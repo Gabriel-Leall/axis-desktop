@@ -11,7 +11,7 @@
 
 Do not report security vulnerabilities through public GitHub issues.
 
-**Contact**: YOUR_SECURITY_EMAIL
+**Contact**: security@axis-desktop.com
 
 Include:
 

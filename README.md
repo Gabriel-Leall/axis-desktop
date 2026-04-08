@@ -1,10 +1,10 @@
-# Tauri React Template
+# Axis Desktop
 
-A "batteries-included" template for building production-ready desktop applications with **Tauri v2**, **React**, and **TypeScript**. Designed with opinionated patterns that help both human developers and AI coding agents build well-architected apps from the start.
+Axis Desktop is a production-ready desktop application built with **Tauri v2**, **React**, and **TypeScript**. Designed with opinionated patterns that help both human developers and AI coding agents build well-architected apps from the start.
 
-## Why This Template?
+## Features
 
-Most Tauri starters give you a blank canvas. This template gives you a **working application** with patterns already established:
+This application comes with key patterns already established:
 
 - **Type-safe Rust-TypeScript bridge** via tauri-specta.
 - **Performance patterns enforced by tooling** - all the usual linting plus ast-grep for common anti-patterns

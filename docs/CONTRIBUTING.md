@@ -13,8 +13,8 @@ Thank you for your interest in contributing!
 ### Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-cd YOUR_REPO
+git clone https://github.com/Gabriel-Leall/axis-desktop.git
+cd axis-desktop
 npm install
 npm run dev
 npm run check:all

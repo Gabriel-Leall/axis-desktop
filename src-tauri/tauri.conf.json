@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tauri-app",
+  "productName": "Axis Desktop",
   "version": "0.1.0",
-  "identifier": "com.tauri-app.app",
+  "identifier": "com.gabrielleall.axis-desktop",
   "build": {
     "removeUnusedCommands": true,
     "beforeDevCommand": "npm run dev",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "tauri-app",
+        "title": "Axis Desktop",
         "width": 1200,
         "height": 800,
         "minWidth": 1000,
@@ -46,11 +46,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "publisher": "Your Name",
+    "publisher": "Gabriel Leall",
     "category": "DeveloperTool",
-    "shortDescription": "A Tauri React template application",
-    "longDescription": "A modern Tauri React template with comprehensive boilerplate code, TypeScript, Tailwind CSS, and shadcn/ui components.",
-    "copyright": "Copyright © 2025 Your Name. All rights reserved.",
+    "shortDescription": "Axis Desktop application",
+    "longDescription": "Axis Desktop application built with Tauri and React.",
+    "copyright": "Copyright © 2026 Gabriel Leall. All rights reserved.",
     "macOS": {
       "frameworks": [],
       "minimumSystemVersion": "10.15",
@@ -64,7 +64,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/YOUR_USERNAME/YOUR_REPO/releases/latest/download/latest.json"
+        "https://github.com/Gabriel-Leall/axis-desktop/releases/latest/download/latest.json"
       ],
       "dialog": true,
       "pubkey": "YOUR_UPDATER_PUBLIC_KEY_HERE"
