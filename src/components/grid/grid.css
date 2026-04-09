@@ -1,0 +1,99 @@
+/*
+ * Bento Grid & Widget Styles
+ *
+ * CSS variables for widget theming so that
+ * the shadow/border system adapts to light/dark mode.
+ */
+
+/* ============================================================
+ * Widget shadow tokens — light & dark
+ * ============================================================ */
+:root {
+  --widget-shadow:
+    rgba(19, 19, 22, 0.7) 0px 1px 5px -4px,
+    rgba(34, 42, 53, 0.08) 0px 0px 0px 1px,
+    rgba(34, 42, 53, 0.05) 0px 4px 8px 0px;
+}
+
+.dark {
+  --widget-shadow:
+    rgba(0, 0, 0, 0.5) 0px 1px 5px -4px,
+    rgba(255, 255, 255, 0.06) 0px 0px 0px 1px,
+    rgba(0, 0, 0, 0.3) 0px 4px 8px 0px;
+}
+
+/* Apply the token to widget cards */
+.widget-card {
+  box-shadow: var(--widget-shadow);
+  transition: box-shadow 0.2s ease;
+}
+
+/* ============================================================
+ * react-grid-layout overrides
+ * ============================================================ */
+
+/* Placeholder shown while dragging */
+.react-grid-layout .react-grid-placeholder {
+  background-color: var(--accent);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  opacity: 0.4;
+}
+
+/* Grid item transition */
+.react-grid-layout .react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+}
+
+/* Remove transition during drag/resize to avoid jank */
+.react-grid-layout .react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+
+.react-grid-layout .react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 100;
+}
+
+.react-grid-layout .react-grid-item.resizing {
+  transition: none;
+  z-index: 100;
+}
+
+/* Resize handle */
+.react-grid-layout .react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+}
+
+.react-grid-layout .react-grid-item > .react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--muted-foreground);
+  border-bottom: 2px solid var(--muted-foreground);
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
+}
+
+.react-grid-layout .react-grid-item:hover > .react-resizable-handle::after {
+  opacity: 0.8;
+}
+
+/* Handle positions */
+.react-grid-layout .react-grid-item > .react-resizable-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+.react-grid-layout .react-grid-item > .react-resizable-handle-sw {
+  bottom: 0;
+  left: 0;
+  cursor: sw-resize;
+}

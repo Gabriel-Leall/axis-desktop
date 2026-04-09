@@ -1,0 +1,38 @@
+import { WidgetCard } from '../WidgetCard'
+import { FolderOpen, FileText, FileCode, FileImage } from 'lucide-react'
+
+/**
+ * Recent Files widget — displays a list of recently accessed files.
+ */
+export function RecentFilesWidget() {
+  // Placeholder data for demonstration
+  const recentFiles = [
+    { name: 'design-notes.md', icon: FileText, time: '2m ago' },
+    { name: 'app.tsx', icon: FileCode, time: '15m ago' },
+    { name: 'screenshot.png', icon: FileImage, time: '1h ago' },
+    { name: 'README.md', icon: FileText, time: '2h ago' },
+    { name: 'config.json', icon: FileCode, time: '3h ago' },
+  ]
+
+  return (
+    <WidgetCard title="Recent Files" icon={FolderOpen}>
+      <div className="flex h-full flex-col gap-1">
+        {recentFiles.map(file => (
+          <button
+            key={file.name}
+            type="button"
+            className="flex items-center gap-2 rounded px-2 py-1 text-start transition-colors hover:bg-accent"
+          >
+            <file.icon className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="flex-1 truncate text-xs text-foreground">
+              {file.name}
+            </span>
+            <span className="shrink-0 text-[10px] text-muted-foreground">
+              {file.time}
+            </span>
+          </button>
+        ))}
+      </div>
+    </WidgetCard>
+  )
+}

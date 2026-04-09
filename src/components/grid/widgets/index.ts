@@ -1,0 +1,6 @@
+export { ClockWidget } from './ClockWidget'
+export { CalendarWidget } from './CalendarWidget'
+export { NotesWidget } from './NotesWidget'
+export { SystemInfoWidget } from './SystemInfoWidget'
+export { QuickActionsWidget } from './QuickActionsWidget'
+export { RecentFilesWidget } from './RecentFilesWidget'
