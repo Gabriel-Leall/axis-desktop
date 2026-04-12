@@ -1,4 +1,4 @@
-import { CheckSquare, LayoutGrid } from 'lucide-react'
+import { CheckSquare, LayoutGrid, Timer } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
 import type { AppPage } from '@/store/ui-store'
@@ -12,6 +12,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: 'grid', label: 'Dashboard', icon: LayoutGrid },
   { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+  { id: 'pomodoro', label: 'Focus', icon: Timer },
 ]
 
 interface LeftSideBarProps {
@@ -28,7 +29,10 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
       className={cn('flex h-full flex-col border-r bg-background', className)}
     >
       {/* Navigation */}
-      <nav className="flex flex-col gap-0.5 p-2 pt-3" aria-label="Main navigation">
+      <nav
+        className="flex flex-col gap-0.5 p-2 pt-3"
+        aria-label="Main navigation"
+      >
         {NAV_ITEMS.map(item => (
           <button
             key={item.id}

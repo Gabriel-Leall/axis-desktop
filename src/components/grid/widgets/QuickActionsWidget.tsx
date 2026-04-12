@@ -1,11 +1,5 @@
 import { WidgetCard } from '../WidgetCard'
-import {
-  Zap,
-  Settings,
-  FolderOpen,
-  Terminal,
-  Palette,
-} from 'lucide-react'
+import { Zap, Settings, FolderOpen, Terminal, Palette } from 'lucide-react'
 import { useUIStore } from '@/store/ui-store'
 
 /**

@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { CheckSquare, Plus, ChevronRight } from 'lucide-react'
 import { WidgetCard } from '../WidgetCard'
-import { useTasksStore, selectTodayTasks, getTodayISO } from '@/store/tasks-store'
+import {
+  useTasksStore,
+  selectTodayTasks,
+  getTodayISO,
+} from '@/store/tasks-store'
 import type { Task } from '@/store/tasks-store'
 import { cn } from '@/lib/utils'
 
@@ -146,9 +150,7 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
       <div className="flex h-full flex-col gap-0">
         {/* Stat row */}
         <div className="mb-2 flex items-center justify-between px-1">
-          <span
-            className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground"
-          >
+          <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             Tasks
           </span>
           {totalCount > 0 && (
@@ -170,7 +172,10 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
             ))
           ) : visibleTasks.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-1.5 py-4 text-center">
-              <CheckSquare className="size-5 text-muted-foreground/30" strokeWidth={1.5} />
+              <CheckSquare
+                className="size-5 text-muted-foreground/30"
+                strokeWidth={1.5}
+              />
               <span className="text-[12px] text-muted-foreground/50">
                 Nothing for today
               </span>

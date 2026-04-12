@@ -6,6 +6,7 @@ interface WidgetCardProps {
   icon?: LucideIcon
   children: React.ReactNode
   className?: string
+  onClick?: () => void
 }
 
 /**
@@ -24,13 +25,16 @@ export function WidgetCard({
   icon: Icon,
   children,
   className,
+  onClick,
 }: WidgetCardProps) {
   return (
     <div
       className={cn(
         'widget-card flex h-full w-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground',
+        onClick && 'cursor-pointer',
         className
       )}
+      onClick={onClick}
     >
       {/* Header — drag handle */}
       <div

@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils'
 import { BentoGrid } from '@/components/grid'
 import { WidgetToggleMenu } from '@/components/grid'
 import { TasksPage } from '@/pages/TasksPage'
+import { PomodoroPage } from '@/pages/PomodoroPage'
 import { useUIStore } from '@/store/ui-store'
 
 interface MainWindowContentProps {
@@ -24,6 +25,8 @@ export function MainWindowContent({
             <TasksPage
               initialSelectedTaskId={activePageData['selectedTaskId']}
             />
+          ) : activePage === 'pomodoro' ? (
+            <PomodoroPage />
           ) : (
             <>
               {/* Header with widget toggle */}

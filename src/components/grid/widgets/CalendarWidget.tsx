@@ -37,11 +37,9 @@ export function CalendarWidget() {
     month === today.getMonth() &&
     year === today.getFullYear()
 
-  const prevMonth = () =>
-    setCurrentDate(new Date(year, month - 1, 1))
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1))
 
-  const nextMonth = () =>
-    setCurrentDate(new Date(year, month + 1, 1))
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1))
 
   return (
     <WidgetCard title="Calendar" icon={CalendarIcon}>

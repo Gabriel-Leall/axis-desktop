@@ -8,10 +8,7 @@ import type { Layout, LayoutItem } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import './grid.css'
 
-import {
-  useGridStore,
-  getDefaultVisibility,
-} from '@/store/grid-store'
+import { useGridStore, getDefaultVisibility } from '@/store/grid-store'
 import { saveGridLayout, loadGridLayout } from '@/services/grid-layout-db'
 import { logger } from '@/lib/logger'
 
@@ -23,6 +20,7 @@ import {
   QuickActionsWidget,
   RecentFilesWidget,
   TasksWidget,
+  PomodoroWidget,
 } from './widgets'
 import { useUIStore } from '@/store/ui-store'
 
@@ -50,6 +48,7 @@ const WIDGET_COMPONENTS: Record<string, React.FC> = {
   'quick-actions': QuickActionsWidget,
   'recent-files': RecentFilesWidget,
   tasks: TasksWidgetConnected,
+  pomodoro: PomodoroWidget,
 }
 
 /** Grid configuration */
