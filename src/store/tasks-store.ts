@@ -31,7 +31,7 @@ export interface Task {
   description?: string
   priority: Priority
   status: Status
-  due_date?: string    // ISO date string (YYYY-MM-DD) or undefined for inbox
+  due_date?: string // ISO date string (YYYY-MM-DD) or undefined for inbox
   completed_at?: string
   created_at: string
   updated_at: string
@@ -89,7 +89,8 @@ function todayISO(): string {
 function generateId(): string {
   return typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
-    : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+    : Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15)
 }
 
 // ─── Store ─────────────────────────────────────────────────────────────────────
@@ -353,7 +354,10 @@ export function getTodayISO(): string {
 }
 
 /** Filters tasks matching current store filters */
-export function selectFilteredTasks(tasks: Task[], filters: TaskFilters): Task[] {
+export function selectFilteredTasks(
+  tasks: Task[],
+  filters: TaskFilters
+): Task[] {
   return tasks.filter(task => {
     if (filters.priority && task.priority !== filters.priority) return false
     if (filters.status && task.status !== filters.status) return false

@@ -11,7 +11,11 @@ import {
   Calendar,
   AlertCircle,
 } from 'lucide-react'
-import { useTasksStore, selectFilteredTasks, getTodayISO } from '@/store/tasks-store'
+import {
+  useTasksStore,
+  selectFilteredTasks,
+  getTodayISO,
+} from '@/store/tasks-store'
 import type { Task, Priority, Status } from '@/store/tasks-store'
 import { cn } from '@/lib/utils'
 
@@ -188,7 +192,12 @@ function TaskRow({
             : 'border-muted-foreground/40 hover:border-primary hover:bg-accent'
         )}
       >
-        {isDone && <Check className="size-2.5 text-muted-foreground/60" strokeWidth={3} />}
+        {isDone && (
+          <Check
+            className="size-2.5 text-muted-foreground/60"
+            strokeWidth={3}
+          />
+        )}
       </button>
 
       {/* Priority indicator */}
@@ -223,8 +232,7 @@ function TaskRow({
             <span
               className={cn(
                 'text-[11px] text-muted-foreground/50',
-                task.due_date < getTodayISO() &&
-                  'text-red-500/70'
+                task.due_date < getTodayISO() && 'text-red-500/70'
               )}
             >
               {formatRelativeDate(task.due_date)}
@@ -325,7 +333,9 @@ function PriorityButton({
         active
           ? 'border-current'
           : 'border-transparent bg-muted/50 text-muted-foreground hover:border-border',
-        value === 'high' && active && 'border-red-500/50 bg-red-500/10 text-red-500',
+        value === 'high' &&
+          active &&
+          'border-red-500/50 bg-red-500/10 text-red-500',
         value === 'medium' &&
           active &&
           'border-yellow-400/50 bg-yellow-400/10 text-yellow-400',
@@ -369,19 +379,9 @@ function TaskDetailPanel({
   const [newSubtask, setNewSubtask] = useState('')
   const titleRef = useRef<HTMLInputElement>(null)
 
-  // Sync local state when task changes
-  useEffect(() => {
-    if (task) {
-      setTitle(task.title)
-      setDescription(task.description ?? '')
-      setPriority(task.priority)
-      setDueDate(task.due_date ?? '')
-    }
-  }, [task?.id])
-
   useEffect(() => {
     if (task) titleRef.current?.focus()
-  }, [task?.id])
+  }, [task])
 
   // Keyboard: Escape to close
   useEffect(() => {
@@ -941,8 +941,7 @@ export function TasksPage({ initialSelectedTaskId }: TasksPageProps) {
     switch (activeTab) {
       case 'today':
         return (
-          task.status !== 'done' &&
-          (task.due_date === today || !task.due_date)
+          task.status !== 'done' && (task.due_date === today || !task.due_date)
         )
       case 'upcoming':
         return (
@@ -1057,7 +1056,9 @@ export function TasksPage({ initialSelectedTaskId }: TasksPageProps) {
             >
               <Filter className="size-3.5" />
               {activeFilterCount > 0 && (
-                <span className="font-mono text-[10px]">{activeFilterCount}</span>
+                <span className="font-mono text-[10px]">
+                  {activeFilterCount}
+                </span>
               )}
             </button>
             <FilterDropdown
@@ -1084,7 +1085,7 @@ export function TasksPage({ initialSelectedTaskId }: TasksPageProps) {
                   <div className="size-4 animate-pulse rounded-full bg-muted" />
                   <div
                     className="h-3.5 animate-pulse rounded bg-muted"
-                    style={{ width: `${60 + Math.random() * 30}%` }}
+                    style={{ width: `${60 + (i % 3) * 15}%` }}
                   />
                 </div>
               ))}
@@ -1103,14 +1104,18 @@ export function TasksPage({ initialSelectedTaskId }: TasksPageProps) {
               {(filters.search || activeFilterCount > 0) && (
                 <button
                   type="button"
-                  onClick={() => setFilter({ priority: null, status: null, search: '' })}
+                  onClick={() =>
+                    setFilter({ priority: null, status: null, search: '' })
+                  }
                   className="text-[12px] text-muted-foreground/40 underline-offset-2 transition-colors hover:text-foreground hover:underline"
                 >
                   Clear all filters
                 </button>
               )}
             </div>
-          ) : activeTab === 'all' || activeTab === 'today' || activeTab === 'upcoming' ? (
+          ) : activeTab === 'all' ||
+            activeTab === 'today' ||
+            activeTab === 'upcoming' ? (
             <>
               {activeTab === 'all' && (
                 <>
@@ -1229,6 +1234,7 @@ export function TasksPage({ initialSelectedTaskId }: TasksPageProps) {
         {/* Detail panel (slide-over style) */}
         {selectedTask && (
           <TaskDetailPanel
+            key={selectedTask.id}
             task={selectedTask}
             onClose={() => setSelectedTask(null)}
             onUpdate={(id, updates) => updateTask(id, updates)}

@@ -149,7 +149,9 @@ export async function loadAllTasks(): Promise<Task[]> {
  * Creates a new task in SQLite.
  */
 export async function createTask(task: Task): Promise<void> {
-  logger.debug(`createTask called — id=${task.id} title="${task.title}" due=${task.due_date ?? 'none'}`)
+  logger.debug(
+    `createTask called — id=${task.id} title="${task.title}" due=${task.due_date ?? 'none'}`
+  )
   try {
     const db = await getDb()
     logger.debug('createTask: db acquired, executing INSERT')
@@ -203,7 +205,9 @@ export async function updateTask(
        WHERE id = $9`,
       [
         updates.title ?? null,
-        updates.description !== undefined ? (updates.description ?? null) : null,
+        updates.description !== undefined
+          ? (updates.description ?? null)
+          : null,
         updates.priority ?? null,
         updates.status ?? null,
         updates.due_date !== undefined ? (updates.due_date ?? null) : null,
@@ -298,13 +302,16 @@ export async function createSubtask(subtask: Subtask): Promise<void> {
 /**
  * Toggles a subtask's completed status.
  */
-export async function toggleSubtask(id: string, completed: boolean): Promise<void> {
+export async function toggleSubtask(
+  id: string,
+  completed: boolean
+): Promise<void> {
   try {
     const db = await getDb()
-    await db.execute(
-      `UPDATE subtasks SET completed = $1 WHERE id = $2`,
-      [completed ? 1 : 0, id]
-    )
+    await db.execute(`UPDATE subtasks SET completed = $1 WHERE id = $2`, [
+      completed ? 1 : 0,
+      id,
+    ])
   } catch (error) {
     logger.error(`Failed to toggle subtask: ${String(error)}`)
     throw error
