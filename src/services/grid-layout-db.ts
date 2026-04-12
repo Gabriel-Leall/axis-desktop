@@ -76,7 +76,7 @@ export async function loadGridLayout(): Promise<GridLayoutData | null> {
     const db = await getDb()
 
     const rows = await db.select<
-      Array<{ layout_json: string; widget_visibility: string }>
+      { layout_json: string; widget_visibility: string }[]
     >('SELECT layout_json, widget_visibility FROM grid_layout WHERE id = $1', [
       'default',
     ])

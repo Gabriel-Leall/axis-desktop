@@ -80,6 +80,14 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minW: 3,
     minH: 3,
   },
+  {
+    id: 'pomodoro',
+    label: 'Pomodoro Timer',
+    icon: 'Timer',
+    defaultLayout: { x: 4, y: 5, w: 4, h: 2 },
+    minW: 3,
+    minH: 2,
+  },
 ]
 
 interface GridState {

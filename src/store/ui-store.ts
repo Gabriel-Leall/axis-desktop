@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 
-export type AppPage = 'grid' | 'tasks'
+export type AppPage = 'grid' | 'tasks' | 'pomodoro'
 
 interface UIState {
   leftSidebarVisible: boolean
@@ -92,7 +92,11 @@ export const useUIStore = create<UIState>()(
       },
 
       navigateTo: (page, data = {}) =>
-        set({ activePage: page, activePageData: data }, undefined, 'navigateTo'),
+        set(
+          { activePage: page, activePageData: data },
+          undefined,
+          'navigateTo'
+        ),
     }),
     {
       name: 'ui-store',
