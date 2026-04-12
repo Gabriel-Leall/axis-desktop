@@ -22,7 +22,24 @@ import {
   SystemInfoWidget,
   QuickActionsWidget,
   RecentFilesWidget,
+  TasksWidget,
 } from './widgets'
+import { useUIStore } from '@/store/ui-store'
+
+/**
+ * Wrapper that passes navigation to TasksWidget.
+ * We need this because WIDGET_COMPONENTS only holds React.FC with no props.
+ */
+function TasksWidgetConnected() {
+  const navigateTo = useUIStore(state => state.navigateTo)
+  return (
+    <TasksWidget
+      onNavigateToTasks={selectedTaskId =>
+        navigateTo('tasks', selectedTaskId ? { selectedTaskId } : {})
+      }
+    />
+  )
+}
 
 /** Map widget ID → React component */
 const WIDGET_COMPONENTS: Record<string, React.FC> = {
@@ -32,6 +49,7 @@ const WIDGET_COMPONENTS: Record<string, React.FC> = {
   'system-info': SystemInfoWidget,
   'quick-actions': QuickActionsWidget,
   'recent-files': RecentFilesWidget,
+  tasks: TasksWidgetConnected,
 }
 
 /** Grid configuration */
