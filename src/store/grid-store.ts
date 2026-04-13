@@ -88,6 +88,14 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minW: 3,
     minH: 2,
   },
+  {
+    id: 'habits',
+    label: 'Habits',
+    icon: 'CircleCheck',
+    defaultLayout: { x: 8, y: 5, w: 4, h: 4 },
+    minW: 3,
+    minH: 3,
+  },
 ]
 
 interface GridState {
