@@ -33,6 +33,7 @@ function MockThemeProvider({ children }: { children: React.ReactNode }) {
 
   const value: ThemeProviderState = {
     theme,
+    resolvedTheme: theme === 'system' ? 'light' : theme,
     setTheme,
   }
 
