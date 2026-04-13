@@ -9,7 +9,9 @@ mod commands;
 mod types;
 mod utils;
 
+use sqlx::sqlite::SqlitePoolOptions;
 use tauri::{Manager, RunEvent, WindowEvent};
+use tauri_plugin_sql::{Migration, MigrationKind};
 
 // Re-export only what's needed externally
 pub use types::DEFAULT_QUICK_PANE_SHORTCUT;
@@ -101,13 +103,350 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin({
+            let migrations = vec![
+                Migration {
+                    version: 1,
+                    description: "create_tasks_and_subtasks",
+                    sql: "
+                        CREATE TABLE IF NOT EXISTS tasks (
+                            id TEXT PRIMARY KEY,
+                            title TEXT NOT NULL,
+                            description TEXT,
+                            priority TEXT NOT NULL DEFAULT 'medium',
+                            status TEXT NOT NULL DEFAULT 'todo',
+                            due_date TEXT,
+                            completed_at TEXT,
+                            created_at TEXT NOT NULL,
+                            updated_at TEXT NOT NULL,
+                            sort_order INTEGER DEFAULT 0
+                        );
+                        CREATE TABLE IF NOT EXISTS subtasks (
+                            id TEXT PRIMARY KEY,
+                            task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                            title TEXT NOT NULL,
+                            completed INTEGER NOT NULL DEFAULT 0,
+                            sort_order INTEGER DEFAULT 0,
+                            created_at TEXT NOT NULL
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
+                        CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+                        CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_id);
+                    ",
+                    kind: MigrationKind::Up,
+                },
+                Migration {
+                    version: 2,
+                    description: "create_pomodoro_tables",
+                    sql: "
+                        CREATE TABLE IF NOT EXISTS pomodoro_sessions (
+                            id TEXT PRIMARY KEY,
+                            session_type TEXT NOT NULL,
+                            duration_seconds INTEGER NOT NULL,
+                            completed INTEGER NOT NULL DEFAULT 0,
+                            task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+                            started_at TEXT NOT NULL,
+                            ended_at TEXT,
+                            created_at TEXT NOT NULL
+                        );
+                        CREATE TABLE IF NOT EXISTS pomodoro_settings (
+                            id INTEGER PRIMARY KEY DEFAULT 1,
+                            focus_duration INTEGER NOT NULL DEFAULT 25,
+                            short_break_duration INTEGER NOT NULL DEFAULT 5,
+                            long_break_duration INTEGER NOT NULL DEFAULT 15,
+                            pomos_until_long_break INTEGER NOT NULL DEFAULT 4,
+                            auto_start_breaks INTEGER NOT NULL DEFAULT 0,
+                            auto_start_focus INTEGER NOT NULL DEFAULT 0,
+                            sound_notifications INTEGER NOT NULL DEFAULT 1
+                        );
+                        INSERT OR IGNORE INTO pomodoro_settings (id) VALUES (1);
+                        CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_started_at
+                            ON pomodoro_sessions(started_at);
+                    ",
+                    kind: MigrationKind::Up,
+                },
+                Migration {
+                    version: 3,
+                    description: "create_habits_tables",
+                    sql: "
+                        CREATE TABLE IF NOT EXISTS habits (
+                            id TEXT PRIMARY KEY,
+                            name TEXT NOT NULL,
+                            color TEXT NOT NULL DEFAULT '#6366f1',
+                            icon TEXT,
+                            frequency TEXT NOT NULL DEFAULT 'daily',
+                            frequency_days TEXT,
+                            active INTEGER NOT NULL DEFAULT 1,
+                            sort_order INTEGER DEFAULT 0,
+                            created_at TEXT NOT NULL,
+                            updated_at TEXT NOT NULL
+                        );
+                        CREATE TABLE IF NOT EXISTS habit_logs (
+                            id TEXT PRIMARY KEY,
+                            habit_id TEXT NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+                            completed_date TEXT NOT NULL,
+                            completed_at TEXT NOT NULL,
+                            UNIQUE(habit_id, completed_date)
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_habits_active_sort
+                            ON habits(active, sort_order);
+                        CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_date
+                            ON habit_logs(habit_id, completed_date);
+                        CREATE INDEX IF NOT EXISTS idx_habit_logs_date
+                            ON habit_logs(completed_date);
+                    ",
+                    kind: MigrationKind::Up,
+                },
+                Migration {
+                    version: 4,
+                    description: "rename_pomodoro_sessions_type_column",
+                    sql: "
+                        CREATE TABLE IF NOT EXISTS pomodoro_sessions_new (
+                            id TEXT PRIMARY KEY,
+                            session_type TEXT NOT NULL,
+                            duration_seconds INTEGER NOT NULL,
+                            completed INTEGER NOT NULL DEFAULT 0,
+                            task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+                            started_at TEXT NOT NULL,
+                            ended_at TEXT,
+                            created_at TEXT NOT NULL
+                        );
+                        INSERT OR IGNORE INTO pomodoro_sessions_new
+                            (id, session_type, duration_seconds, completed, task_id, started_at, ended_at, created_at)
+                        SELECT id,
+                            CASE
+                                WHEN type IS NOT NULL THEN type
+                                ELSE session_type
+                            END,
+                            duration_seconds, completed, task_id, started_at, ended_at, created_at
+                        FROM pomodoro_sessions;
+                        DROP TABLE pomodoro_sessions;
+                        ALTER TABLE pomodoro_sessions_new RENAME TO pomodoro_sessions;
+                        CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_started_at
+                            ON pomodoro_sessions(started_at);
+                    ",
+                    kind: MigrationKind::Up,
+                },
+            ];
+            tauri_plugin_sql::Builder::default()
+                .add_migrations("sqlite:tasks.db", migrations)
+                .build()
+        })
         .setup(|app| {
             log::info!("Application starting up");
             log::debug!(
                 "App handle initialized for package: {}",
                 app.package_info().name
             );
+
+            // ── SQLite pool for domain commands (tasks, pomodoro, habits) ────────
+            // The tauri-plugin-sql plugin already runs migrations and creates the DB
+            // file. We create a separate sqlx pool pointing to the same file so that
+            // our typed Rust commands can query it directly without relying on the
+            // plugin's private internal API.
+            {
+                let app_config_dir = app
+                    .path()
+                    .app_config_dir()
+                    .expect("Failed to get app config directory");
+
+                // Ensure directory exists (plugin may not have run yet at this point)
+                std::fs::create_dir_all(&app_config_dir)
+                    .expect("Failed to create app config directory");
+
+                let db_path = app_config_dir.join("tasks.db");
+                let db_url = format!(
+                    "sqlite://{}",
+                    db_path
+                        .to_str()
+                        .expect("Invalid DB path")
+                );
+
+                let pool = tauri::async_runtime::block_on(async {
+                    SqlitePoolOptions::new()
+                        .max_connections(5)
+                        .connect(&db_url)
+                        .await
+                        .expect("Failed to connect to SQLite database")
+                });
+
+                // Run migrations for the domain tables
+                tauri::async_runtime::block_on(async {
+                    sqlx::query("PRAGMA journal_mode=WAL;")
+                        .execute(&pool)
+                        .await
+                        .expect("Failed to enable WAL mode");
+
+                    sqlx::query("PRAGMA foreign_keys=ON;")
+                        .execute(&pool)
+                        .await
+                        .expect("Failed to enable foreign keys");
+
+                    // Tasks
+                    sqlx::query(
+                        "CREATE TABLE IF NOT EXISTS tasks (
+                            id TEXT PRIMARY KEY,
+                            title TEXT NOT NULL,
+                            description TEXT,
+                            priority TEXT NOT NULL DEFAULT 'medium',
+                            status TEXT NOT NULL DEFAULT 'todo',
+                            due_date TEXT,
+                            completed_at TEXT,
+                            created_at TEXT NOT NULL,
+                            updated_at TEXT NOT NULL,
+                            sort_order INTEGER DEFAULT 0
+                        )"
+                    ).execute(&pool).await.expect("Failed to create tasks table");
+
+                    sqlx::query(
+                        "CREATE TABLE IF NOT EXISTS subtasks (
+                            id TEXT PRIMARY KEY,
+                            task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                            title TEXT NOT NULL,
+                            completed INTEGER NOT NULL DEFAULT 0,
+                            sort_order INTEGER DEFAULT 0,
+                            created_at TEXT NOT NULL
+                        )"
+                    ).execute(&pool).await.expect("Failed to create subtasks table");
+
+                    sqlx::query(
+                        "CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date)"
+                    ).execute(&pool).await.expect("Failed to create tasks index");
+
+                    sqlx::query(
+                        "CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)"
+                    ).execute(&pool).await.expect("Failed to create tasks status index");
+
+                    sqlx::query(
+                        "CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_id)"
+                    ).execute(&pool).await.expect("Failed to create subtasks index");
+
+                    // Pomodoro
+                    sqlx::query(
+                        "CREATE TABLE IF NOT EXISTS pomodoro_sessions (
+                            id TEXT PRIMARY KEY,
+                            session_type TEXT NOT NULL,
+                            duration_seconds INTEGER NOT NULL,
+                            completed INTEGER NOT NULL DEFAULT 0,
+                            task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+                            started_at TEXT NOT NULL,
+                            ended_at TEXT,
+                            created_at TEXT NOT NULL
+                        )"
+                    ).execute(&pool).await.expect("Failed to create pomodoro_sessions table");
+
+                    sqlx::query(
+                        "CREATE TABLE IF NOT EXISTS pomodoro_settings (
+                            id INTEGER PRIMARY KEY DEFAULT 1,
+                            focus_duration INTEGER NOT NULL DEFAULT 25,
+                            short_break_duration INTEGER NOT NULL DEFAULT 5,
+                            long_break_duration INTEGER NOT NULL DEFAULT 15,
+                            pomos_until_long_break INTEGER NOT NULL DEFAULT 4,
+                            auto_start_breaks INTEGER NOT NULL DEFAULT 0,
+                            auto_start_focus INTEGER NOT NULL DEFAULT 0,
+                            sound_notifications INTEGER NOT NULL DEFAULT 1
+                        )"
+                    ).execute(&pool).await.expect("Failed to create pomodoro_settings table");
+
+                    sqlx::query(
+                        "INSERT OR IGNORE INTO pomodoro_settings (id) VALUES (1)"
+                    ).execute(&pool).await.expect("Failed to insert default pomodoro settings");
+
+                    sqlx::query(
+                        "CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_started_at \
+                         ON pomodoro_sessions(started_at)"
+                    ).execute(&pool).await.expect("Failed to create pomodoro index");
+
+                    // Habits
+                    sqlx::query(
+                        "CREATE TABLE IF NOT EXISTS habits (
+                            id TEXT PRIMARY KEY,
+                            name TEXT NOT NULL,
+                            color TEXT NOT NULL DEFAULT '#6366f1',
+                            icon TEXT,
+                            frequency TEXT NOT NULL DEFAULT 'daily',
+                            frequency_days TEXT,
+                            active INTEGER NOT NULL DEFAULT 1,
+                            sort_order INTEGER DEFAULT 0,
+                            created_at TEXT NOT NULL,
+                            updated_at TEXT NOT NULL
+                        )"
+                    ).execute(&pool).await.expect("Failed to create habits table");
+
+                    sqlx::query(
+                        "CREATE TABLE IF NOT EXISTS habit_logs (
+                            id TEXT PRIMARY KEY,
+                            habit_id TEXT NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+                            completed_date TEXT NOT NULL,
+                            completed_at TEXT NOT NULL,
+                            UNIQUE(habit_id, completed_date)
+                        )"
+                    ).execute(&pool).await.expect("Failed to create habit_logs table");
+
+                    sqlx::query(
+                        "CREATE INDEX IF NOT EXISTS idx_habits_active_sort \
+                         ON habits(active, sort_order)"
+                    ).execute(&pool).await.expect("Failed to create habits index");
+
+                    sqlx::query(
+                        "CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_date \
+                         ON habit_logs(habit_id, completed_date)"
+                    ).execute(&pool).await.expect("Failed to create habit_logs index");
+
+                    sqlx::query(
+                        "CREATE INDEX IF NOT EXISTS idx_habit_logs_date \
+                         ON habit_logs(completed_date)"
+                    ).execute(&pool).await.expect("Failed to create habit_logs date index");
+
+                    // Migration: rename 'type' column to 'session_type' in old databases
+                    // This is a no-op if the column already has the right name.
+                    let has_type_col: bool = sqlx::query_scalar::<_, i64>(
+                        "SELECT COUNT(*) FROM pragma_table_info('pomodoro_sessions') \
+                         WHERE name = 'type'"
+                    )
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap_or(0) > 0;
+
+                    if has_type_col {
+                        log::info!("Migrating pomodoro_sessions: renaming 'type' -> 'session_type'");
+                        sqlx::query(
+                            "CREATE TABLE IF NOT EXISTS pomodoro_sessions_v2 (
+                                id TEXT PRIMARY KEY,
+                                session_type TEXT NOT NULL,
+                                duration_seconds INTEGER NOT NULL,
+                                completed INTEGER NOT NULL DEFAULT 0,
+                                task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+                                started_at TEXT NOT NULL,
+                                ended_at TEXT,
+                                created_at TEXT NOT NULL
+                            )"
+                        ).execute(&pool).await.expect("Failed to create pomodoro_sessions_v2");
+
+                        sqlx::query(
+                            "INSERT OR IGNORE INTO pomodoro_sessions_v2
+                             SELECT id, type, duration_seconds, completed, task_id, started_at, ended_at, created_at
+                             FROM pomodoro_sessions"
+                        ).execute(&pool).await.expect("Failed to migrate pomodoro_sessions data");
+
+                        sqlx::query("DROP TABLE pomodoro_sessions")
+                            .execute(&pool).await.expect("Failed to drop old pomodoro_sessions");
+
+                        sqlx::query("ALTER TABLE pomodoro_sessions_v2 RENAME TO pomodoro_sessions")
+                            .execute(&pool).await.expect("Failed to rename pomodoro_sessions_v2");
+
+                        sqlx::query(
+                            "CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_started_at \
+                             ON pomodoro_sessions(started_at)"
+                        ).execute(&pool).await.expect("Failed to recreate pomodoro index");
+
+                        log::info!("Pomodoro sessions migration complete");
+                    }
+                });
+
+                app.manage(pool);
+                log::info!("SQLite pool initialized and managed");
+            }
 
             // Set up global shortcut plugin (without any shortcuts - we register them separately)
             #[cfg(desktop)]

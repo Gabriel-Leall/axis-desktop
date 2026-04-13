@@ -3,7 +3,10 @@
 //! Each submodule contains related commands and their helper functions.
 //! Import specific commands via their submodule (e.g., `commands::preferences::greet`).
 
+pub mod habits;
 pub mod notifications;
+pub mod pomodoro;
 pub mod preferences;
 pub mod quick_pane;
 pub mod recovery;
+pub mod tasks;

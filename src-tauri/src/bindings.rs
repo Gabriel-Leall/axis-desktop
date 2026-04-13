@@ -1,9 +1,12 @@
 use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
-    use crate::commands::{notifications, preferences, quick_pane, recovery};
+    use crate::commands::{
+        habits, notifications, pomodoro, preferences, quick_pane, recovery, tasks,
+    };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
+        // Existing commands
         preferences::greet,
         preferences::load_preferences,
         preferences::save_preferences,
@@ -16,6 +19,31 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         quick_pane::toggle_quick_pane,
         quick_pane::get_default_quick_pane_shortcut,
         quick_pane::update_quick_pane_shortcut,
+        // Tasks
+        tasks::get_tasks,
+        tasks::get_subtasks,
+        tasks::get_tasks_today,
+        tasks::create_task,
+        tasks::update_task,
+        tasks::delete_task,
+        tasks::toggle_task_complete,
+        tasks::create_subtask,
+        tasks::toggle_subtask,
+        tasks::delete_subtask,
+        // Pomodoro
+        pomodoro::save_pomodoro_session,
+        pomodoro::get_today_sessions,
+        pomodoro::get_pomodoro_settings,
+        pomodoro::save_pomodoro_settings,
+        // Habits
+        habits::get_habits,
+        habits::create_habit,
+        habits::update_habit,
+        habits::archive_habit,
+        habits::delete_habit,
+        habits::toggle_habit_log,
+        habits::get_habit_logs_range,
+        habits::get_habit_logs_for_date,
     ])
 }
 
