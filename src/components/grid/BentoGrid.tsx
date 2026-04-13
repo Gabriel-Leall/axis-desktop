@@ -21,6 +21,7 @@ import {
   RecentFilesWidget,
   TasksWidget,
   PomodoroWidget,
+  HabitWidget,
 } from './widgets'
 import { useUIStore } from '@/store/ui-store'
 
@@ -39,6 +40,17 @@ function TasksWidgetConnected() {
   )
 }
 
+function HabitWidgetConnected() {
+  const navigateTo = useUIStore(state => state.navigateTo)
+  return (
+    <HabitWidget
+      onNavigateToHabits={selectedHabitId =>
+        navigateTo('habits', selectedHabitId ? { selectedHabitId } : {})
+      }
+    />
+  )
+}
+
 /** Map widget ID → React component */
 const WIDGET_COMPONENTS: Record<string, React.FC> = {
   clock: ClockWidget,
@@ -49,6 +61,7 @@ const WIDGET_COMPONENTS: Record<string, React.FC> = {
   'recent-files': RecentFilesWidget,
   tasks: TasksWidgetConnected,
   pomodoro: PomodoroWidget,
+  habits: HabitWidgetConnected,
 }
 
 /** Grid configuration */
