@@ -1,4 +1,4 @@
-import { CheckSquare, LayoutGrid, Timer } from 'lucide-react'
+import { CheckSquare, LayoutGrid, Timer, CircleCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
 import type { AppPage } from '@/store/ui-store'
@@ -12,6 +12,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: 'grid', label: 'Dashboard', icon: LayoutGrid },
   { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+  { id: 'habits', label: 'Habits', icon: CircleCheck },
   { id: 'pomodoro', label: 'Focus', icon: Timer },
 ]
 

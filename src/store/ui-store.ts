@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 
-export type AppPage = 'grid' | 'tasks' | 'pomodoro'
+export type AppPage = 'grid' | 'tasks' | 'pomodoro' | 'habits'
 
 interface UIState {
   leftSidebarVisible: boolean

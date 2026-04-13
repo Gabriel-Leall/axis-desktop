@@ -3,6 +3,7 @@ import { BentoGrid } from '@/components/grid'
 import { WidgetToggleMenu } from '@/components/grid'
 import { TasksPage } from '@/pages/TasksPage'
 import { PomodoroPage } from '@/pages/PomodoroPage'
+import { HabitPage } from '@/pages/HabitPage'
 import { useUIStore } from '@/store/ui-store'
 
 interface MainWindowContentProps {
@@ -24,6 +25,10 @@ export function MainWindowContent({
           {activePage === 'tasks' ? (
             <TasksPage
               initialSelectedTaskId={activePageData['selectedTaskId']}
+            />
+          ) : activePage === 'habits' ? (
+            <HabitPage
+              initialSelectedHabitId={activePageData['selectedHabitId']}
             />
           ) : activePage === 'pomodoro' ? (
             <PomodoroPage />

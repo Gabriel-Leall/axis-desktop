@@ -9,6 +9,9 @@ describe('UIStore', () => {
       rightSidebarVisible: true,
       commandPaletteOpen: false,
       preferencesOpen: false,
+      lastQuickPaneEntry: null,
+      activePage: 'grid',
+      activePageData: {},
     })
   })
 
@@ -58,5 +61,16 @@ describe('UIStore', () => {
 
     toggleCommandPalette()
     expect(useUIStore.getState().commandPaletteOpen).toBe(false)
+  })
+
+  it('navigates to habits with payload', () => {
+    const { navigateTo } = useUIStore.getState()
+
+    navigateTo('habits', { selectedHabitId: 'habit-1' })
+
+    expect(useUIStore.getState().activePage).toBe('habits')
+    expect(useUIStore.getState().activePageData['selectedHabitId']).toBe(
+      'habit-1'
+    )
   })
 })
