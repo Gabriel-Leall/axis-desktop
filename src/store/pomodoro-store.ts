@@ -27,13 +27,7 @@
 
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import {
-  loadPomodoroSettings,
-  savePomodoroSettings,
-  savePomodoroSession,
-  loadTodaySessions,
-  DEFAULT_SETTINGS,
-} from '@/services/pomodoro-db'
+import { commands } from '@/lib/tauri-bindings'
 import { logger } from '@/lib/logger'
 
 import type {
@@ -42,6 +36,18 @@ import type {
   TimerState,
   SessionType,
 } from './pomodoro-types'
+
+// ─── Default settings ──────────────────────────────────────────────────────────
+
+export const DEFAULT_SETTINGS: PomodoroSettings = {
+  focus_duration: 25,
+  short_break_duration: 5,
+  long_break_duration: 15,
+  pomos_until_long_break: 4,
+  auto_start_breaks: false,
+  auto_start_focus: false,
+  sound_notifications: true,
+}
 
 // ─── Store shape ───────────────────────────────────────────────────────────────
 
@@ -126,6 +132,15 @@ function nextType(
   if (currentType !== 'focus') return 'focus'
   const newCycles = cyclesCompleted + 1
   return newCycles % pomosUntilLong === 0 ? 'long_break' : 'short_break'
+}
+
+function todayStartISO(): string {
+  const now = new Date()
+  return new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  ).toISOString()
 }
 
 /**
@@ -284,7 +299,7 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
 
           const abortedSession: PomodoroSession = {
             id: currentSessionId,
-            type: currentType,
+            session_type: currentType,
             duration_seconds: Math.round(elapsedSec),
             completed: false,
             task_id: linkedTaskId,
@@ -293,14 +308,19 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
             created_at: sessionStartedAt,
           }
           try {
-            await savePomodoroSession(abortedSession)
-            set(
-              state => ({
-                todaySessions: [...state.todaySessions, abortedSession],
-              }),
-              undefined,
-              'skip/saveAborted'
-            )
+            const result = await commands.savePomodoroSession({
+              ...abortedSession,
+              ended_at: abortedSession.ended_at ?? null,
+            })
+            if (result.status === 'ok') {
+              set(
+                state => ({
+                  todaySessions: [...state.todaySessions, abortedSession],
+                }),
+                undefined,
+                'skip/saveAborted'
+              )
+            }
           } catch {
             // non-fatal — skip proceeds regardless
           }
@@ -336,8 +356,6 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
       },
 
       // ── Tick ──────────────────────────────────────────────────────────────────
-      // Called every second by the internal interval.
-      // Computes timeRemaining from timestamps — no drift.
       tick: () => {
         const { timerState, startedAt, pausedElapsed, totalDuration } = get()
         if (timerState !== 'running' || startedAt === null) return
@@ -348,11 +366,6 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
         set({ timeRemaining: remaining }, undefined, 'tick')
 
         if (remaining === 0) {
-          // --- Double-completion guard ---
-          // Set timerState to 'idle' synchronously BEFORE the async call so
-          // any subsequent tick() invocations that still fire before the
-          // interval is cleared will see timerState !== 'running' and exit
-          // at the guard above.
           set({ timerState: 'idle' }, undefined, 'tick/completing')
 
           get()
@@ -396,7 +409,7 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
 
         const completedSession: PomodoroSession = {
           id: currentSessionId,
-          type: currentType,
+          session_type: currentType,
           duration_seconds: totalDuration,
           completed: true,
           task_id: linkedTaskId,
@@ -405,8 +418,6 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
           created_at: sessionStartedAt,
         }
 
-        // Update state — timerState was already set to 'idle' by tick() above,
-        // so we only override it when autoStart is true.
         set(
           state => ({
             timerState: autoStart ? 'running' : 'idle',
@@ -424,17 +435,17 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
           '_completeSession'
         )
 
-        // Interval management — single decision point:
-        //   autoStart → keep/restart interval (clear first to avoid duplicates)
-        //   !autoStart → ensure interval is cleared
         _clearInterval()
         if (autoStart) {
           _startInterval()
         }
 
-        // Persist to SQLite
+        // Persist to Rust backend
         try {
-          await savePomodoroSession(completedSession)
+          await commands.savePomodoroSession({
+            ...completedSession,
+            ended_at: completedSession.ended_at ?? null,
+          })
         } catch (err) {
           logger.error(`[pomodoro] Failed to save session: ${String(err)}`)
         }
@@ -454,9 +465,20 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
       loadSettings: async () => {
         set({ isLoadingSettings: true }, undefined, 'loadSettings/start')
         try {
-          const settings = await loadPomodoroSettings()
+          const result = await commands.getPomodoroSettings()
+          if (result.status !== 'ok') throw result.error
+
+          const settings: PomodoroSettings = {
+            focus_duration: result.data.focus_duration,
+            short_break_duration: result.data.short_break_duration,
+            long_break_duration: result.data.long_break_duration,
+            pomos_until_long_break: result.data.pomos_until_long_break,
+            auto_start_breaks: result.data.auto_start_breaks,
+            auto_start_focus: result.data.auto_start_focus,
+            sound_notifications: result.data.sound_notifications,
+          }
+
           const { currentType } = get()
-          // Only update totalDuration/timeRemaining if timer is idle
           const duration = durationForType(currentType, settings)
           set(
             state => ({
@@ -483,7 +505,6 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
         let newDuration = state.totalDuration
         let newRemaining = state.timeRemaining
 
-        // If timer is idle, update duration and timeRemaining dynamically based on new settings
         if (state.timerState === 'idle') {
           newDuration = durationForType(state.currentType, newSettings)
           newRemaining = newDuration
@@ -499,7 +520,7 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
           'updateSettings'
         )
         try {
-          await savePomodoroSettings(newSettings)
+          await commands.savePomodoroSettings(newSettings)
         } catch (err) {
           logger.error(`Failed to save pomodoro settings: ${String(err)}`)
         }
@@ -509,7 +530,20 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
       loadTodaySessions: async () => {
         set({ isLoadingSessions: true }, undefined, 'loadTodaySessions/start')
         try {
-          const sessions = await loadTodaySessions()
+          const result = await commands.getTodaySessions(todayStartISO())
+          if (result.status !== 'ok') throw result.error
+
+          const sessions: PomodoroSession[] = result.data.map(s => ({
+            id: s.id,
+            session_type: s.session_type as PomodoroSession['session_type'],
+            duration_seconds: s.duration_seconds,
+            completed: s.completed,
+            task_id: s.task_id,
+            started_at: s.started_at,
+            ended_at: s.ended_at ?? undefined,
+            created_at: s.created_at,
+          }))
+
           set(
             { todaySessions: sessions, isLoadingSessions: false },
             undefined,

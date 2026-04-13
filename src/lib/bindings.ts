@@ -142,6 +142,250 @@ async updateQuickPaneShortcut(shortcut: string | null) : Promise<Result<null, st
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Returns all tasks ordered by sort_order.
+ */
+async getTasks() : Promise<Result<Task[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_tasks") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Returns all subtasks for a given task.
+ */
+async getSubtasks(taskId: string) : Promise<Result<Subtask[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_subtasks", { taskId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Returns today's pending tasks (due today or no due date, status != done).
+ */
+async getTasksToday(today: string) : Promise<Result<Task[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_tasks_today", { today }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Creates a new task and returns it.
+ */
+async createTask(input: CreateTaskInput) : Promise<Result<Task, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_task", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Updates an existing task. Returns the updated task.
+ */
+async updateTask(input: UpdateTaskInput) : Promise<Result<Task, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_task", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Deletes a task (subtasks cascade via FK).
+ */
+async deleteTask(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_task", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Toggles a task between done and todo. Returns the updated task.
+ */
+async toggleTaskComplete(id: string, completedAt: string | null, updatedAt: string) : Promise<Result<Task, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("toggle_task_complete", { id, completedAt, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Creates a subtask.
+ */
+async createSubtask(input: CreateSubtaskInput) : Promise<Result<Subtask, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_subtask", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Toggles a subtask's completed status.
+ */
+async toggleSubtask(id: string, completed: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("toggle_subtask", { id, completed }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Deletes a subtask.
+ */
+async deleteSubtask(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_subtask", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Saves a pomodoro session (completed or aborted).
+ */
+async savePomodoroSession(session: PomodoroSession) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_pomodoro_session", { session }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Returns all sessions started on or after `today_start` (UTC ISO timestamp).
+ */
+async getTodaySessions(todayStart: string) : Promise<Result<PomodoroSession[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_today_sessions", { todayStart }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Loads persisted pomodoro settings. Returns defaults if not yet saved.
+ */
+async getPomodoroSettings() : Promise<Result<PomodoroSettings, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_pomodoro_settings") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Persists pomodoro settings (upsert on the singleton row id=1).
+ */
+async savePomodoroSettings(settings: PomodoroSettings) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("save_pomodoro_settings", { settings }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Returns all active habits ordered by sort_order.
+ */
+async getHabits() : Promise<Result<Habit[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_habits") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Creates a new habit.
+ */
+async createHabit(input: CreateHabitInput) : Promise<Result<Habit, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_habit", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Updates an existing habit's fields. Returns the updated habit.
+ */
+async updateHabit(input: UpdateHabitInput) : Promise<Result<Habit, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_habit", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Archives a habit (sets active = false). Logs are preserved.
+ */
+async archiveHabit(id: string, updatedAt: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("archive_habit", { id, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Permanently deletes a habit and its logs (ON DELETE CASCADE).
+ */
+async deleteHabit(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_habit", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Toggles a habit log for the given date.
+ * Inserts if no log exists; deletes if it already exists.
+ * Returns `true` if the habit is now completed, `false` if uncompleted.
+ */
+async toggleHabitLog(habitId: string, date: string, logId: string, completedAt: string) : Promise<Result<boolean, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("toggle_habit_log", { habitId, date, logId, completedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Returns all habit logs within a date range (inclusive), used for heat maps.
+ */
+async getHabitLogsRange(startDate: string, endDate: string) : Promise<Result<HabitLog[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_habit_logs_range", { startDate, endDate }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Returns all habit logs for a specific date.
+ */
+async getHabitLogsForDate(date: string) : Promise<Result<HabitLog[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_habit_logs_for_date", { date }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -170,7 +414,14 @@ quick_pane_shortcut: string | null;
  * If None, uses system locale detection
  */
 language: string | null }
+export type CreateHabitInput = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; sort_order: number; created_at: string; updated_at: string }
+export type CreateSubtaskInput = { id: string; task_id: string; title: string; sort_order: number; created_at: string }
+export type CreateTaskInput = { id: string; title: string; description: string | null; priority: string; due_date: string | null; created_at: string; updated_at: string; sort_order: number }
+export type Habit = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; active: boolean; sort_order: number; created_at: string; updated_at: string }
+export type HabitLog = { id: string; habit_id: string; completed_date: string; completed_at: string }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
+export type PomodoroSession = { id: string; session_type: string; duration_seconds: number; completed: boolean; task_id: string | null; started_at: string; ended_at: string | null; created_at: string }
+export type PomodoroSettings = { focus_duration: number; short_break_duration: number; long_break_duration: number; pomos_until_long_break: number; auto_start_breaks: boolean; auto_start_focus: boolean; sound_notifications: boolean }
 /**
  * Error types for recovery operations (typed for frontend matching)
  */
@@ -195,6 +446,10 @@ export type RecoveryError =
  * JSON serialization/deserialization error
  */
 { type: "ParseError"; message: string }
+export type Subtask = { id: string; task_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
+export type Task = { id: string; title: string; description: string | null; priority: string; status: string; due_date: string | null; completed_at: string | null; created_at: string; updated_at: string; sort_order: number }
+export type UpdateHabitInput = { id: string; name: string | null; color: string | null; icon: string | null; frequency: string | null; frequency_days: string | null; sort_order: number | null; updated_at: string }
+export type UpdateTaskInput = { id: string; title: string | null; description: string | null; priority: string | null; status: string | null; due_date: string | null; completed_at: string | null; updated_at: string; sort_order: number | null }
 
 /** tauri-specta globals **/
 

@@ -24,6 +24,26 @@
 export { commands, type Result } from './bindings'
 export type { AppPreferences, JsonValue, RecoveryError } from './bindings'
 
+// Tasks domain
+export type {
+  Task,
+  CreateTaskInput,
+  UpdateTaskInput,
+  Subtask,
+  CreateSubtaskInput,
+} from './bindings'
+
+// Pomodoro domain
+export type { PomodoroSession, PomodoroSettings } from './bindings'
+
+// Habits domain
+export type {
+  Habit,
+  HabitLog,
+  CreateHabitInput,
+  UpdateHabitInput,
+} from './bindings'
+
 /**
  * Helper to unwrap a Result type, throwing on error
  */

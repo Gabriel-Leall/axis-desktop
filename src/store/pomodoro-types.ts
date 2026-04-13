@@ -10,7 +10,7 @@ export interface PomodoroSettings {
 
 export interface PomodoroSession {
   id: string
-  type: 'focus' | 'short_break' | 'long_break'
+  session_type: 'focus' | 'short_break' | 'long_break'
   duration_seconds: number
   completed: boolean
   task_id: string | null

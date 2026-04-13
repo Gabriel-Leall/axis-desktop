@@ -1,18 +1,6 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import {
-  archiveHabit as dbArchiveHabit,
-  createHabit as dbCreateHabit,
-  deleteHabit as dbDeleteHabit,
-  deleteHabitLog,
-  loadActiveHabits,
-  loadLogsByDate,
-  loadLogsSinceDate,
-  type HabitLogRecord,
-  type HabitRecord,
-  updateHabit as dbUpdateHabit,
-  upsertHabitLog,
-} from '@/services/habits-db'
+import { commands } from '@/lib/tauri-bindings'
 import {
   bestHistoricalStreak,
   buildDateRange,
@@ -76,30 +64,6 @@ interface HabitsState {
   setActiveTab: (tab: HabitsTab) => void
 }
 
-function recordToHabit(record: HabitRecord): Habit {
-  return {
-    id: record.id,
-    name: record.name,
-    color: record.color,
-    icon: record.icon ?? undefined,
-    frequency: record.frequency,
-    frequency_days: record.frequency_days ?? undefined,
-    active: record.active === 1,
-    sort_order: record.sort_order,
-    created_at: record.created_at,
-    updated_at: record.updated_at,
-  }
-}
-
-function recordToLog(record: HabitLogRecord): HabitLog {
-  return {
-    id: record.id,
-    habit_id: record.habit_id,
-    completed_date: record.completed_date,
-    completed_at: record.completed_at,
-  }
-}
-
 function monthWindowStart(days = 30): string {
   const cursor = new Date()
   cursor.setDate(cursor.getDate() - (days - 1))
@@ -124,15 +88,23 @@ export const useHabitsStore = create<HabitsState>()(
       loadHabits: async () => {
         set({ isLoading: true, error: null }, undefined, 'loadHabits/start')
         try {
-          const records = await loadActiveHabits()
-          set(
-            {
-              habits: records.map(recordToHabit),
-              isLoading: false,
-            },
-            undefined,
-            'loadHabits/done'
-          )
+          const result = await commands.getHabits()
+          if (result.status !== 'ok') throw result.error
+
+          const habits: Habit[] = result.data.map(h => ({
+            id: h.id,
+            name: h.name,
+            color: h.color,
+            icon: h.icon ?? undefined,
+            frequency: h.frequency as HabitFrequency,
+            frequency_days: h.frequency_days ?? undefined,
+            active: h.active,
+            sort_order: h.sort_order,
+            created_at: h.created_at,
+            updated_at: h.updated_at,
+          }))
+
+          set({ habits, isLoading: false }, undefined, 'loadHabits/done')
         } catch (error) {
           logger.error(`Failed to load habits: ${String(error)}`)
           set(
@@ -146,12 +118,17 @@ export const useHabitsStore = create<HabitsState>()(
       loadTodayLogs: async () => {
         try {
           const today = getLocalISODate()
-          const records = await loadLogsByDate(today)
-          set(
-            { todayLogs: records.map(recordToLog) },
-            undefined,
-            'loadTodayLogs'
-          )
+          const result = await commands.getHabitLogsForDate(today)
+          if (result.status !== 'ok') throw result.error
+
+          const todayLogs: HabitLog[] = result.data.map(l => ({
+            id: l.id,
+            habit_id: l.habit_id,
+            completed_date: l.completed_date,
+            completed_at: l.completed_at,
+          }))
+
+          set({ todayLogs }, undefined, 'loadTodayLogs')
         } catch (error) {
           logger.error(`Failed to load today logs: ${String(error)}`)
           set(
@@ -164,12 +141,19 @@ export const useHabitsStore = create<HabitsState>()(
 
       loadMonthLogs: async () => {
         try {
-          const records = await loadLogsSinceDate(monthWindowStart(30))
-          set(
-            { monthLogs: records.map(recordToLog) },
-            undefined,
-            'loadMonthLogs'
-          )
+          const startDate = monthWindowStart(30)
+          const endDate = getLocalISODate()
+          const result = await commands.getHabitLogsRange(startDate, endDate)
+          if (result.status !== 'ok') throw result.error
+
+          const monthLogs: HabitLog[] = result.data.map(l => ({
+            id: l.id,
+            habit_id: l.habit_id,
+            completed_date: l.completed_date,
+            completed_at: l.completed_at,
+          }))
+
+          set({ monthLogs }, undefined, 'loadMonthLogs')
         } catch (error) {
           logger.error(`Failed to load month logs: ${String(error)}`)
           set(
@@ -188,6 +172,7 @@ export const useHabitsStore = create<HabitsState>()(
         )
 
         if (existing) {
+          // Optimistic remove
           set(
             state => ({
               todayLogs: state.todayLogs.filter(log => log.id !== existing.id),
@@ -198,7 +183,18 @@ export const useHabitsStore = create<HabitsState>()(
           )
 
           try {
-            await deleteHabitLog(habitId, today)
+            const result = await commands.toggleHabitLog(
+              habitId,
+              today,
+              existing.id,
+              nowISO
+            )
+            // If backend returned true (completed), it means the log was re-inserted
+            // which shouldn't happen in uncheck flow — reload to reconcile.
+            if (result.status === 'ok' && result.data === true) {
+              await get().loadTodayLogs()
+              await get().loadMonthLogs()
+            }
           } catch (error) {
             logger.error(`Failed to uncheck habit: ${String(error)}`)
             await get().loadTodayLogs()
@@ -214,6 +210,7 @@ export const useHabitsStore = create<HabitsState>()(
           completed_at: nowISO,
         }
 
+        // Optimistic add
         set(
           state => ({
             todayLogs: [...state.todayLogs, newLog],
@@ -224,7 +221,7 @@ export const useHabitsStore = create<HabitsState>()(
         )
 
         try {
-          await upsertHabitLog(newLog)
+          await commands.toggleHabitLog(habitId, today, newLog.id, nowISO)
         } catch (error) {
           logger.error(`Failed to check habit: ${String(error)}`)
           await get().loadTodayLogs()
@@ -257,14 +254,13 @@ export const useHabitsStore = create<HabitsState>()(
         )
 
         try {
-          await dbCreateHabit({
+          await commands.createHabit({
             id: newHabit.id,
             name: newHabit.name,
             color: newHabit.color,
             icon: newHabit.icon ?? null,
             frequency: newHabit.frequency,
             frequency_days: newHabit.frequency_days ?? null,
-            active: 1,
             sort_order: newHabit.sort_order,
             created_at: newHabit.created_at,
             updated_at: newHabit.updated_at,
@@ -307,17 +303,19 @@ export const useHabitsStore = create<HabitsState>()(
         )
 
         try {
-          await dbUpdateHabit(id, {
-            name: updates.name,
-            color: updates.color,
-            icon: updates.icon,
-            frequency: updates.frequency,
+          await commands.updateHabit({
+            id,
+            name: updates.name ?? null,
+            color: updates.color ?? null,
+            icon: updates.icon ?? null,
+            frequency: updates.frequency ?? null,
             frequency_days:
               updates.frequency === 'custom'
                 ? (updates.frequency_days ?? '[]')
                 : updates.frequency
                   ? null
-                  : updates.frequency_days,
+                  : (updates.frequency_days ?? null),
+            sort_order: null,
             updated_at: now,
           })
         } catch (error) {
@@ -338,7 +336,7 @@ export const useHabitsStore = create<HabitsState>()(
         )
 
         try {
-          await dbArchiveHabit(id, now)
+          await commands.archiveHabit(id, now)
         } catch (error) {
           logger.error(`Failed to archive habit: ${String(error)}`)
           set({ habits: snapshot }, undefined, 'archiveHabit/rollback')
@@ -364,7 +362,7 @@ export const useHabitsStore = create<HabitsState>()(
         )
 
         try {
-          await dbDeleteHabit(id)
+          await commands.deleteHabit(id)
         } catch (error) {
           logger.error(`Failed to delete habit: ${String(error)}`)
           set(

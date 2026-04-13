@@ -1,17 +1,10 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import {
-  loadAllTasks,
-  createTask as dbCreateTask,
-  replaceTask as dbReplaceTask,
-  deleteTask as dbDeleteTask,
-  createSubtask as dbCreateSubtask,
-  toggleSubtask as dbToggleSubtask,
-  deleteSubtask as dbDeleteSubtask,
-} from '@/services/tasks-db'
+import { commands } from '@/lib/tauri-bindings'
 import { logger } from '@/lib/logger'
 
 // ─── Domain Types ──────────────────────────────────────────────────────────────
+// These extend the generated bindings types with frontend-only fields.
 
 export type Priority = 'low' | 'medium' | 'high'
 export type Status = 'todo' | 'in_progress' | 'done'
@@ -93,6 +86,13 @@ function generateId(): string {
         Math.random().toString(36).substring(2, 15)
 }
 
+function unwrapOrThrow<T>(
+  result: { status: 'ok'; data: T } | { status: 'error'; error: unknown }
+): T {
+  if (result.status === 'ok') return result.data
+  throw result.error
+}
+
 // ─── Store ─────────────────────────────────────────────────────────────────────
 
 export const useTasksStore = create<TasksState>()(
@@ -108,7 +108,42 @@ export const useTasksStore = create<TasksState>()(
       loadTasks: async () => {
         set({ isLoading: true }, undefined, 'loadTasks/start')
         try {
-          const tasks = await loadAllTasks()
+          const [tasksResult, subtasksMap] = await Promise.all([
+            commands.getTasks(),
+            // Fetch all subtasks for all tasks in one pass using a single query
+            // per task would be N+1; instead we load all tasks first then batch
+            // subtask fetches. For a typical task count (<200) this is fine.
+            Promise.resolve(new Map<string, Subtask[]>()),
+          ])
+
+          const rawTasks = unwrapOrThrow(tasksResult)
+
+          // Load subtasks for each task (batched)
+          const subtaskResults = await Promise.all(
+            rawTasks.map(t => commands.getSubtasks(t.id))
+          )
+
+          rawTasks.forEach((t, i) => {
+            const result = subtaskResults[i]
+            if (result && result.status === 'ok') {
+              subtasksMap.set(t.id, result.data)
+            }
+          })
+
+          const tasks: Task[] = rawTasks.map(t => ({
+            id: t.id,
+            title: t.title,
+            description: t.description ?? undefined,
+            priority: t.priority as Priority,
+            status: t.status as Status,
+            due_date: t.due_date ?? undefined,
+            completed_at: t.completed_at ?? undefined,
+            created_at: t.created_at,
+            updated_at: t.updated_at,
+            sort_order: t.sort_order,
+            subtasks: subtasksMap.get(t.id) ?? [],
+          }))
+
           set({ tasks, isLoading: false }, undefined, 'loadTasks/done')
         } catch (error) {
           logger.error(`Failed to load tasks: ${String(error)}`)
@@ -119,8 +154,11 @@ export const useTasksStore = create<TasksState>()(
       // ── Add ──────────────────────────────────────────────────────────────────
       addTask: async (title, options = {}) => {
         const now = utcNow()
+        const id = generateId()
+        const sortOrder = get().tasks.length
+
         const newTask: Task = {
-          id: generateId(),
+          id,
           title: title.trim(),
           description: options.description,
           priority: options.priority ?? 'medium',
@@ -128,7 +166,7 @@ export const useTasksStore = create<TasksState>()(
           due_date: options.due_date ?? todayISO(),
           created_at: now,
           updated_at: now,
-          sort_order: get().tasks.length,
+          sort_order: sortOrder,
           subtasks: [],
         }
 
@@ -140,14 +178,23 @@ export const useTasksStore = create<TasksState>()(
         )
 
         try {
-          await dbCreateTask(newTask)
+          await unwrapOrThrow(
+            await commands.createTask({
+              id,
+              title: newTask.title,
+              description: newTask.description ?? null,
+              priority: newTask.priority,
+              due_date: newTask.due_date ?? null,
+              created_at: newTask.created_at,
+              updated_at: newTask.updated_at,
+              sort_order: sortOrder,
+            })
+          )
         } catch (error) {
-          // Rollback — remove the optimistic task
-          // console.error is intentional here: surfaces the full error in Tauri DevTools
-          console.error('[tasks-store] addTask FAILED — SQLite error:', error)
+          console.error('[tasks-store] addTask FAILED:', error)
           logger.error(`addTask failed, rolling back: ${String(error)}`)
           set(
-            state => ({ tasks: state.tasks.filter(t => t.id !== newTask.id) }),
+            state => ({ tasks: state.tasks.filter(t => t.id !== id) }),
             undefined,
             'addTask/rollback'
           )
@@ -177,10 +224,21 @@ export const useTasksStore = create<TasksState>()(
         if (!updated) return
 
         try {
-          await dbReplaceTask(updated)
+          await unwrapOrThrow(
+            await commands.updateTask({
+              id,
+              title: updated.title,
+              description: updated.description ?? null,
+              priority: updated.priority,
+              status: updated.status,
+              due_date: updated.due_date ?? null,
+              completed_at: updated.completed_at ?? null,
+              updated_at: now,
+              sort_order: updated.sort_order,
+            })
+          )
         } catch (error) {
           logger.error(`Failed to persist task update: ${String(error)}`)
-          // Reload from DB to reconcile
           await get().loadTasks()
           throw error
         }
@@ -196,7 +254,7 @@ export const useTasksStore = create<TasksState>()(
         )
 
         try {
-          await dbDeleteTask(id)
+          await unwrapOrThrow(await commands.deleteTask(id))
         } catch (error) {
           set({ tasks: snapshot }, undefined, 'deleteTask/rollback')
           throw error
@@ -210,9 +268,10 @@ export const useTasksStore = create<TasksState>()(
 
         const now = utcNow()
         const isDone = task.status === 'done'
+        const newCompletedAt = isDone ? undefined : now
         const updates: Partial<Task> = {
           status: isDone ? 'todo' : 'done',
-          completed_at: isDone ? undefined : now,
+          completed_at: newCompletedAt,
           updated_at: now,
         }
 
@@ -226,11 +285,10 @@ export const useTasksStore = create<TasksState>()(
           'toggleComplete'
         )
 
-        const updated = get().tasks.find(t => t.id === id)
-        if (!updated) return
-
         try {
-          await dbReplaceTask(updated)
+          await unwrapOrThrow(
+            await commands.toggleTaskComplete(id, newCompletedAt ?? null, now)
+          )
         } catch (error) {
           logger.error(`Failed to toggle task: ${String(error)}`)
           await get().loadTasks()
@@ -264,7 +322,13 @@ export const useTasksStore = create<TasksState>()(
           'addSubtask'
         )
 
-        await dbCreateSubtask(newSubtask)
+        await commands.createSubtask({
+          id: newSubtask.id,
+          task_id: taskId,
+          title: newSubtask.title,
+          sort_order: newSubtask.sort_order,
+          created_at: now,
+        })
       },
 
       toggleSubtask: async (taskId, subtaskId) => {
@@ -291,7 +355,7 @@ export const useTasksStore = create<TasksState>()(
           'toggleSubtask'
         )
 
-        await dbToggleSubtask(subtaskId, newCompleted)
+        await commands.toggleSubtask(subtaskId, newCompleted)
       },
 
       deleteSubtask: async (taskId, subtaskId) => {
@@ -310,7 +374,7 @@ export const useTasksStore = create<TasksState>()(
           'deleteSubtask'
         )
 
-        await dbDeleteSubtask(subtaskId)
+        await commands.deleteSubtask(subtaskId)
       },
 
       // ── Filters ───────────────────────────────────────────────────────────────
