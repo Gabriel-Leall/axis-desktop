@@ -3,6 +3,7 @@ import { emit, listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { commands } from '@/lib/tauri-bindings'
 import { logger } from '@/lib/logger'
+import { applyDocumentTheme, THEME_STORAGE_KEY } from '@/lib/theme'
 
 /** Dismiss the quick pane window, logging any errors */
 async function dismissQuickPane() {
@@ -23,20 +24,8 @@ async function dismissQuickPane() {
  */
 // Apply theme from localStorage to document
 function applyTheme() {
-  const theme = localStorage.getItem('ui-theme') || 'system'
-  const root = document.documentElement
-
-  root.classList.remove('light', 'dark')
-
-  if (theme === 'system') {
-    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-      .matches
-      ? 'dark'
-      : 'light'
-    root.classList.add(systemTheme)
-  } else {
-    root.classList.add(theme)
-  }
+  const theme = localStorage.getItem(THEME_STORAGE_KEY) || 'system'
+  applyDocumentTheme(theme as 'light' | 'dark' | 'system')
 }
 
 export default function QuickPaneApp() {
@@ -107,7 +96,7 @@ export default function QuickPaneApp() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex h-screen w-screen items-center rounded-[var(--app-corner-radius)] border border-border bg-background px-5 shadow-lg"
+      className="flex h-screen w-screen items-center rounded-(--app-corner-radius) border border-border bg-background px-5 shadow-lg"
     >
       <input
         ref={inputRef}

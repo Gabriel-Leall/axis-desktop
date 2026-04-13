@@ -87,6 +87,8 @@ onFocusChanged(({ payload: focused }) => {
 })
 ```
 
+Use `src/lib/theme.ts` as the shared source of truth for theme resolution (`system` -> `light`/`dark`) and DOM class application. This keeps main window and quick pane behavior consistent and prepares the codebase for future custom theme families on top of the same light/dark base.
+
 ## Platform Behavior
 
 | Platform      | Panel Type    | Fullscreen Overlay | Dismiss Behavior            |

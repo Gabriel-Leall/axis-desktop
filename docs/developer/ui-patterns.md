@@ -93,8 +93,9 @@ Then use with Tailwind: `bg-success text-success-foreground`
 
 1. **ThemeProvider** (`src/components/ThemeProvider.tsx`) manages theme state
 2. Adds `.dark` class to `<html>` element when dark mode is active
-3. CSS variables in `.dark` override `:root` values
-4. Tailwind's `dark:` variant applies styles conditionally
+3. Syncs app chrome with Tauri `app.setTheme()` (`light` / `dark` / `system`)
+4. CSS variables in `.dark` override `:root` values
+5. Tailwind's `dark:` variant applies styles conditionally
 
 ### Theme Options
 

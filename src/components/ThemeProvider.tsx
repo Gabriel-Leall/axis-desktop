@@ -2,6 +2,12 @@ import { useEffect, useLayoutEffect, useState, useRef } from 'react'
 import { emit } from '@tauri-apps/api/event'
 import { ThemeProviderContext, type Theme } from '@/lib/theme-context'
 import { usePreferences } from '@/services/preferences'
+import {
+  applyDocumentTheme,
+  resolveThemePreference,
+  syncNativeAppTheme,
+  THEME_STORAGE_KEY,
+} from '@/lib/theme'
 
 interface ThemeProviderProps {
   children: React.ReactNode
@@ -12,11 +18,17 @@ interface ThemeProviderProps {
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
-  storageKey = 'ui-theme',
+  storageKey = THEME_STORAGE_KEY,
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+  )
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
+    resolveThemePreference(
+      (localStorage.getItem(storageKey) as Theme) || defaultTheme,
+      window.matchMedia('(prefers-color-scheme: dark)').matches
+    )
   )
 
   // Load theme from persistent preferences
@@ -35,32 +47,36 @@ export function ThemeProvider({
   }, [preferences?.theme])
 
   useEffect(() => {
-    const root = window.document.documentElement
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
-    const applyTheme = (isDark: boolean) => {
-      root.classList.remove('light', 'dark')
-      root.classList.add(isDark ? 'dark' : 'light')
+    const applyTheme = () => {
+      const appliedTheme = applyDocumentTheme(theme)
+      setResolvedTheme(appliedTheme)
     }
 
     if (theme === 'system') {
-      applyTheme(mediaQuery.matches)
+      applyTheme()
 
-      const handleChange = (e: MediaQueryListEvent) => applyTheme(e.matches)
+      const handleChange = () => applyTheme()
       mediaQuery.addEventListener('change', handleChange)
       return () => mediaQuery.removeEventListener('change', handleChange)
     }
 
-    applyTheme(theme === 'dark')
+    applyTheme()
+  }, [theme])
+
+  useEffect(() => {
+    void syncNativeAppTheme(theme)
   }, [theme])
 
   const value = {
     theme,
+    resolvedTheme,
     setTheme: (newTheme: Theme) => {
       localStorage.setItem(storageKey, newTheme)
       setTheme(newTheme)
       // Notify other windows (e.g., quick pane) of theme change
-      emit('theme-changed', { theme: newTheme })
+      void emit('theme-changed', { theme: newTheme })
     },
   }
 
