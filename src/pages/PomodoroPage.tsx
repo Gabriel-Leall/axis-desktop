@@ -276,7 +276,7 @@ function SessionIcon({ type }: { type: SessionType }) {
 function SessionHistorySection({ sessions }: { sessions: PomodoroSession[] }) {
   const tasks = useTasksStore(state => state.tasks)
   const completedFocus = sessions.filter(
-    s => s.type === 'focus' && s.completed
+    s => s.session_type === 'focus' && s.completed
   ).length
 
   return (
@@ -311,12 +311,12 @@ function SessionHistorySection({ sessions }: { sessions: PomodoroSession[] }) {
                   !session.completed && 'bg-muted/40'
                 )}
               >
-                <SessionIcon type={session.type} />
+                <SessionIcon type={session.session_type} />
                 <span className="font-mono text-muted-foreground w-11 shrink-0">
                   {formatSessionTime(session.started_at)}
                 </span>
                 <span className="text-muted-foreground/70 shrink-0">
-                  {typeLabel(session.type)}
+                  {typeLabel(session.session_type)}
                 </span>
                 <span className="text-muted-foreground/50 shrink-0">
                   {formatDuration(session.duration_seconds)}
