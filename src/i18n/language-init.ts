@@ -45,12 +45,13 @@ export async function initializeLanguage(
       // Extract the language code (e.g., "en-US" -> "en")
       const parts = systemLocale.split('-')
       const langCode = (parts[0] ?? 'en').toLowerCase()
+      const resolvedLanguage = langCode === 'pt' ? 'pt-BR' : langCode
 
-      if (availableLanguages.includes(langCode)) {
-        await i18n.changeLanguage(langCode)
+      if (availableLanguages.includes(resolvedLanguage)) {
+        await i18n.changeLanguage(resolvedLanguage)
         logger.info('Language set from system locale', {
           systemLocale,
-          language: langCode,
+          language: resolvedLanguage,
         })
         return
       }

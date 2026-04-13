@@ -17,8 +17,7 @@ import { logger } from '@/lib/logger'
 // Language display names (native names)
 const languageNames: Record<string, string> = {
   en: 'English',
-  fr: 'Français',
-  ar: 'العربية',
+  'pt-BR': 'Português (Brasil)',
 }
 
 export function AppearancePane() {
@@ -48,10 +47,11 @@ export function AppearancePane() {
         // System language selected - detect and apply system locale
         const systemLocale = await locale()
         const langCode = systemLocale?.split('-')[0]?.toLowerCase() ?? 'en'
-        const targetLang = availableLanguages.includes(langCode)
-          ? langCode
+        const targetLang = langCode === 'pt' ? 'pt-BR' : langCode
+        const resolvedLang = availableLanguages.includes(targetLang)
+          ? targetLang
           : 'en'
-        await i18n.changeLanguage(targetLang)
+        await i18n.changeLanguage(resolvedLang)
       }
     } catch (error) {
       logger.error('Failed to change language', { error })
