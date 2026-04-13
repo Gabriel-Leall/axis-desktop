@@ -29,6 +29,7 @@ Guide to all Tauri plugins installed in this app, plus built-in features and gui
 | **process**           | Exit/restart app                  | `@tauri-apps/plugin-process`           |
 | **os**                | OS information                    | `@tauri-apps/plugin-os`                |
 | **global-shortcut**   | System-wide keyboard shortcuts    | None (configured in Rust)              |
+| **autostart**         | Launch app at OS startup          | `@tauri-apps/plugin-autostart`         |
 | **updater**           | In-app updates                    | `@tauri-apps/plugin-updater`           |
 
 ### Platform-Specific

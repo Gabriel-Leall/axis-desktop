@@ -59,6 +59,12 @@ pub fn run() {
         app_builder = app_builder.plugin(tauri_plugin_updater::Builder::new().build());
     }
 
+    // Autostart plugin - allows enabling launch at system startup.
+    #[cfg(desktop)]
+    {
+        app_builder = app_builder.plugin(tauri_plugin_autostart::Builder::new().build());
+    }
+
     app_builder = app_builder
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_notification::init())

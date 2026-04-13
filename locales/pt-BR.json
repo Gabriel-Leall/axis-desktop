@@ -39,9 +39,9 @@
   "preferences.appearance.languageDescription": "Choose your preferred display language",
   "preferences.appearance.language.system": "System Default",
 
-  "preferences.advanced.startup": "Startup",
-  "preferences.advanced.launchAtStartup": "Launch at system startup",
-  "preferences.advanced.launchAtStartupDescription": "Start Axis Desktop automatically when you sign in",
+  "preferences.advanced.startup": "Inicialização",
+  "preferences.advanced.launchAtStartup": "Iniciar com o sistema",
+  "preferences.advanced.launchAtStartupDescription": "Inicia o Axis Desktop automaticamente quando você entra no Windows",
 
   "preferences.advanced.title": "Example Advanced Settings",
   "preferences.advanced.toggle": "Example Advanced Toggle",
@@ -100,12 +100,12 @@
   "titlebar.settings": "Settings",
 
   "toast.success.preferencesSaved": "Preferences saved",
-  "toast.success.autostartEnabled": "Launch at startup enabled",
-  "toast.success.autostartDisabled": "Launch at startup disabled",
+  "toast.success.autostartEnabled": "Inicialização com o sistema ativada",
+  "toast.success.autostartDisabled": "Inicialização com o sistema desativada",
   "toast.success.testToast": "Test Toast",
   "toast.success.testToastDescription": "This is a test notification",
   "toast.error.generic": "Something went wrong",
-  "toast.error.autostartFailed": "Failed to update startup setting",
+  "toast.error.autostartFailed": "Falha ao atualizar a configuração de inicialização",
   "toast.error.shortcutFailed": "Failed to register shortcut",
   "toast.error.shortcutRestoreFailed": "Failed to restore previous shortcut",
   "toast.error.shortcutRestoreDescription": "The shortcut may be out of sync. Please restart the app or try again.",
