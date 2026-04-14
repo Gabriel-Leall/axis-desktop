@@ -2,7 +2,7 @@ use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
-        habits, notifications, pomodoro, preferences, quick_pane, recovery, tasks,
+        habits, notes, notifications, pomodoro, preferences, quick_pane, recovery, tasks,
     };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
@@ -44,6 +44,13 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         habits::toggle_habit_log,
         habits::get_habit_logs_range,
         habits::get_habit_logs_for_date,
+        // Notes
+        notes::get_notes,
+        notes::get_note,
+        notes::create_note,
+        notes::update_note,
+        notes::delete_note,
+        notes::search_notes,
     ])
 }
 

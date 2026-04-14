@@ -386,6 +386,54 @@ async getHabitLogsForDate(date: string) : Promise<Result<HabitLog[], string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getNotes() : Promise<Result<Note[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_notes") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getNote(id: string) : Promise<Result<Note, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_note", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createNote(input: CreateNoteInput) : Promise<Result<Note, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_note", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateNote(input: UpdateNoteInput) : Promise<Result<Note, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_note", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async deleteNote(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_note", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async searchNotes(query: string) : Promise<Result<Note[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("search_notes", { query }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -415,11 +463,13 @@ quick_pane_shortcut: string | null;
  */
 language: string | null }
 export type CreateHabitInput = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; sort_order: number; created_at: string; updated_at: string }
+export type CreateNoteInput = { id: string; content: string; created_at: string; updated_at: string; word_count: number }
 export type CreateSubtaskInput = { id: string; task_id: string; title: string; sort_order: number; created_at: string }
 export type CreateTaskInput = { id: string; title: string; description: string | null; priority: string; due_date: string | null; created_at: string; updated_at: string; sort_order: number }
 export type Habit = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; active: boolean; sort_order: number; created_at: string; updated_at: string }
 export type HabitLog = { id: string; habit_id: string; completed_date: string; completed_at: string }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
+export type Note = { id: string; content: string; created_at: string; updated_at: string; word_count: number }
 export type PomodoroSession = { id: string; session_type: string; duration_seconds: number; completed: boolean; task_id: string | null; started_at: string; ended_at: string | null; created_at: string }
 export type PomodoroSettings = { focus_duration: number; short_break_duration: number; long_break_duration: number; pomos_until_long_break: number; auto_start_breaks: boolean; auto_start_focus: boolean; sound_notifications: boolean }
 /**
@@ -449,6 +499,7 @@ export type RecoveryError =
 export type Subtask = { id: string; task_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
 export type Task = { id: string; title: string; description: string | null; priority: string; status: string; due_date: string | null; completed_at: string | null; created_at: string; updated_at: string; sort_order: number }
 export type UpdateHabitInput = { id: string; name: string | null; color: string | null; icon: string | null; frequency: string | null; frequency_days: string | null; sort_order: number | null; updated_at: string }
+export type UpdateNoteInput = { id: string; content: string; updated_at: string; word_count: number }
 export type UpdateTaskInput = { id: string; title: string | null; description: string | null; priority: string | null; status: string | null; due_date: string | null; completed_at: string | null; updated_at: string; sort_order: number | null }
 
 /** tauri-specta globals **/

@@ -404,6 +404,22 @@ pub fn run() {
                          ON habit_logs(completed_date)"
                     ).execute(&pool).await.expect("Failed to create habit_logs date index");
 
+                    // Notes
+                    sqlx::query(
+                        "CREATE TABLE IF NOT EXISTS notes (
+                            id TEXT PRIMARY KEY,
+                            content TEXT NOT NULL,
+                            created_at TEXT NOT NULL,
+                            updated_at TEXT NOT NULL,
+                            word_count INTEGER NOT NULL DEFAULT 0
+                        )"
+                    ).execute(&pool).await.expect("Failed to create notes table");
+
+                    sqlx::query(
+                        "CREATE INDEX IF NOT EXISTS idx_notes_updated_at \
+                         ON notes(updated_at)"
+                    ).execute(&pool).await.expect("Failed to create notes updated_at index");
+
                     // Migration: rename 'type' column to 'session_type' in old databases
                     // This is a no-op if the column already has the right name.
                     let has_type_col: bool = sqlx::query_scalar::<_, i64>(

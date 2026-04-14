@@ -44,6 +44,9 @@ export type {
   UpdateHabitInput,
 } from './bindings'
 
+// Notes domain
+export type { Note, CreateNoteInput, UpdateNoteInput } from './bindings'
+
 /**
  * Helper to unwrap a Result type, throwing on error
  */
