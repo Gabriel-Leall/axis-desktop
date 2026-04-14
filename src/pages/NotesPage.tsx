@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import MDEditor from '@uiw/react-md-editor'
+import { Editor as ToastEditor } from '@toast-ui/react-editor'
 import {
   Plus,
   Search,
@@ -26,8 +26,7 @@ import { logger } from '@/lib/logger'
 import { useUIStore } from '@/store/ui-store'
 import type { Note } from '@/lib/notes-domain'
 
-import '@uiw/react-md-editor/markdown-editor.css'
-import '@uiw/react-markdown-preview/markdown.css'
+import '@toast-ui/editor/dist/toastui-editor.css'
 
 interface NotesPageProps {
   initialSelectedNoteId?: string
@@ -156,6 +155,7 @@ function EditorArea({
   const [showMenu, setShowMenu] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const editorRef = useRef<ToastEditor>(null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -212,6 +212,11 @@ function EditorArea({
   }
 
   const wordCount = countWords(note.content)
+
+  const handleEditorChange = useCallback(() => {
+    const markdown = editorRef.current?.getInstance().getMarkdown() ?? ''
+    onContentChange(markdown)
+  }, [onContentChange])
 
   return (
     <div className="flex h-full flex-1 flex-col" data-color-mode="auto">
@@ -300,23 +305,28 @@ function EditorArea({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <MDEditor
-          value={note.content}
-          onChange={v => onContentChange(v ?? '')}
-          preview="live"
-          hideToolbar
-          visibleDragbar={false}
+      <div className="notes-inline-editor flex-1 overflow-hidden">
+        <ToastEditor
+          key={note.id}
+          ref={editorRef}
+          initialValue={note.content}
+          initialEditType="wysiwyg"
+          hideModeSwitch
           height="100%"
-          textareaProps={{
-            placeholder: 'Start writing...',
-          }}
+          placeholder="Start writing..."
+          usageStatistics={false}
+          toolbarItems={[
+            ['heading', 'bold', 'italic', 'strike'],
+            ['ul', 'ol', 'task', 'quote'],
+            ['link', 'code', 'codeblock'],
+          ]}
+          onChange={handleEditorChange}
         />
       </div>
 
       <div className="flex items-center justify-between border-t border-border px-3 py-1">
         <span className="font-mono text-[10px] text-muted-foreground/60">
-          Markdown
+          Inline WYSIWYG · Markdown · Ctrl/Cmd+B · Ctrl/Cmd+I
         </span>
         <span className="font-mono text-[10px] text-muted-foreground/60">
           {wordCount} words · {isSaving ? 'Saving...' : 'Saved'}

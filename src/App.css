@@ -65,43 +65,71 @@
   }
 }
 
-/* MDEditor overrides — matches design system */
-.w-md-editor {
-  --color-fg-default: var(--foreground) !important;
-  --color-canvas-default: transparent !important;
-  --color-border-default: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
+/* Inline notes editor (Toast UI) overrides */
+.notes-inline-editor .toastui-editor-defaultUI {
+  height: 100%;
+  border: 0;
+  background: transparent;
 }
 
-.w-md-editor-toolbar {
-  display: none !important;
+.notes-inline-editor .toastui-editor-toolbar {
+  border-color: color-mix(in oklab, var(--border) 85%, transparent);
+  background: color-mix(in oklab, var(--card) 78%, transparent);
+  backdrop-filter: blur(8px);
+  padding: 4px 6px;
 }
 
-.w-md-editor-text-pre,
-.w-md-editor-text-input,
-.w-md-editor-text {
+.notes-inline-editor .toastui-editor-toolbar button {
+  border-radius: 8px;
+}
+
+.notes-inline-editor .toastui-editor-toolbar button:hover,
+.notes-inline-editor .toastui-editor-toolbar button.active {
+  background: color-mix(in oklab, var(--accent) 78%, transparent);
+}
+
+.notes-inline-editor .toastui-editor-main {
+  background: transparent;
+}
+
+.notes-inline-editor .toastui-editor-ww-container {
+  background: transparent;
+}
+
+.notes-inline-editor .toastui-editor-contents {
+  font-family: 'Charter', 'Iowan Old Style', 'Palatino Linotype', serif;
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--foreground);
+}
+
+.notes-inline-editor .toastui-editor-contents p,
+.notes-inline-editor .toastui-editor-contents li {
+  margin: 0 0 0.75rem;
+}
+
+.notes-inline-editor .toastui-editor-contents h1,
+.notes-inline-editor .toastui-editor-contents h2,
+.notes-inline-editor .toastui-editor-contents h3 {
+  border-bottom: 0;
+  font-family: 'Fraunces', Georgia, serif;
+  letter-spacing: 0.01em;
+}
+
+.notes-inline-editor .toastui-editor-contents blockquote {
+  border-inline-start: 3px solid var(--border);
+  color: var(--muted-foreground);
+}
+
+.notes-inline-editor .toastui-editor-contents code {
   font-family:
     var(--font-geist-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
-    Consolas, monospace !important;
-  font-size: 14px !important;
-  line-height: 1.6 !important;
+    Consolas, monospace;
+  background: color-mix(in oklab, var(--muted) 40%, transparent);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
 }
 
-.w-md-editor-text-input::placeholder {
-  color: var(--muted-foreground) !important;
-  opacity: 0.4 !important;
-}
-
-.wmde-markdown {
-  background: transparent !important;
-  font-family: -apple-system, 'Segoe UI', 'Roboto', sans-serif !important;
-  font-size: 14px !important;
-}
-
-.wmde-markdown h1,
-.wmde-markdown h2,
-.wmde-markdown h3 {
-  border-bottom: none !important;
+.notes-inline-editor .toastui-editor-mode-switch {
+  display: none;
 }
