@@ -42,8 +42,8 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
   },
   {
     id: 'notes',
-    label: 'Quick Notes',
-    icon: 'StickyNote',
+    label: 'Brain Dump',
+    icon: 'Brain',
     defaultLayout: { x: 7, y: 0, w: 5, h: 3 },
     minW: 3,
     minH: 2,

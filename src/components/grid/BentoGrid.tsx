@@ -15,7 +15,7 @@ import { logger } from '@/lib/logger'
 import {
   ClockWidget,
   CalendarWidget,
-  NotesWidget,
+  NotesWidget as BrainDumpWidget,
   SystemInfoWidget,
   QuickActionsWidget,
   RecentFilesWidget,
@@ -51,11 +51,22 @@ function HabitWidgetConnected() {
   )
 }
 
+function BrainDumpWidgetConnected() {
+  const navigateTo = useUIStore(state => state.navigateTo)
+  return (
+    <BrainDumpWidget
+      onNavigateToNotes={selectedNoteId =>
+        navigateTo('notes', selectedNoteId ? { selectedNoteId } : {})
+      }
+    />
+  )
+}
+
 /** Map widget ID → React component */
 const WIDGET_COMPONENTS: Record<string, React.FC> = {
   clock: ClockWidget,
   calendar: CalendarWidget,
-  notes: NotesWidget,
+  notes: BrainDumpWidgetConnected,
   'system-info': SystemInfoWidget,
   'quick-actions': QuickActionsWidget,
   'recent-files': RecentFilesWidget,

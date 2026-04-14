@@ -1,6 +1,6 @@
 export { ClockWidget } from './ClockWidget'
 export { CalendarWidget } from './CalendarWidget'
-export { NotesWidget } from './NotesWidget'
+export { BrainDumpWidget as NotesWidget } from './BrainDumpWidget'
 export { SystemInfoWidget } from './SystemInfoWidget'
 export { QuickActionsWidget } from './QuickActionsWidget'
 export { RecentFilesWidget } from './RecentFilesWidget'
