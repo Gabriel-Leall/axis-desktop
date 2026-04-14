@@ -4,6 +4,7 @@ import { WidgetToggleMenu } from '@/components/grid'
 import { TasksPage } from '@/pages/TasksPage'
 import { PomodoroPage } from '@/pages/PomodoroPage'
 import { HabitPage } from '@/pages/HabitPage'
+import { NotesPage } from '@/pages/NotesPage'
 import { useUIStore } from '@/store/ui-store'
 
 interface MainWindowContentProps {
@@ -32,6 +33,10 @@ export function MainWindowContent({
             />
           ) : activePage === 'pomodoro' ? (
             <PomodoroPage />
+          ) : activePage === 'notes' ? (
+            <NotesPage
+              initialSelectedNoteId={activePageData['selectedNoteId']}
+            />
           ) : (
             <>
               {/* Header with widget toggle */}

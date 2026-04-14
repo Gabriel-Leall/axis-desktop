@@ -64,3 +64,44 @@
     app-region: drag;
   }
 }
+
+/* MDEditor overrides — matches design system */
+.w-md-editor {
+  --color-fg-default: var(--foreground) !important;
+  --color-canvas-default: transparent !important;
+  --color-border-default: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.w-md-editor-toolbar {
+  display: none !important;
+}
+
+.w-md-editor-text-pre,
+.w-md-editor-text-input,
+.w-md-editor-text {
+  font-family:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
+    Consolas, monospace !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+}
+
+.w-md-editor-text-input::placeholder {
+  color: var(--muted-foreground) !important;
+  opacity: 0.4 !important;
+}
+
+.wmde-markdown {
+  background: transparent !important;
+  font-family: -apple-system, 'Segoe UI', 'Roboto', sans-serif !important;
+  font-size: 14px !important;
+}
+
+.wmde-markdown h1,
+.wmde-markdown h2,
+.wmde-markdown h3 {
+  border-bottom: none !important;
+}
