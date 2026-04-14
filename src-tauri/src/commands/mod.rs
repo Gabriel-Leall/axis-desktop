@@ -4,6 +4,7 @@
 //! Import specific commands via their submodule (e.g., `commands::preferences::greet`).
 
 pub mod habits;
+pub mod kanban;
 pub mod notes;
 pub mod notifications;
 pub mod pomodoro;

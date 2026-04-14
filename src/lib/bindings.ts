@@ -387,6 +387,142 @@ async getHabitLogsForDate(date: string) : Promise<Result<HabitLog[], string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async getBoards() : Promise<Result<KanbanBoard[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_boards") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createBoard(id: string, name: string, createdAt: string, updatedAt: string) : Promise<Result<KanbanBoard, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_board", { id, name, createdAt, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateBoard(id: string, name: string, updatedAt: string) : Promise<Result<KanbanBoard, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_board", { id, name, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async setActiveBoard(id: string, updatedAt: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_active_board", { id, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async deleteBoard(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_board", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getFullBoard(boardId: string) : Promise<Result<FullBoard, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_full_board", { boardId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createColumn(id: string, boardId: string, name: string, sortOrder: number, createdAt: string, updatedAt: string) : Promise<Result<KanbanColumn, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_column", { id, boardId, name, sortOrder, createdAt, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateColumn(id: string, name: string, sortOrder: number, updatedAt: string) : Promise<Result<KanbanColumn, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_column", { id, name, sortOrder, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async deleteColumn(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_column", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createCard(id: string, columnId: string, title: string, priority: string, sortOrder: number, createdAt: string, updatedAt: string) : Promise<Result<KanbanCard, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_card", { id, columnId, title, priority, sortOrder, createdAt, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateCard(id: string, title: string, description: string | null, priority: string, sortOrder: number, columnId: string, updatedAt: string) : Promise<Result<KanbanCard, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_card", { id, title, description, priority, sortOrder, columnId, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async deleteCard(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_card", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async reorderCards(updates: CardOrderUpdate[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("reorder_cards", { updates }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async reorderColumns(updates: ColumnOrderUpdate[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("reorder_columns", { updates }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getKanbanCardSubtasks(cardId: string) : Promise<Result<KanbanSubtask[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_kanban_card_subtasks", { cardId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async toggleKanbanSubtask(id: string, updatedAt: string) : Promise<Result<boolean, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("toggle_kanban_subtask", { id, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createKanbanSubtask(id: string, cardId: string, title: string, sortOrder: number, createdAt: string) : Promise<Result<KanbanSubtask, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_kanban_subtask", { id, cardId, title, sortOrder, createdAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getNotes() : Promise<Result<Note[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_notes") };
@@ -462,13 +598,21 @@ quick_pane_shortcut: string | null;
  * If None, uses system locale detection
  */
 language: string | null }
+export type CardOrderUpdate = { id: string; column_id: string; sort_order: number; updated_at: string }
+export type ColumnOrderUpdate = { id: string; sort_order: number; updated_at: string }
 export type CreateHabitInput = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; sort_order: number; created_at: string; updated_at: string }
 export type CreateNoteInput = { id: string; content: string; created_at: string; updated_at: string; word_count: number }
 export type CreateSubtaskInput = { id: string; task_id: string; title: string; sort_order: number; created_at: string }
 export type CreateTaskInput = { id: string; title: string; description: string | null; priority: string; due_date: string | null; created_at: string; updated_at: string; sort_order: number }
+export type FullBoard = { board: KanbanBoard; columns: KanbanColumnWithCards[] }
 export type Habit = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; active: boolean; sort_order: number; created_at: string; updated_at: string }
 export type HabitLog = { id: string; habit_id: string; completed_date: string; completed_at: string }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
+export type KanbanBoard = { id: string; name: string; is_active: boolean; sort_order: number; created_at: string; updated_at: string }
+export type KanbanCard = { id: string; column_id: string; title: string; description: string | null; priority: string; sort_order: number; created_at: string; updated_at: string }
+export type KanbanColumn = { id: string; board_id: string; name: string; sort_order: number; created_at: string; updated_at: string }
+export type KanbanColumnWithCards = { column: KanbanColumn; cards: KanbanCard[] }
+export type KanbanSubtask = { id: string; card_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
 export type Note = { id: string; content: string; created_at: string; updated_at: string; word_count: number }
 export type PomodoroSession = { id: string; session_type: string; duration_seconds: number; completed: boolean; task_id: string | null; started_at: string; ended_at: string | null; created_at: string }
 export type PomodoroSettings = { focus_duration: number; short_break_duration: number; long_break_duration: number; pomos_until_long_break: number; auto_start_breaks: boolean; auto_start_focus: boolean; sound_notifications: boolean }

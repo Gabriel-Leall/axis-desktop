@@ -47,6 +47,18 @@ export type {
 // Notes domain
 export type { Note, CreateNoteInput, UpdateNoteInput } from './bindings'
 
+// Kanban domain
+export type {
+  KanbanBoard,
+  KanbanColumn,
+  KanbanCard,
+  KanbanSubtask,
+  FullBoard,
+  KanbanColumnWithCards,
+  CardOrderUpdate,
+  ColumnOrderUpdate,
+} from './bindings'
+
 /**
  * Helper to unwrap a Result type, throwing on error
  */
