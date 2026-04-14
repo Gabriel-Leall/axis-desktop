@@ -22,6 +22,7 @@ import {
   TasksWidget,
   PomodoroWidget,
   HabitWidget,
+  KanbanWidget,
 } from './widgets'
 import { useUIStore } from '@/store/ui-store'
 
@@ -62,6 +63,11 @@ function BrainDumpWidgetConnected() {
   )
 }
 
+function KanbanWidgetConnected() {
+  const navigateTo = useUIStore(state => state.navigateTo)
+  return <KanbanWidget onOpenKanban={() => navigateTo('kanban')} />
+}
+
 /** Map widget ID → React component */
 const WIDGET_COMPONENTS: Record<string, React.FC> = {
   clock: ClockWidget,
@@ -73,6 +79,7 @@ const WIDGET_COMPONENTS: Record<string, React.FC> = {
   tasks: TasksWidgetConnected,
   pomodoro: PomodoroWidget,
   habits: HabitWidgetConnected,
+  kanban: KanbanWidgetConnected,
 }
 
 /** Grid configuration */

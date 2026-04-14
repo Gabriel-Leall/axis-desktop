@@ -96,6 +96,14 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     minW: 3,
     minH: 3,
   },
+  {
+    id: 'kanban',
+    label: 'Kanban',
+    icon: 'Columns3',
+    defaultLayout: { x: 0, y: 9, w: 8, h: 4 },
+    minW: 4,
+    minH: 3,
+  },
 ]
 
 interface GridState {

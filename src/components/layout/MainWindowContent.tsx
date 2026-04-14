@@ -5,6 +5,7 @@ import { TasksPage } from '@/pages/TasksPage'
 import { PomodoroPage } from '@/pages/PomodoroPage'
 import { HabitPage } from '@/pages/HabitPage'
 import { NotesPage } from '@/pages/NotesPage'
+import { KanbanPage } from '@/pages/KanbanPage'
 import { useUIStore } from '@/store/ui-store'
 
 interface MainWindowContentProps {
@@ -37,6 +38,8 @@ export function MainWindowContent({
             <NotesPage
               initialSelectedNoteId={activePageData['selectedNoteId']}
             />
+          ) : activePage === 'kanban' ? (
+            <KanbanPage />
           ) : (
             <>
               {/* Header with widget toggle */}
