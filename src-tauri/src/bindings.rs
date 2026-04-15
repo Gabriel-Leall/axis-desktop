@@ -2,11 +2,16 @@ use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
-        habits, kanban, notes, notifications, pomodoro, preferences, quick_pane, recovery,
-        tasks,
+        calendar, habits, kanban, notes, notifications, pomodoro, preferences, quick_pane,
+        recovery, tasks,
     };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
+        // Calendar
+        calendar::get_events_range,
+        calendar::create_event,
+        calendar::update_event,
+        calendar::delete_event,
         // Existing commands
         preferences::greet,
         preferences::load_preferences,

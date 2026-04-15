@@ -204,7 +204,7 @@ pub fn run() {
                     kind: MigrationKind::Up,
                 },
                 Migration {
-                    version: 4,
+                    version: 6,
                     description: "rename_pomodoro_sessions_type_column",
                     sql: "
                         CREATE TABLE IF NOT EXISTS pomodoro_sessions_new (
@@ -419,6 +419,26 @@ pub fn run() {
                         "CREATE INDEX IF NOT EXISTS idx_notes_updated_at \
                          ON notes(updated_at)"
                     ).execute(&pool).await.expect("Failed to create notes updated_at index");
+
+                    // Calendar
+                    sqlx::query(
+                        "CREATE TABLE IF NOT EXISTS calendar_events (
+                            id TEXT PRIMARY KEY,
+                            title TEXT NOT NULL,
+                            description TEXT,
+                            start_date TEXT NOT NULL,
+                            end_date TEXT NOT NULL,
+                            all_day INTEGER NOT NULL DEFAULT 1,
+                            color TEXT,
+                            created_at TEXT NOT NULL,
+                            updated_at TEXT NOT NULL
+                        )"
+                    ).execute(&pool).await.expect("Failed to create calendar_events table");
+
+                    sqlx::query(
+                        "CREATE INDEX IF NOT EXISTS idx_calendar_events_date \
+                         ON calendar_events(start_date, end_date)"
+                    ).execute(&pool).await.expect("Failed to create calendar events index");
 
                     // Migration: rename 'type' column to 'session_type' in old databases
                     // This is a no-op if the column already has the right name.
