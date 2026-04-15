@@ -60,28 +60,33 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
 
   const currentNote = notes[currentIndex] ?? null
 
-  useEffect(() => {
-    if (notes.length === 0) {
+  const [prevNotesLength, setPrevNotesLength] = useState(notes.length)
+  if (notes.length !== prevNotesLength) {
+    setPrevNotesLength(notes.length)
+    if (notes.length === 0 && currentIndex !== 0) {
       setCurrentIndex(0)
-      return
-    }
-
-    if (currentIndex > notes.length - 1) {
+    } else if (notes.length > 0 && currentIndex > notes.length - 1) {
       setCurrentIndex(notes.length - 1)
     }
-  }, [currentIndex, notes.length])
+  }
 
-  useEffect(() => {
+  const [prevNoteId, setPrevNoteId] = useState(currentNote?.id)
+  const [prevNoteContent, setPrevNoteContent] = useState(currentNote?.content)
+  if (
+    currentNote?.id !== prevNoteId ||
+    currentNote?.content !== prevNoteContent
+  ) {
+    setPrevNoteId(currentNote?.id)
+    setPrevNoteContent(currentNote?.content)
     if (!currentNote) {
       setDraftTitle('')
       setDraftBody('')
-      return
+    } else {
+      const parsed = splitNoteContent(currentNote.content)
+      setDraftTitle(parsed.title)
+      setDraftBody(parsed.body)
     }
-
-    const parsed = splitNoteContent(currentNote.content)
-    setDraftTitle(parsed.title)
-    setDraftBody(parsed.body)
-  }, [currentNote?.id, currentNote?.content])
+  }
 
   const handleContentChange = useCallback(
     (content: string) => {
@@ -207,22 +212,22 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
           className="relative flex-1 overflow-hidden p-0"
           onClick={() => textareaRef.current?.focus()}
         >
-        <textarea
-          ref={textareaRef}
-          key={currentNote?.id ?? 'empty-body'}
-          value={draftBody}
-          onChange={e => handleBodyChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Dump it here..."
-          className="h-full w-full resize-none bg-transparent px-3 py-2 font-mono text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
-        />
-        <div
-          className={cn(
-            'absolute inset-e-2 top-2 size-1.5 rounded-full transition-opacity duration-700',
-            isSaving ? 'animate-pulse bg-primary/60 opacity-100' : 'opacity-0'
-          )}
-        />
-      </div>
+          <textarea
+            ref={textareaRef}
+            key={currentNote?.id ?? 'empty-body'}
+            value={draftBody}
+            onChange={e => handleBodyChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Dump it here..."
+            className="h-full w-full resize-none bg-transparent px-3 py-2 font-mono text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+          />
+          <div
+            className={cn(
+              'absolute inset-e-2 top-2 size-1.5 rounded-full transition-opacity duration-700',
+              isSaving ? 'animate-pulse bg-primary/60 opacity-100' : 'opacity-0'
+            )}
+          />
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t border-border px-3 py-1">
