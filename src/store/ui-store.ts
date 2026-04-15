@@ -8,6 +8,7 @@ export type AppPage =
   | 'habits'
   | 'notes'
   | 'kanban'
+  | 'calendar'
 
 interface UIState {
   leftSidebarVisible: boolean

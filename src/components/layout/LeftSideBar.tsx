@@ -4,6 +4,7 @@ import {
   Timer,
   CircleCheck,
   NotebookPen,
+  CalendarDays,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
@@ -19,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'grid', label: 'Dashboard', icon: LayoutGrid },
   { id: 'tasks', label: 'Tasks', icon: CheckSquare },
   { id: 'notes', label: 'Notes', icon: NotebookPen },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays },
   { id: 'habits', label: 'Habits', icon: CircleCheck },
   { id: 'pomodoro', label: 'Focus', icon: Timer },
 ]

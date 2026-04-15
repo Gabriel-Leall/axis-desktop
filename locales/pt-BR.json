@@ -113,5 +113,16 @@
   "toast.error.windowMinimizeFailed": "Failed to minimize window: {{message}}",
   "toast.error.windowMaximizeFailed": "Failed to toggle maximize: {{message}}",
   "toast.error.fullscreenEnterFailed": "Failed to enter fullscreen: {{message}}",
-  "toast.error.fullscreenExitFailed": "Failed to exit fullscreen: {{message}}"
+  "toast.error.fullscreenExitFailed": "Failed to exit fullscreen: {{message}}",
+
+  "calendar.widgetTitle": "Calendário",
+  "calendar.pageTitle": "Calendário",
+  "calendar.addEvent": "Adicionar Evento",
+  "calendar.newEvent": "Novo Evento",
+  "calendar.editEvent": "Editar Evento",
+  "calendar.title": "Título",
+  "calendar.titlePlaceholder": "Título do evento",
+  "calendar.start": "Início",
+  "calendar.end": "Fim",
+  "calendar.allDay": "Dia todo"
 }

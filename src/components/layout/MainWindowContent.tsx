@@ -6,6 +6,7 @@ import { PomodoroPage } from '@/pages/PomodoroPage'
 import { HabitPage } from '@/pages/HabitPage'
 import { NotesPage } from '@/pages/NotesPage'
 import { KanbanPage } from '@/pages/KanbanPage'
+import { CalendarPage } from '@/pages/CalendarPage'
 import { useUIStore } from '@/store/ui-store'
 
 interface MainWindowContentProps {
@@ -40,6 +41,8 @@ export function MainWindowContent({
             />
           ) : activePage === 'kanban' ? (
             <KanbanPage />
+          ) : activePage === 'calendar' ? (
+            <CalendarPage />
           ) : (
             <>
               {/* Header with widget toggle */}
