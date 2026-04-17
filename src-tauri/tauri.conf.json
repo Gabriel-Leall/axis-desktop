@@ -68,6 +68,12 @@
       ],
       "dialog": true,
       "pubkey": "YOUR_UPDATER_PUBLIC_KEY_HERE"
+    },
+    "deep-link": {
+      "mobile": [],
+      "desktop": {
+        "schemes": ["axis"]
+      }
     }
   }
 }

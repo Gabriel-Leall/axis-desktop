@@ -20,6 +20,8 @@
     "clipboard-manager:default",
     "dialog:default",
     "fs:default",
+    "store:default",
+    "deep-link:default",
     "log:default",
     "notification:default",
     "process:default",
