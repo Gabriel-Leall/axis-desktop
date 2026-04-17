@@ -8,6 +8,38 @@
 
 
 export const commands = {
+async getEventsRange(start: string, end: string) : Promise<Result<CalendarEvent[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_events_range", { start, end }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createEvent(input: CreateEventInput) : Promise<Result<CalendarEvent, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_event", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateEvent(input: UpdateEventInput) : Promise<Result<CalendarEvent, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_event", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async deleteEvent(id: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_event", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Simple greeting command for demonstration purposes.
  */
@@ -598,8 +630,10 @@ quick_pane_shortcut: string | null;
  * If None, uses system locale detection
  */
 language: string | null }
+export type CalendarEvent = { id: string; title: string; description: string | null; start_date: string; end_date: string; all_day: boolean; color: string | null; created_at: string; updated_at: string }
 export type CardOrderUpdate = { id: string; column_id: string; sort_order: number; updated_at: string }
 export type ColumnOrderUpdate = { id: string; sort_order: number; updated_at: string }
+export type CreateEventInput = { id: string; title: string; description: string | null; start_date: string; end_date: string; all_day: boolean; color: string | null; created_at: string; updated_at: string }
 export type CreateHabitInput = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; sort_order: number; created_at: string; updated_at: string }
 export type CreateNoteInput = { id: string; content: string; created_at: string; updated_at: string; word_count: number }
 export type CreateSubtaskInput = { id: string; task_id: string; title: string; sort_order: number; created_at: string }
@@ -642,6 +676,7 @@ export type RecoveryError =
 { type: "ParseError"; message: string }
 export type Subtask = { id: string; task_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
 export type Task = { id: string; title: string; description: string | null; priority: string; status: string; due_date: string | null; completed_at: string | null; created_at: string; updated_at: string; sort_order: number }
+export type UpdateEventInput = { id: string; title: string | null; description: string | null; start_date: string | null; end_date: string | null; all_day: boolean | null; color: string | null; updated_at: string }
 export type UpdateHabitInput = { id: string; name: string | null; color: string | null; icon: string | null; frequency: string | null; frequency_days: string | null; sort_order: number | null; updated_at: string }
 export type UpdateNoteInput = { id: string; content: string; updated_at: string; word_count: number }
 export type UpdateTaskInput = { id: string; title: string | null; description: string | null; priority: string | null; status: string | null; due_date: string | null; completed_at: string | null; updated_at: string; sort_order: number | null }
