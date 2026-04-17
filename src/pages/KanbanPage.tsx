@@ -60,7 +60,11 @@ function SortableColumnCard({
     isDragging,
   } = useSortable({
     id: card.id,
-    data: { type: 'card' as DragItemType, cardId: card.id, columnId: card.column_id },
+    data: {
+      type: 'card' as DragItemType,
+      cardId: card.id,
+      columnId: card.column_id,
+    },
   })
 
   return (
@@ -362,7 +366,9 @@ function CardDetailPanel() {
 
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-[11px] text-muted-foreground">Title</label>
+            <label className="mb-1 block text-[11px] text-muted-foreground">
+              Title
+            </label>
             <input
               value={card.title}
               onChange={event =>
@@ -373,7 +379,9 @@ function CardDetailPanel() {
           </div>
 
           <div>
-            <label className="mb-1 block text-[11px] text-muted-foreground">Description</label>
+            <label className="mb-1 block text-[11px] text-muted-foreground">
+              Description
+            </label>
             <textarea
               value={card.description ?? ''}
               onChange={event =>
@@ -388,7 +396,9 @@ function CardDetailPanel() {
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-[11px] text-muted-foreground">Priority</label>
+              <label className="mb-1 block text-[11px] text-muted-foreground">
+                Priority
+              </label>
               <select
                 value={card.priority}
                 onChange={event =>
@@ -405,7 +415,9 @@ function CardDetailPanel() {
             </div>
 
             <div>
-              <label className="mb-1 block text-[11px] text-muted-foreground">Move to column</label>
+              <label className="mb-1 block text-[11px] text-muted-foreground">
+                Move to column
+              </label>
               <select
                 value={card.column_id}
                 onChange={event => {
@@ -430,9 +442,12 @@ function CardDetailPanel() {
 
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <label className="text-[11px] text-muted-foreground">Subtasks</label>
+              <label className="text-[11px] text-muted-foreground">
+                Subtasks
+              </label>
               <span className="text-[11px] text-muted-foreground">
-                {subtasks.filter(item => item.completed).length}/{subtasks.length}
+                {subtasks.filter(item => item.completed).length}/
+                {subtasks.length}
               </span>
             </div>
             <div className="mb-2 max-h-40 space-y-1 overflow-y-auto">
@@ -446,7 +461,11 @@ function CardDetailPanel() {
                     checked={subtask.completed}
                     onChange={() => void toggleSubtask(card.id, subtask.id)}
                   />
-                  <span className={cn(subtask.completed && 'line-through text-muted-foreground')}>
+                  <span
+                    className={cn(
+                      subtask.completed && 'line-through text-muted-foreground'
+                    )}
+                  >
                     {subtask.title}
                   </span>
                 </label>
@@ -516,9 +535,13 @@ export function KanbanPage({ compact = false }: KanbanPageProps) {
   )
 
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
-  const [activeDragType, setActiveDragType] = useState<DragItemType | null>(null)
+  const [activeDragType, setActiveDragType] = useState<DragItemType | null>(
+    null
+  )
   const [overColumnId, setOverColumnId] = useState<string | null>(null)
-  const [editingBoardNameId, setEditingBoardNameId] = useState<string | null>(null)
+  const [editingBoardNameId, setEditingBoardNameId] = useState<string | null>(
+    null
+  )
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -771,7 +794,10 @@ export function KanbanPage({ compact = false }: KanbanPageProps) {
                   title={column.column.name}
                   cards={column.cards}
                   selectedCardId={selectedCardId}
-                  isCardOver={overColumnId === column.column.id && activeDragType === 'card'}
+                  isCardOver={
+                    overColumnId === column.column.id &&
+                    activeDragType === 'card'
+                  }
                   editing={editingColumnId === column.column.id}
                   onStartEditing={() => setEditingColumnId(column.column.id)}
                   onSaveTitle={name => {
@@ -791,7 +817,9 @@ export function KanbanPage({ compact = false }: KanbanPageProps) {
 
               <button
                 type="button"
-                onClick={() => void createColumn(activeBoard.id, 'Untitled Column')}
+                onClick={() =>
+                  void createColumn(activeBoard.id, 'Untitled Column')
+                }
                 className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded border border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"
                 aria-label="Add column"
               >
@@ -814,7 +842,9 @@ export function KanbanPage({ compact = false }: KanbanPageProps) {
               className="w-[260px] rounded-md border border-border/80 bg-muted/80 p-2 opacity-50"
               style={{ pointerEvents: 'none' }}
             >
-              <p className="text-[12px] font-medium">{draggedColumn.column.name}</p>
+              <p className="text-[12px] font-medium">
+                {draggedColumn.column.name}
+              </p>
             </div>
           ) : null}
         </DragOverlay>

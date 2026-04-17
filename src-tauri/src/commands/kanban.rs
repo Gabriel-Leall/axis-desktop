@@ -148,10 +148,11 @@ pub async fn create_board(
     created_at: String,
     updated_at: String,
 ) -> Result<KanbanBoard, String> {
-    let next_sort_order: i32 = sqlx::query_scalar("SELECT COALESCE(MAX(sort_order), -1000) + 1000 FROM kanban_boards")
-        .fetch_one(pool.inner())
-        .await
-        .map_err(|e| format!("Failed to calculate board sort order: {e}"))?;
+    let next_sort_order: i32 =
+        sqlx::query_scalar("SELECT COALESCE(MAX(sort_order), -1000) + 1000 FROM kanban_boards")
+            .fetch_one(pool.inner())
+            .await
+            .map_err(|e| format!("Failed to calculate board sort order: {e}"))?;
 
     sqlx::query(
         "INSERT INTO kanban_boards (id, name, is_active, sort_order, created_at, updated_at)
@@ -397,6 +398,7 @@ pub async fn delete_column(pool: State<'_, Pool<Sqlite>>, id: String) -> Result<
 
 #[tauri::command]
 #[specta::specta]
+#[allow(clippy::too_many_arguments)]
 pub async fn create_card(
     pool: State<'_, Pool<Sqlite>>,
     id: String,
@@ -437,6 +439,7 @@ pub async fn create_card(
 
 #[tauri::command]
 #[specta::specta]
+#[allow(clippy::too_many_arguments)]
 pub async fn update_card(
     pool: State<'_, Pool<Sqlite>>,
     id: String,

@@ -33,7 +33,11 @@ interface KanbanStoreState {
   deleteColumn: (id: string) => Promise<void>
   createCard: (columnId: string, title: string) => Promise<void>
   updateCard: (id: string, updates: Partial<KanbanCard>) => Promise<void>
-  moveCard: (cardId: string, toColumnId: string, newOrder: number) => Promise<void>
+  moveCard: (
+    cardId: string,
+    toColumnId: string,
+    newOrder: number
+  ) => Promise<void>
   reorderCards: (columnId: string, orderedIds: string[]) => Promise<void>
   reorderColumns: (orderedIds: string[]) => Promise<void>
   deleteCard: (id: string) => Promise<void>
@@ -63,11 +67,18 @@ function cloneBoard(board: FullBoard): FullBoard {
   return structuredClone(board)
 }
 
-function findCardLocation(fullBoard: FullBoard, cardId: string): {
+function findCardLocation(
+  fullBoard: FullBoard,
+  cardId: string
+): {
   columnIndex: number
   cardIndex: number
 } | null {
-  for (let columnIndex = 0; columnIndex < fullBoard.columns.length; columnIndex += 1) {
+  for (
+    let columnIndex = 0;
+    columnIndex < fullBoard.columns.length;
+    columnIndex += 1
+  ) {
     const cardIndex = fullBoard.columns[columnIndex]?.cards.findIndex(
       card => card.id === cardId
     )
@@ -81,9 +92,7 @@ function findCardLocation(fullBoard: FullBoard, cardId: string): {
 async function bootstrapDefaultBoard(): Promise<string> {
   const now = utcNow()
   const boardId = createId()
-  await unwrapOrThrow(
-    await commands.createBoard(boardId, 'Personal', now, now)
-  )
+  await unwrapOrThrow(await commands.createBoard(boardId, 'Personal', now, now))
 
   const columns: { id: string; name: string; sort: number }[] = [
     { id: createId(), name: 'Backlog', sort: 0 },
@@ -254,7 +263,9 @@ export const useKanbanStore = create<KanbanStoreState>()(
           {
             boards: remaining,
             fullBoard: wasActive ? null : get().fullBoard,
-            activeBoardId: wasActive ? (remaining[0]?.id ?? null) : snapshotActive,
+            activeBoardId: wasActive
+              ? (remaining[0]?.id ?? null)
+              : snapshotActive,
             selectedCardId: wasActive ? null : get().selectedCardId,
             subtasksByCardId: wasActive ? {} : get().subtasksByCardId,
           },
@@ -289,8 +300,8 @@ export const useKanbanStore = create<KanbanStoreState>()(
         const id = createId()
         const sort_order =
           fullBoard.columns.length > 0
-            ? (fullBoard.columns[fullBoard.columns.length - 1]?.column.sort_order ?? 0) +
-              SORT_GAP
+            ? (fullBoard.columns[fullBoard.columns.length - 1]?.column
+                .sort_order ?? 0) + SORT_GAP
             : 0
 
         const optimisticColumn: KanbanColumn = {
@@ -322,17 +333,14 @@ export const useKanbanStore = create<KanbanStoreState>()(
 
         try {
           await unwrapOrThrow(
-            await commands.createColumn(
-              id,
-              boardId,
-              name,
-              sort_order,
-              now,
-              now
-            )
+            await commands.createColumn(id, boardId, name, sort_order, now, now)
           )
         } catch (error) {
-          set({ fullBoard: snapshot }, undefined, 'kanban/createColumn:rollback')
+          set(
+            { fullBoard: snapshot },
+            undefined,
+            'kanban/createColumn:rollback'
+          )
           throw error
         }
       },
@@ -381,7 +389,11 @@ export const useKanbanStore = create<KanbanStoreState>()(
             )
           )
         } catch (error) {
-          set({ fullBoard: snapshot }, undefined, 'kanban/updateColumn:rollback')
+          set(
+            { fullBoard: snapshot },
+            undefined,
+            'kanban/updateColumn:rollback'
+          )
           throw error
         }
       },
@@ -397,7 +409,9 @@ export const useKanbanStore = create<KanbanStoreState>()(
             fullBoard: state.fullBoard
               ? {
                   ...state.fullBoard,
-                  columns: state.fullBoard.columns.filter(col => col.column.id !== id),
+                  columns: state.fullBoard.columns.filter(
+                    col => col.column.id !== id
+                  ),
                 }
               : state.fullBoard,
           }),
@@ -408,7 +422,11 @@ export const useKanbanStore = create<KanbanStoreState>()(
         try {
           await unwrapOrThrow(await commands.deleteColumn(id))
         } catch (error) {
-          set({ fullBoard: snapshot }, undefined, 'kanban/deleteColumn:rollback')
+          set(
+            { fullBoard: snapshot },
+            undefined,
+            'kanban/deleteColumn:rollback'
+          )
           throw error
         }
       },
@@ -424,7 +442,8 @@ export const useKanbanStore = create<KanbanStoreState>()(
         const id = createId()
         const sort_order =
           column.cards.length > 0
-            ? (column.cards[column.cards.length - 1]?.sort_order ?? 0) + SORT_GAP
+            ? (column.cards[column.cards.length - 1]?.sort_order ?? 0) +
+              SORT_GAP
             : 0
 
         const optimisticCard: KanbanCard = {
@@ -482,7 +501,8 @@ export const useKanbanStore = create<KanbanStoreState>()(
         const location = findCardLocation(fullBoard, id)
         if (!location) return
 
-        const targetCard = fullBoard.columns[location.columnIndex]?.cards[location.cardIndex]
+        const targetCard =
+          fullBoard.columns[location.columnIndex]?.cards[location.cardIndex]
         if (!targetCard) return
 
         const now = utcNow()
@@ -573,7 +593,10 @@ export const useKanbanStore = create<KanbanStoreState>()(
         const now = utcNow()
         const updates: CardOrderUpdate[] = []
 
-        const affectedColumnIndexes = new Set([source.columnIndex, targetColumnIndex])
+        const affectedColumnIndexes = new Set([
+          source.columnIndex,
+          targetColumnIndex,
+        ])
         for (const columnIndex of affectedColumnIndexes) {
           const column = next.columns[columnIndex]
           if (!column) continue
@@ -581,7 +604,10 @@ export const useKanbanStore = create<KanbanStoreState>()(
           const orderedIds = column.cards.map(card => card.id)
           const recalculated = recalculateOrder(
             orderedIds,
-            column.cards.map(card => ({ id: card.id, sort_order: card.sort_order }))
+            column.cards.map(card => ({
+              id: card.id,
+              sort_order: card.sort_order,
+            }))
           )
 
           column.cards = column.cards.map(card => {
@@ -633,7 +659,10 @@ export const useKanbanStore = create<KanbanStoreState>()(
 
         const recalculated = recalculateOrder(
           orderedCards.map(card => card.id),
-          orderedCards.map(card => ({ id: card.id, sort_order: card.sort_order }))
+          orderedCards.map(card => ({
+            id: card.id,
+            sort_order: card.sort_order,
+          }))
         )
 
         const now = utcNow()
@@ -658,7 +687,11 @@ export const useKanbanStore = create<KanbanStoreState>()(
         try {
           await unwrapOrThrow(await commands.reorderCards(updates))
         } catch (error) {
-          set({ fullBoard: snapshot }, undefined, 'kanban/reorderCards:rollback')
+          set(
+            { fullBoard: snapshot },
+            undefined,
+            'kanban/reorderCards:rollback'
+          )
           throw error
         }
       },
@@ -669,32 +702,41 @@ export const useKanbanStore = create<KanbanStoreState>()(
 
         const snapshot = cloneBoard(fullBoard)
         const next = cloneBoard(fullBoard)
-        const byId = new Map(next.columns.map(column => [column.column.id, column]))
+        const byId = new Map(
+          next.columns.map(column => [column.column.id, column])
+        )
 
         next.columns = orderedIds
           .map(id => byId.get(id))
-          .filter((column): column is { column: KanbanColumn; cards: KanbanCard[] } =>
-            Boolean(column)
+          .filter(
+            (column): column is { column: KanbanColumn; cards: KanbanCard[] } =>
+              Boolean(column)
           )
 
         const now = utcNow()
-        const updates: ColumnOrderUpdate[] = next.columns.map((column, index) => {
-          const sort_order = index * SORT_GAP
-          column.column.sort_order = sort_order
-          column.column.updated_at = now
-          return {
-            id: column.column.id,
-            sort_order,
-            updated_at: now,
+        const updates: ColumnOrderUpdate[] = next.columns.map(
+          (column, index) => {
+            const sort_order = index * SORT_GAP
+            column.column.sort_order = sort_order
+            column.column.updated_at = now
+            return {
+              id: column.column.id,
+              sort_order,
+              updated_at: now,
+            }
           }
-        })
+        )
 
         set({ fullBoard: next }, undefined, 'kanban/reorderColumns:optimistic')
 
         try {
           await unwrapOrThrow(await commands.reorderColumns(updates))
         } catch (error) {
-          set({ fullBoard: snapshot }, undefined, 'kanban/reorderColumns:rollback')
+          set(
+            { fullBoard: snapshot },
+            undefined,
+            'kanban/reorderColumns:rollback'
+          )
           throw error
         }
       },
@@ -714,9 +756,12 @@ export const useKanbanStore = create<KanbanStoreState>()(
         set(
           state => ({
             fullBoard: next,
-            selectedCardId: state.selectedCardId === id ? null : state.selectedCardId,
+            selectedCardId:
+              state.selectedCardId === id ? null : state.selectedCardId,
             subtasksByCardId: Object.fromEntries(
-              Object.entries(state.subtasksByCardId).filter(([cardId]) => cardId !== id)
+              Object.entries(state.subtasksByCardId).filter(
+                ([cardId]) => cardId !== id
+              )
             ),
           }),
           undefined,
@@ -836,9 +881,7 @@ export const useKanbanStore = create<KanbanStoreState>()(
               subtasksByCardId: {
                 ...state.subtasksByCardId,
                 [cardId]: (state.subtasksByCardId[cardId] ?? []).map(subtask =>
-                  subtask.id === subtaskId
-                    ? { ...subtask, completed }
-                    : subtask
+                  subtask.id === subtaskId ? { ...subtask, completed } : subtask
                 ),
               },
             }),

@@ -286,7 +286,10 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
               <div className="flex h-full min-w-max gap-2 pb-1">
                 {fullBoard.columns.map(column => {
                   const visibleCards = column.cards.slice(0, 4)
-                  const hiddenCount = Math.max(0, column.cards.length - visibleCards.length)
+                  const hiddenCount = Math.max(
+                    0,
+                    column.cards.length - visibleCards.length
+                  )
 
                   return (
                     <DroppableMiniColumn
@@ -328,7 +331,9 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
                         {quickAddColumnId === column.column.id ? (
                           <input
                             value={quickAddValue}
-                            onChange={event => setQuickAddValue(event.target.value)}
+                            onChange={event =>
+                              setQuickAddValue(event.target.value)
+                            }
                             onBlur={() => void submitQuickAdd()}
                             onKeyDown={event => {
                               if (event.key === 'Enter') {
@@ -346,7 +351,9 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setQuickAddColumnId(column.column.id)}
+                            onClick={() =>
+                              setQuickAddColumnId(column.column.id)
+                            }
                             className="flex w-full items-center gap-1 rounded px-1 py-1 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground"
                           >
                             <Plus className="size-3" /> Add card
