@@ -201,11 +201,6 @@ function EditorArea({
     setShowMenu(false)
   }, [note])
 
-  const handleEditorChange = useCallback(() => {
-    const markdown = editorRef.current?.getInstance().getMarkdown() ?? ''
-    onContentChange(markdown)
-  }, [onContentChange])
-
   if (!note) {
     return (
       <div className="flex h-full flex-1 items-center justify-center text-muted-foreground">
@@ -217,6 +212,11 @@ function EditorArea({
   }
 
   const wordCount = countWords(note.content)
+
+  const handleEditorChange = useCallback(() => {
+    const markdown = editorRef.current?.getInstance().getMarkdown() ?? ''
+    onContentChange(markdown)
+  }, [onContentChange])
 
   return (
     <div className="flex h-full flex-1 flex-col" data-color-mode="auto">
@@ -362,9 +362,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
 
   const normalizedSearch = searchQuery.trim().toLowerCase()
   const displayedNotes = normalizedSearch
-    ? notes.filter(note =>
-        note.content.toLowerCase().includes(normalizedSearch)
-      )
+    ? notes.filter(note => note.content.toLowerCase().includes(normalizedSearch))
     : notes
   const activeNote = selectedNoteId
     ? (notes.find(note => note.id === selectedNoteId) ?? null)

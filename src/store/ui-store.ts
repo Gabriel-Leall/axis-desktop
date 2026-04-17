@@ -9,6 +9,8 @@ export type AppPage =
   | 'notes'
   | 'kanban'
   | 'calendar'
+  | 'github'
+  | 'slack'
 
 interface UIState {
   leftSidebarVisible: boolean

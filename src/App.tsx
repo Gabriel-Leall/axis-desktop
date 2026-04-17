@@ -7,6 +7,9 @@ import { initializeLanguage } from './i18n/language-init'
 import { logger } from './lib/logger'
 import { cleanupOldFiles } from './lib/recovery'
 import { commands } from './lib/tauri-bindings'
+import { registerDeepLinkHandler } from './lib/oauth-handler'
+import { useGitHubStore } from './store/github-store'
+import { useSlackStore } from './store/slack-store'
 import './App.css'
 import { MainWindow } from './components/layout/MainWindow'
 import { ThemeProvider } from './components/ThemeProvider'
@@ -43,6 +46,13 @@ function App() {
     }
 
     initLanguageAndMenu()
+
+    // Register deep link handler for OAuth callbacks (axis:// scheme)
+    void registerDeepLinkHandler()
+
+    // Initialize integration stores (load saved tokens, fetch if authenticated)
+    void useGitHubStore.getState().initialize()
+    void useSlackStore.getState().initialize()
 
     // Clean up old recovery files on startup
     cleanupOldFiles().catch(error => {
