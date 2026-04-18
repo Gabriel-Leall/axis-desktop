@@ -11,6 +11,7 @@ export type AppPage =
   | 'calendar'
   | 'github'
   | 'slack'
+  | 'analytics'
 
 interface UIState {
   leftSidebarVisible: boolean

@@ -9,6 +9,7 @@ import { KanbanPage } from '@/pages/KanbanPage'
 import { CalendarPage } from '@/pages/CalendarPage'
 import { GitHubPage } from '@/pages/GitHubPage'
 import { SlackPage } from '@/pages/SlackPage'
+import AnalyticsPage from '@/pages/AnalyticsPage'
 import { useUIStore } from '@/store/ui-store'
 
 interface MainWindowContentProps {
@@ -49,6 +50,8 @@ export function MainWindowContent({
             <GitHubPage />
           ) : activePage === 'slack' ? (
             <SlackPage />
+          ) : activePage === 'analytics' ? (
+            <AnalyticsPage />
           ) : (
             <>
               {/* Header with widget toggle */}

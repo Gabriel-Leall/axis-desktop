@@ -4,6 +4,7 @@ import {
   Timer,
   CircleCheck,
   NotebookPen,
+  BarChart2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
@@ -21,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'notes', label: 'Notes', icon: NotebookPen },
   { id: 'habits', label: 'Habits', icon: CircleCheck },
   { id: 'pomodoro', label: 'Focus', icon: Timer },
+  { id: 'analytics', label: 'Analytics', icon: BarChart2 },
 ]
 
 interface LeftSideBarProps {
