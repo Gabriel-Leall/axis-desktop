@@ -602,6 +602,41 @@ async searchNotes(query: string) : Promise<Result<Note[], string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Fetches the summary numbers for the top dashboard cards.
+ */
+async getAnalyticsSummary(start: string, end: string, prevStart: string, prevEnd: string) : Promise<Result<AnalyticsSummary, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_analytics_summary", { start, end, prevStart, prevEnd }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getFocusTimeByDay(start: string, end: string) : Promise<Result<FocusTimeByDay[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_focus_time_by_day", { start, end }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getTaskCountsByDay(start: string, end: string) : Promise<Result<TaskCountByDay[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_task_counts_by_day", { start, end }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getPomodoroSummary(start: string, end: string) : Promise<Result<PomodoroSummary[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_pomodoro_summary", { start, end }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -615,6 +650,7 @@ async searchNotes(query: string) : Promise<Result<Note[], string>> {
 
 /** user-defined types **/
 
+export type AnalyticsSummary = { total_focus_seconds: number; total_focus_seconds_prev: number; tasks_created: number; tasks_completed: number; pomodoros_completed: number; days_active: number; top_productivity_day: string | null; best_habit_name: string | null; best_habit_streak: number }
 /**
  * Application preferences that persist to disk.
  * Only contains settings that should be saved between sessions.
@@ -638,6 +674,7 @@ export type CreateHabitInput = { id: string; name: string; color: string; icon: 
 export type CreateNoteInput = { id: string; content: string; created_at: string; updated_at: string; word_count: number }
 export type CreateSubtaskInput = { id: string; task_id: string; title: string; sort_order: number; created_at: string }
 export type CreateTaskInput = { id: string; title: string; description: string | null; priority: string; due_date: string | null; created_at: string; updated_at: string; sort_order: number }
+export type FocusTimeByDay = { day: string; total_seconds: number }
 export type FullBoard = { board: KanbanBoard; columns: KanbanColumnWithCards[] }
 export type Habit = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; active: boolean; sort_order: number; created_at: string; updated_at: string }
 export type HabitLog = { id: string; habit_id: string; completed_date: string; completed_at: string }
@@ -650,6 +687,7 @@ export type KanbanSubtask = { id: string; card_id: string; title: string; comple
 export type Note = { id: string; content: string; created_at: string; updated_at: string; word_count: number }
 export type PomodoroSession = { id: string; session_type: string; duration_seconds: number; completed: boolean; task_id: string | null; started_at: string; ended_at: string | null; created_at: string }
 export type PomodoroSettings = { focus_duration: number; short_break_duration: number; long_break_duration: number; pomos_until_long_break: number; auto_start_breaks: boolean; auto_start_focus: boolean; sound_notifications: boolean }
+export type PomodoroSummary = { session_type: string; sessions: number; total_seconds: number }
 /**
  * Error types for recovery operations (typed for frontend matching)
  */
@@ -676,6 +714,7 @@ export type RecoveryError =
 { type: "ParseError"; message: string }
 export type Subtask = { id: string; task_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
 export type Task = { id: string; title: string; description: string | null; priority: string; status: string; due_date: string | null; completed_at: string | null; created_at: string; updated_at: string; sort_order: number }
+export type TaskCountByDay = { day: string; created: number; completed: number }
 export type UpdateEventInput = { id: string; title: string | null; description: string | null; start_date: string | null; end_date: string | null; all_day: boolean | null; color: string | null; updated_at: string }
 export type UpdateHabitInput = { id: string; name: string | null; color: string | null; icon: string | null; frequency: string | null; frequency_days: string | null; sort_order: number | null; updated_at: string }
 export type UpdateNoteInput = { id: string; content: string; updated_at: string; word_count: number }

@@ -59,6 +59,14 @@ export type {
   ColumnOrderUpdate,
 } from './bindings'
 
+// Analytics domain
+export type {
+  AnalyticsSummary,
+  FocusTimeByDay,
+  TaskCountByDay,
+  PomodoroSummary,
+} from './bindings'
+
 /**
  * Helper to unwrap a Result type, throwing on error
  */
