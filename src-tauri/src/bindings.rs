@@ -2,7 +2,7 @@ use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
-        calendar, habits, kanban, notes, notifications, pomodoro, preferences, quick_pane,
+        analytics, calendar, habits, kanban, notes, notifications, pomodoro, preferences, quick_pane,
         recovery, tasks,
     };
 
@@ -75,6 +75,11 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         notes::update_note,
         notes::delete_note,
         notes::search_notes,
+        // Analytics
+        analytics::get_analytics_summary,
+        analytics::get_focus_time_by_day,
+        analytics::get_task_counts_by_day,
+        analytics::get_pomodoro_summary,
     ])
 }
 
