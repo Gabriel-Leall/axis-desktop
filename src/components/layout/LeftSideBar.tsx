@@ -41,9 +41,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
   const navigateTo = useUIStore(state => state.navigateTo)
 
   return (
-    <div
-      className={cn('flex h-full flex-col border-r bg-sidebar', className)}
-    >
+    <div className={cn('flex h-full flex-col border-r bg-sidebar', className)}>
       {/* Activity Bar - icon-only navigation */}
       <nav
         className="flex flex-col items-center gap-1 p-2 pt-3"
@@ -52,33 +50,32 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
         {NAV_ITEMS.map(item => {
           const isActive = activePage === item.id
           return (
-            <div
-              key={item.id}
-              className={cn(item.spacedBelow && 'mb-6')}
-            >
+            <div key={item.id} className={cn(item.spacedBelow && 'mb-6')}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => navigateTo(item.id)}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    'group relative flex size-9 items-center justify-center rounded-md transition-all duration-150',
-                    isActive
-                      ? [
-                          'text-foreground',
-                          'before:absolute before:left-0 before:top-1/2 before:h-4 before:-translate-y-1/2 before:w-0.75 before:rounded-r-full before:bg-accent',
-                        ]
-                      : [
-                          'text-muted-foreground',
-                          'hover:bg-accent/8 hover:text-foreground',
-                        ]
-                  )}
-                >
+                  <button
+                    type="button"
+                    onClick={() => navigateTo(item.id)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      'group relative flex size-9 items-center justify-center rounded-md transition-all duration-150',
+                      isActive
+                        ? [
+                            'text-foreground',
+                            'before:absolute before:left-0 before:top-1/2 before:h-4 before:-translate-y-1/2 before:w-0.75 before:rounded-r-full before:bg-accent',
+                          ]
+                        : [
+                            'text-muted-foreground',
+                            'hover:bg-accent/8 hover:text-foreground',
+                          ]
+                    )}
+                  >
                     <item.icon
                       className={cn(
                         'size-[18px] transition-colors',
-                        isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
+                        isActive
+                          ? 'text-foreground'
+                          : 'text-muted-foreground group-hover:text-foreground'
                       )}
                       strokeWidth={isActive ? 2 : 1.75}
                     />

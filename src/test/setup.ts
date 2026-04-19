@@ -3,9 +3,15 @@ import { vi } from 'vitest'
 
 // Mock ResizeObserver which is missing in JSDOM
 class ResizeObserverMock {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe() {
+    return null
+  }
+  unobserve() {
+    return null
+  }
+  disconnect() {
+    return null
+  }
 }
 
 global.ResizeObserver = ResizeObserverMock
@@ -29,14 +35,16 @@ Object.defineProperty(window, 'matchMedia', {
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn().mockResolvedValue(undefined),
   Channel: class {
-    onMessage() {}
+    onMessage() {
+      return null
+    }
   },
   registerCallback: vi.fn(),
   transformCallback: vi.fn(),
 }))
 
 vi.mock('@tauri-apps/api/event', () => ({
-  listen: vi.fn().mockResolvedValue(() => {}),
+  listen: vi.fn().mockResolvedValue(() => null),
   emit: vi.fn().mockResolvedValue(undefined),
 }))
 

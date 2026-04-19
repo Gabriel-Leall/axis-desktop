@@ -97,7 +97,9 @@ export function MainWindowContent({
                     type="button"
                     onClick={toggleFullscreen}
                     className="flex size-7 cursor-pointer items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                    title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                    title={
+                      isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'
+                    }
                   >
                     {isFullscreen ? (
                       <Minimize2 className="size-3.5" />

@@ -8,7 +8,6 @@ import {
   X,
   Check,
   Filter,
-  Calendar,
   AlertCircle,
 } from 'lucide-react'
 import {
@@ -18,8 +17,23 @@ import {
 } from '@/store/tasks-store'
 import type { Task, Priority, Status } from '@/store/tasks-store'
 import { cn } from '@/lib/utils'
+import { Calendar, type RangeValue } from '@/components/calendar'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Convert ISO date string to Date object at midnight */
+function isoToDate(isoDate: string | undefined): Date | undefined {
+  if (!isoDate) return undefined
+  const date = new Date(isoDate)
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
+/** Convert Date object to ISO date string (YYYY-MM-DD) */
+function dateToIso(date: Date | null | undefined): string | undefined {
+  if (!date) return undefined
+  return date.toISOString().slice(0, 10)
+}
 
 function formatRelativeDate(isoDate: string): string {
   const today = getTodayISO()
@@ -186,7 +200,7 @@ function TaskRow({
           onToggle()
         }}
         className={cn(
-          'flex size-[18px] shrink-0 items-center justify-center rounded-full border transition-all',
+          'flex size-4.5 shrink-0 items-center justify-center rounded-full border transition-all',
           isDone
             ? 'border-muted-foreground/30 bg-muted-foreground/15'
             : 'border-muted-foreground/40 hover:border-primary hover:bg-accent'
@@ -211,7 +225,7 @@ function TaskRow({
       >
         <span
           className={cn(
-            'flex-1 text-[13px] font-[400] transition-all',
+            'flex-1 text-[13px] font-normal transition-all',
             isDone && 'line-through text-muted-foreground'
           )}
         >
@@ -376,12 +390,28 @@ function TaskDetailPanel({
   const [description, setDescription] = useState(task?.description ?? '')
   const [priority, setPriority] = useState<Priority>(task?.priority ?? 'medium')
   const [dueDate, setDueDate] = useState(task?.due_date ?? '')
+  const [dateRange, setDateRange] = useState<RangeValue | null>(() => {
+    if (task?.due_date) {
+      const date = isoToDate(task.due_date)
+      return date ? { start: date, end: null } : null
+    }
+    return null
+  })
   const [newSubtask, setNewSubtask] = useState('')
   const titleRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (task) titleRef.current?.focus()
   }, [task])
+
+  // Sync dateRange with dueDate state
+  useEffect(() => {
+    if (dateRange?.start) {
+      setDueDate(dateToIso(dateRange.start) || '')
+    } else {
+      setDueDate('')
+    }
+  }, [dateRange])
 
   // Keyboard: Escape to close
   useEffect(() => {
@@ -498,25 +528,25 @@ function TaskDetailPanel({
 
         {/* Due date */}
         <div>
-          <label
-            htmlFor="task-due-date"
-            className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50"
-          >
+          <label className="mb-3 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
             Due date
           </label>
-          <div className="flex items-center gap-2 rounded-md border border-border/60 px-2.5 py-1.5 focus-within:border-border">
-            <Calendar className="size-3.5 text-muted-foreground/50" />
-            <input
-              id="task-due-date"
-              type="date"
-              value={dueDate}
-              onChange={e => {
-                setDueDate(e.target.value)
-                onUpdate(task.id, { due_date: e.target.value || undefined })
-              }}
-              className="bg-transparent text-[13px] text-foreground outline-none"
-            />
-          </div>
+          <Calendar
+            value={dateRange}
+            onChange={newRange => {
+              setDateRange(newRange)
+              // Immediately update the task when a date is selected
+              if (newRange?.start) {
+                const isoDate = dateToIso(newRange.start)
+                if (isoDate) onUpdate(task.id, { due_date: isoDate })
+              } else {
+                onUpdate(task.id, { due_date: undefined })
+              }
+            }}
+            compact
+            allowClear
+            showTimeInput={false}
+          />
         </div>
 
         {/* Subtasks */}
@@ -634,7 +664,10 @@ function NewTaskModal({
 }) {
   const [title, setTitle] = useState('')
   const [priority, setPriority] = useState<Priority>('medium')
-  const [dueDate, setDueDate] = useState(getTodayISO())
+  const [dateRange, setDateRange] = useState<RangeValue | null>(() => {
+    const today = isoToDate(getTodayISO())
+    return today ? { start: today, end: null } : null
+  })
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -652,9 +685,13 @@ function NewTaskModal({
   const handleSubmit = async () => {
     const trimmed = title.trim()
     if (!trimmed) return
+    
+    // Use start date as the due date
+    const dueDateIso = dateRange?.start ? dateToIso(dateRange.start) : undefined
+    
     await onAdd(trimmed, {
       priority,
-      due_date: dueDate || undefined,
+      due_date: dueDateIso,
     })
     onClose()
   }
@@ -686,7 +723,7 @@ function NewTaskModal({
         />
 
         {/* Priority + Date row */}
-        <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div className="mb-5 flex flex-col gap-4">
           <div className="flex items-center gap-1.5">
             {(['low', 'medium', 'high'] as Priority[]).map(p => (
               <PriorityButton
@@ -698,16 +735,14 @@ function NewTaskModal({
             ))}
           </div>
 
-          <div className="flex items-center gap-1.5 rounded-md border border-border/60 px-2 py-1 focus-within:border-border">
-            <Calendar className="size-3 text-muted-foreground/50" />
-            <input
-              type="date"
-              value={dueDate}
-              onChange={e => setDueDate(e.target.value)}
-              aria-label="Due date"
-              className="bg-transparent text-[12px] text-foreground outline-none"
-            />
-          </div>
+          {/* Calendar date picker */}
+          <Calendar
+            value={dateRange}
+            onChange={setDateRange}
+            compact
+            allowClear
+            showTimeInput={false}
+          />
         </div>
 
         {/* Actions */}

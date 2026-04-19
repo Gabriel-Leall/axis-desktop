@@ -6,6 +6,7 @@ interface WidgetCardProps {
   icon?: LucideIcon
   children: React.ReactNode
   className?: string
+  contentClassName?: string
   onClick?: () => void
 }
 
@@ -22,6 +23,7 @@ export function WidgetCard({
   icon: Icon,
   children,
   className,
+  contentClassName,
   onClick,
 }: WidgetCardProps) {
   return (
@@ -48,7 +50,9 @@ export function WidgetCard({
         </span>
       </div>
       {/* Content */}
-      <div className="flex-1 overflow-auto p-3">{children}</div>
+      <div className={cn('flex-1 overflow-auto p-3', contentClassName)}>
+        {children}
+      </div>
     </div>
   )
 }

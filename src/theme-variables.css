@@ -58,11 +58,11 @@
    ═══════════════════════════════════════════════ */
 :root {
   /* Mistral Warm Canvas */
-  --background: oklch(0.993 0.01 90);      /* #fffaeb Warm Ivory */
-  --foreground: oklch(0.18 0.005 60);      /* #1f1f1f Mistral Black */
+  --background: oklch(0.993 0.01 90); /* #fffaeb Warm Ivory */
+  --foreground: oklch(0.18 0.005 60); /* #1f1f1f Mistral Black */
 
   /* Card / Surface — Cream */
-  --card: oklch(0.977 0.018 90);           /* #fff0c2-ish warm cream */
+  --card: oklch(0.977 0.018 90); /* #fff0c2-ish warm cream */
   --card-foreground: oklch(0.18 0.005 60);
 
   /* Popover — Pure White for contrast */
@@ -70,11 +70,11 @@
   --popover-foreground: oklch(0.18 0.005 60);
 
   /* Primary — Mistral Black buttons */
-  --primary: oklch(0.18 0.005 60);         /* #1f1f1f */
-  --primary-foreground: oklch(1 0 0);      /* white text */
+  --primary: oklch(0.18 0.005 60); /* #1f1f1f */
+  --primary-foreground: oklch(1 0 0); /* white text */
 
   /* Secondary — Cream surface */
-  --secondary: oklch(0.96 0.03 88);        /* warm cream */
+  --secondary: oklch(0.96 0.03 88); /* warm cream */
   --secondary-foreground: oklch(0.18 0.005 60);
 
   /* Muted — Slightly dimmed warm surface */
@@ -82,26 +82,26 @@
   --muted-foreground: oklch(0.42 0.015 60); /* mid warm gray */
 
   /* Accent — Sunshine Amber (#ffa110) */
-  --accent: oklch(0.82 0.12 65);           /* amber-gold */
+  --accent: oklch(0.82 0.12 65); /* amber-gold */
   --accent-foreground: oklch(0.18 0.005 60);
 
   /* Destructive */
   --destructive: oklch(0.58 0.22 27);
 
   /* Border — Warm tinted border */
-  --border: oklch(0.88 0.025 80);          /* warm ivory border */
-  --input: oklch(0.90 0.02 80);
-  --ring: oklch(0.82 0.12 65);             /* amber ring */
+  --border: oklch(0.88 0.025 80); /* warm ivory border */
+  --input: oklch(0.9 0.02 80);
+  --ring: oklch(0.82 0.12 65); /* amber ring */
 
   /* Chart colors — warm amber spectrum */
-  --chart-1: oklch(0.72 0.17 52);          /* Mistral Orange */
-  --chart-2: oklch(0.80 0.15 65);          /* Sunshine 700 amber */
-  --chart-3: oklch(0.87 0.13 78);          /* Sunshine 500 gold */
-  --chart-4: oklch(0.93 0.10 90);          /* Sunshine 300 */
-  --chart-5: oklch(0.55 0.20 40);          /* Deep burnt orange */
+  --chart-1: oklch(0.72 0.17 52); /* Mistral Orange */
+  --chart-2: oklch(0.8 0.15 65); /* Sunshine 700 amber */
+  --chart-3: oklch(0.87 0.13 78); /* Sunshine 500 gold */
+  --chart-4: oklch(0.93 0.1 90); /* Sunshine 300 */
+  --chart-5: oklch(0.55 0.2 40); /* Deep burnt orange */
 
   /* Base radius — Mistral uses near-zero, but we add slight softness for desktop */
-  --radius: 0.375rem;                      /* 6px — subtle, architectural */
+  --radius: 0.375rem; /* 6px — subtle, architectural */
 
   /* Sidebar — Slightly warmer than main background */
   --sidebar: oklch(0.985 0.014 88);
@@ -119,59 +119,59 @@
    Pure black canvas, frost borders, icy accents
    ═══════════════════════════════════════════════ */
 .dark {
-   /* Resend Void Canvas */
-   --background: oklch(0.07 0 0);           /* ~#0a0a0a near-void black */
-   --foreground: oklch(0.94 0 0);           /* #f0f0f0 near-white */
+  /* Resend Void Canvas */
+  --background: oklch(0.07 0 0); /* ~#0a0a0a near-void black */
+  --foreground: oklch(0.94 0 0); /* #f0f0f0 near-white */
 
-   /* Card — slightly lifted dark surface */
-   --card: oklch(0.11 0.002 240);           /* very dark with faint blue tint */
-   --card-foreground: oklch(0.94 0 0);
+  /* Card — slightly lifted dark surface */
+  --card: oklch(0.11 0.002 240); /* very dark with faint blue tint */
+  --card-foreground: oklch(0.94 0 0);
 
-   /* Popover — slightly elevated */
-   --popover: oklch(0.13 0.003 240);
-   --popover-foreground: oklch(0.94 0 0);
+  /* Popover — slightly elevated */
+  --popover: oklch(0.13 0.003 240);
+  --popover-foreground: oklch(0.94 0 0);
 
-   /* Primary — near-white for primary actions */
-   --primary: oklch(0.94 0 0);             /* #f0f0f0 */
-   --primary-foreground: oklch(0.07 0 0);
+  /* Primary — near-white for primary actions */
+  --primary: oklch(0.94 0 0); /* #f0f0f0 */
+  --primary-foreground: oklch(0.07 0 0);
 
-   /* Secondary — dark lifted surface */
-   --secondary: oklch(0.16 0.004 240);
-   --secondary-foreground: oklch(0.94 0 0);
+  /* Secondary — dark lifted surface */
+  --secondary: oklch(0.16 0.004 240);
+  --secondary-foreground: oklch(0.94 0 0);
 
-   /* Muted — dim silver tone */
-   --muted: oklch(0.16 0.003 240);
-   --muted-foreground: oklch(0.65 0.01 220); /* #a1a4a5 Resend Silver */
+  /* Muted — dim silver tone */
+  --muted: oklch(0.16 0.003 240);
+  --muted-foreground: oklch(0.65 0.01 220); /* #a1a4a5 Resend Silver */
 
-   /* Accent — Resend Blue accent (#3b9eff) */
-   --accent: oklch(0.65 0.14 240);
-   --accent-foreground: oklch(0.07 0 0);
+  /* Accent — Resend Blue accent (#3b9eff) */
+  --accent: oklch(0.65 0.14 240);
+  --accent-foreground: oklch(0.07 0 0);
 
-   /* Destructive — Resend Red (#ff2047) */
-   --destructive: oklch(0.65 0.22 15);
+  /* Destructive — Resend Red (#ff2047) */
+  --destructive: oklch(0.65 0.22 15);
 
-   /* Resend Frost Border — rgba(214,235,253,0.19) expressed as oklch */
-   --border: oklch(0.88 0.02 230 / 0.18);   /* icy blue-tinted at ~19% opacity */
-   --input: oklch(0.88 0.02 230 / 0.15);
-   --ring: oklch(0.65 0.14 240 / 0.6);     /* accent blue focus ring */
+  /* Resend Frost Border — rgba(214,235,253,0.19) expressed as oklch */
+  --border: oklch(0.88 0.02 230 / 0.18); /* icy blue-tinted at ~19% opacity */
+  --input: oklch(0.88 0.02 230 / 0.15);
+  --ring: oklch(0.65 0.14 240 / 0.6); /* accent blue focus ring */
 
-   /* Chart colors — Resend multi-color accent scale */
-   --chart-1: oklch(0.72 0.18 30);         /* Orange #ff801f */
-   --chart-2: oklch(0.88 0.14 160);        /* Green #22ff99 */
-   --chart-3: oklch(0.65 0.14 240);        /* Blue #3b9eff */
-   --chart-4: oklch(0.85 0.13 80);         /* Yellow #ffc53d */
-   --chart-5: oklch(0.60 0.22 15);         /* Red #ff2047 */
+  /* Chart colors — Resend multi-color accent scale */
+  --chart-1: oklch(0.72 0.18 30); /* Orange #ff801f */
+  --chart-2: oklch(0.88 0.14 160); /* Green #22ff99 */
+  --chart-3: oklch(0.65 0.14 240); /* Blue #3b9eff */
+  --chart-4: oklch(0.85 0.13 80); /* Yellow #ffc53d */
+  --chart-5: oklch(0.6 0.22 15); /* Red #ff2047 */
 
-   /* Base radius */
-   --radius: 0.375rem;                      /* 6px */
+  /* Base radius */
+  --radius: 0.375rem; /* 6px */
 
-   /* Sidebar — slightly lifted from background */
-   --sidebar: oklch(0.10 0.002 240);
-   --sidebar-foreground: oklch(0.94 0 0);
-   --sidebar-primary: oklch(0.94 0 0);
-   --sidebar-primary-foreground: oklch(0.07 0 0);
-   --sidebar-accent: oklch(0.16 0.003 240);
-   --sidebar-accent-foreground: oklch(0.94 0 0);
-   --sidebar-border: oklch(0.88 0.02 230 / 0.18);
-   --sidebar-ring: oklch(0.65 0.14 240 / 0.6);
+  /* Sidebar — slightly lifted from background */
+  --sidebar: oklch(0.1 0.002 240);
+  --sidebar-foreground: oklch(0.94 0 0);
+  --sidebar-primary: oklch(0.94 0 0);
+  --sidebar-primary-foreground: oklch(0.07 0 0);
+  --sidebar-accent: oklch(0.16 0.003 240);
+  --sidebar-accent-foreground: oklch(0.94 0 0);
+  --sidebar-border: oklch(0.88 0.02 230 / 0.18);
+  --sidebar-ring: oklch(0.65 0.14 240 / 0.6);
 }

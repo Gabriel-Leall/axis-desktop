@@ -206,7 +206,10 @@ export function BentoGrid() {
   return (
     <div className="h-full w-full min-w-0 overflow-auto">
       <div className="flex w-full justify-center">
-        <div ref={containerRef} className="h-full w-full max-w-[min(90vw,1600px)]">
+        <div
+          ref={containerRef}
+          className="h-full w-full max-w-[min(90vw,1600px)]"
+        >
           <GridLayout
             width={width}
             layout={visibleLayout}
