@@ -110,16 +110,15 @@ pub async fn update_note(
     pool: State<'_, Pool<Sqlite>>,
     input: UpdateNoteInput,
 ) -> Result<Note, String> {
-    let result = sqlx::query(
-        "UPDATE notes SET content = ?, updated_at = ?, word_count = ? WHERE id = ?",
-    )
-    .bind(&input.content)
-    .bind(&input.updated_at)
-    .bind(input.word_count)
-    .bind(&input.id)
-    .execute(pool.inner())
-    .await
-    .map_err(|e| format!("Failed to update note: {e}"))?;
+    let result =
+        sqlx::query("UPDATE notes SET content = ?, updated_at = ?, word_count = ? WHERE id = ?")
+            .bind(&input.content)
+            .bind(&input.updated_at)
+            .bind(input.word_count)
+            .bind(&input.id)
+            .execute(pool.inner())
+            .await
+            .map_err(|e| format!("Failed to update note: {e}"))?;
 
     if result.rows_affected() == 0 {
         return Err("Note not found".to_string());

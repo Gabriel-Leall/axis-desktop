@@ -253,7 +253,7 @@ pub async fn get_task_counts_by_day(
     start: String,
     end: String,
 ) -> Result<Vec<TaskCountByDay>, String> {
-    // We do separate queries for created and completed, and then merge in Rust 
+    // We do separate queries for created and completed, and then merge in Rust
     // to handle full outer join simply.
     let created_rows = sqlx::query(
         r#"
@@ -290,21 +290,27 @@ pub async fn get_task_counts_by_day(
     for row in created_rows {
         let day: String = row.get("day");
         let created: i64 = row.get("count");
-        day_map.entry(day.clone()).or_insert(TaskCountByDay {
-            day,
-            created: 0,
-            completed: 0,
-        }).created = created as i32;
+        day_map
+            .entry(day.clone())
+            .or_insert(TaskCountByDay {
+                day,
+                created: 0,
+                completed: 0,
+            })
+            .created = created as i32;
     }
 
     for row in completed_rows {
         let day: String = row.get("day");
         let completed: i64 = row.get("count");
-        day_map.entry(day.clone()).or_insert(TaskCountByDay {
-            day,
-            created: 0,
-            completed: 0,
-        }).completed = completed as i32;
+        day_map
+            .entry(day.clone())
+            .or_insert(TaskCountByDay {
+                day,
+                created: 0,
+                completed: 0,
+            })
+            .completed = completed as i32;
     }
 
     Ok(day_map.into_values().collect())
