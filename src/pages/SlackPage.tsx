@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
-import { MessageSquare, RefreshCw, LogOut, ExternalLink, ChevronLeft } from 'lucide-react'
+import {
+  MessageSquare,
+  RefreshCw,
+  LogOut,
+  ExternalLink,
+  ChevronLeft,
+} from 'lucide-react'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { useSlackStore } from '@/store/slack-store'
 import { useUIStore } from '@/store/ui-store'
@@ -14,7 +20,15 @@ import type { SlackUser } from '@/types/slack'
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
-function UserAvatar({ name, avatarUrl, size = 'sm' }: { name: string; avatarUrl?: string; size?: 'sm' | 'md' }) {
+function UserAvatar({
+  name,
+  avatarUrl,
+  size = 'sm',
+}: {
+  name: string
+  avatarUrl?: string
+  size?: 'sm' | 'md'
+}) {
   const cls = size === 'md' ? 'size-8' : 'size-6'
   if (avatarUrl) {
     return (
@@ -59,7 +73,11 @@ function MentionItem({
   const avatarUrl = resolvedUser?.profile.image_72
 
   const handleOpen = async () => {
-    try { await openUrl(message.permalink) } catch { /* silently fail */ }
+    try {
+      await openUrl(message.permalink)
+    } catch {
+      /* silently fail */
+    }
   }
 
   return (
@@ -68,7 +86,9 @@ function MentionItem({
         <UserAvatar name={displayName} avatarUrl={avatarUrl} size="md" />
         <div className="flex-1 min-w-0">
           <div className="mb-0.5 flex items-center gap-2">
-            <span className="text-[13px] font-semibold text-foreground">{displayName}</span>
+            <span className="text-[13px] font-semibold text-foreground">
+              {displayName}
+            </span>
             <span className="text-[11px] text-muted-foreground/60">
               #{message.channel.name}
             </span>
@@ -104,12 +124,17 @@ function DMItem({
   resolvedUser: SlackUser | null
   teamId: string | null
 }) {
-  const displayName = resolvedUser?.real_name ?? resolvedUser?.name ?? 'Direct Message'
+  const displayName =
+    resolvedUser?.real_name ?? resolvedUser?.name ?? 'Direct Message'
   const avatarUrl = resolvedUser?.profile.image_72
 
   const handleOpen = async () => {
     if (!teamId) return
-    try { await openUrl(getSlackChannelUrl(teamId, dm.id)) } catch { /* silently fail */ }
+    try {
+      await openUrl(getSlackChannelUrl(teamId, dm.id))
+    } catch {
+      /* silently fail */
+    }
   }
 
   return (
@@ -118,7 +143,9 @@ function DMItem({
         <UserAvatar name={displayName} avatarUrl={avatarUrl} size="md" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[13px] font-semibold text-foreground">{displayName}</span>
+            <span className="text-[13px] font-semibold text-foreground">
+              {displayName}
+            </span>
             {dm.unread_count > 0 && <UnreadBadge count={dm.unread_count} />}
             {dm.last_message && (
               <span className="text-[10px] text-muted-foreground/40 ml-auto shrink-0">
@@ -176,7 +203,9 @@ function TabBtn({
         <span
           className={cn(
             'rounded px-1 py-0.5 text-[10px] font-mono',
-            active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+            active
+              ? 'bg-primary/10 text-primary'
+              : 'bg-muted text-muted-foreground'
           )}
         >
           {count}
@@ -232,7 +261,6 @@ export function SlackPage() {
   const resolveUser = useSlackStore(state => state.resolveUser)
 
   const [activeTab, setActiveTab] = useState<Tab>('mentions')
-  const [resolvedUsers, setResolvedUsers] = useState<Record<string, SlackUser>>({})
 
   useEffect(() => {
     void initialize()
@@ -248,28 +276,20 @@ export function SlackPage() {
     ])
 
     allIds.forEach(uid => {
-      if (!resolvedUsers[uid] && !usersCache[uid]) {
-        void resolveUser(uid).then(u => {
-          if (u) setResolvedUsers(prev => ({ ...prev, [uid]: u }))
-        })
+      if (!usersCache[uid]) {
+        void resolveUser(uid)
       }
     })
-
-    // Pick up fresh cache entries
-    const fromCache: Record<string, SlackUser> = {}
-    allIds.forEach(uid => {
-      if (usersCache[uid]) fromCache[uid] = usersCache[uid]
-    })
-    if (Object.keys(fromCache).length > 0) {
-      setResolvedUsers(prev => ({ ...prev, ...fromCache }))
-    }
   }, [isAuthenticated, mentions, directMessages, usersCache, resolveUser])
 
   const updatedLabel = lastUpdated
     ? `Updated ${formatSlackTs(String(lastUpdated.getTime() / 1000))}`
     : null
 
-  const totalUnread = directMessages.reduce((sum, dm) => sum + dm.unread_count, 0)
+  const totalUnread = directMessages.reduce(
+    (sum, dm) => sum + dm.unread_count,
+    0
+  )
 
   if (!isAuthenticated) {
     return (
@@ -289,7 +309,10 @@ export function SlackPage() {
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
-          <MessageSquare className="size-14 text-muted-foreground/20" strokeWidth={1} />
+          <MessageSquare
+            className="size-14 text-muted-foreground/20"
+            strokeWidth={1}
+          />
           <div className="text-center">
             <p className="text-[15px] font-medium text-foreground">
               Connect your Slack workspace
@@ -375,7 +398,9 @@ export function SlackPage() {
         </div>
         <div className="flex items-center gap-2">
           {updatedLabel && (
-            <span className="text-[10px] text-muted-foreground/40">{updatedLabel}</span>
+            <span className="text-[10px] text-muted-foreground/40">
+              {updatedLabel}
+            </span>
           )}
           <button
             type="button"
@@ -412,7 +437,7 @@ export function SlackPage() {
                 <MentionItem
                   key={msg.ts}
                   message={msg}
-                  resolvedUser={resolvedUsers[msg.user] ?? null}
+                  resolvedUser={usersCache[msg.user] ?? null}
                 />
               ))
             )}
@@ -422,7 +447,8 @@ export function SlackPage() {
         {activeTab === 'dms' && (
           <div className="flex flex-col gap-2">
             <h2 className="mb-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
-              Direct Messages — {totalUnread > 0 ? `${totalUnread} unread` : 'all read'}
+              Direct Messages —{' '}
+              {totalUnread > 0 ? `${totalUnread} unread` : 'all read'}
             </h2>
             {isLoadingDMs ? (
               <SkeletonList />
@@ -433,7 +459,7 @@ export function SlackPage() {
                 <DMItem
                   key={dm.id}
                   dm={dm}
-                  resolvedUser={resolvedUsers[dm.user] ?? null}
+                  resolvedUser={usersCache[dm.user] ?? null}
                   teamId={teamId}
                 />
               ))

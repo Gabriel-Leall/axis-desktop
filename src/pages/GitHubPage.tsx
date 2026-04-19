@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
-import { GitPullRequest, RefreshCw, LogOut, ExternalLink, ChevronLeft } from 'lucide-react'
+import {
+  GitPullRequest,
+  RefreshCw,
+  LogOut,
+  ExternalLink,
+  ChevronLeft,
+} from 'lucide-react'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { useGitHubStore } from '@/store/github-store'
 import { useUIStore } from '@/store/ui-store'
@@ -59,7 +65,11 @@ function PRItem({ pr }: { pr: PullRequest }) {
   const repoName = extractRepoName(pr.repository_url)
 
   const handleOpen = async () => {
-    try { await openUrl(pr.html_url) } catch { /* silently fail */ }
+    try {
+      await openUrl(pr.html_url)
+    } catch {
+      /* silently fail */
+    }
   }
 
   return (
@@ -74,7 +84,9 @@ function PRItem({ pr }: { pr: PullRequest }) {
               {pr.title}
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] text-muted-foreground/70">{repoName}</span>
+              <span className="text-[11px] text-muted-foreground/70">
+                {repoName}
+              </span>
               <span className="text-muted-foreground/30">·</span>
               <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
                 {pr.user.avatar_url && (
@@ -129,7 +141,11 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
   const repoName = extractRepoName(issue.repository_url)
 
   const handleOpen = async () => {
-    try { await openUrl(issue.html_url) } catch { /* silently fail */ }
+    try {
+      await openUrl(issue.html_url)
+    } catch {
+      /* silently fail */
+    }
   }
 
   return (
@@ -144,7 +160,9 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
               {issue.title}
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] text-muted-foreground/70">{repoName}</span>
+              <span className="text-[11px] text-muted-foreground/70">
+                {repoName}
+              </span>
               <span className="text-muted-foreground/30">·</span>
               <span className="text-[11px] text-muted-foreground/50">
                 {formatRelativeTime(issue.updated_at)}
@@ -203,7 +221,9 @@ function TabBtn({
         <span
           className={cn(
             'rounded px-1 py-0.5 text-[10px] font-mono',
-            active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+            active
+              ? 'bg-primary/10 text-primary'
+              : 'bg-muted text-muted-foreground'
           )}
         >
           {count}
@@ -278,11 +298,17 @@ export function GitHubPage() {
 
         {/* Connect state */}
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
-          <GitPullRequest className="size-14 text-muted-foreground/20" strokeWidth={1} />
+          <GitPullRequest
+            className="size-14 text-muted-foreground/20"
+            strokeWidth={1}
+          />
           <div className="text-center">
-            <p className="text-[15px] font-medium text-foreground">Connect your GitHub account</p>
+            <p className="text-[15px] font-medium text-foreground">
+              Connect your GitHub account
+            </p>
             <p className="mt-1 text-[13px] text-muted-foreground/60">
-              Review pull requests and track assigned issues without leaving Axis.
+              Review pull requests and track assigned issues without leaving
+              Axis.
             </p>
           </div>
           <button
@@ -293,9 +319,7 @@ export function GitHubPage() {
           >
             Connect GitHub
           </button>
-          {error && (
-            <p className="text-[11px] text-destructive">{error}</p>
-          )}
+          {error && <p className="text-[11px] text-destructive">{error}</p>}
         </div>
       </div>
     )
@@ -328,7 +352,9 @@ export function GitHubPage() {
                   className="size-5 rounded-full"
                 />
               )}
-              <span className="text-[12px] text-muted-foreground">@{user.login}</span>
+              <span className="text-[12px] text-muted-foreground">
+                @{user.login}
+              </span>
             </div>
           )}
           <button
@@ -346,19 +372,33 @@ export function GitHubPage() {
       {/* Tabs bar */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-1.5">
         <div className="flex gap-1">
-          <TabBtn active={activeTab === 'reviews'} count={reviewRequests.length} onClick={() => setActiveTab('reviews')}>
+          <TabBtn
+            active={activeTab === 'reviews'}
+            count={reviewRequests.length}
+            onClick={() => setActiveTab('reviews')}
+          >
             Review Requests
           </TabBtn>
-          <TabBtn active={activeTab === 'myPRs'} count={myPRs.length} onClick={() => setActiveTab('myPRs')}>
+          <TabBtn
+            active={activeTab === 'myPRs'}
+            count={myPRs.length}
+            onClick={() => setActiveTab('myPRs')}
+          >
             My PRs
           </TabBtn>
-          <TabBtn active={activeTab === 'issues'} count={assignedIssues.length} onClick={() => setActiveTab('issues')}>
+          <TabBtn
+            active={activeTab === 'issues'}
+            count={assignedIssues.length}
+            onClick={() => setActiveTab('issues')}
+          >
             Issues
           </TabBtn>
         </div>
         <div className="flex items-center gap-2">
           {updatedLabel && (
-            <span className="text-[10px] text-muted-foreground/40">{updatedLabel}</span>
+            <span className="text-[10px] text-muted-foreground/40">
+              {updatedLabel}
+            </span>
           )}
           <button
             type="button"
@@ -421,7 +461,9 @@ export function GitHubPage() {
             ) : assignedIssues.length === 0 ? (
               <EmptyState message="No assigned issues 🎉" />
             ) : (
-              assignedIssues.map(issue => <IssueItem key={issue.id} issue={issue} />)
+              assignedIssues.map(issue => (
+                <IssueItem key={issue.id} issue={issue} />
+              ))
             )}
           </div>
         )}

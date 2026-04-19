@@ -106,7 +106,9 @@ function FocusTimeChart() {
         <XAxis
           dataKey="day"
           tickFormatter={val =>
-            new Date(`${val}T12:00:00Z`).toLocaleDateString(undefined, { weekday: 'short' })
+            new Date(`${val}T12:00:00Z`).toLocaleDateString(undefined, {
+              weekday: 'short',
+            })
           }
           stroke="hsl(var(--muted-foreground))"
           fontSize={11}
@@ -177,7 +179,9 @@ function TasksChart() {
         <XAxis
           dataKey="day"
           tickFormatter={val =>
-            new Date(`${val}T12:00:00Z`).toLocaleDateString(undefined, { weekday: 'short' })
+            new Date(`${val}T12:00:00Z`).toLocaleDateString(undefined, {
+              weekday: 'short',
+            })
           }
           stroke="hsl(var(--muted-foreground))"
           fontSize={11}
@@ -277,7 +281,12 @@ export default function AnalyticsPage() {
         <PeriodToggle />
       </div>
 
-      <div className={cn('transition-opacity duration-300', isLoading ? 'opacity-50 pointer-events-none' : 'opacity-100')}>
+      <div
+        className={cn(
+          'transition-opacity duration-300',
+          isLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'
+        )}
+      >
         {/* Summary Cards */}
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
@@ -285,7 +294,9 @@ export default function AnalyticsPage() {
             value={formatDuration(summary?.total_focus_seconds ?? 0)}
             subtitle={
               summary?.top_productivity_day
-                ? `Most active: ${new Date(summary.top_productivity_day).toLocaleDateString(undefined, {
+                ? `Most active: ${new Date(
+                    summary.top_productivity_day
+                  ).toLocaleDateString(undefined, {
                     weekday: 'long',
                   })}`
                 : undefined
@@ -301,14 +312,16 @@ export default function AnalyticsPage() {
           <StatCard
             title="Pomodoros"
             value={summary?.pomodoros_completed ?? 0}
-            subtitle={
-              (() => {
-                const focusSummary = pomodoroSummary?.find(s => s.session_type === 'focus')
-                if (!focusSummary || focusSummary.sessions === 0) return undefined
-                const avgMin = Math.round(focusSummary.total_seconds / focusSummary.sessions / 60)
-                return `${avgMin}m avg session`
-              })()
-            }
+            subtitle={(() => {
+              const focusSummary = pomodoroSummary?.find(
+                s => s.session_type === 'focus'
+              )
+              if (!focusSummary || focusSummary.sessions === 0) return undefined
+              const avgMin = Math.round(
+                focusSummary.total_seconds / focusSummary.sessions / 60
+              )
+              return `${avgMin}m avg session`
+            })()}
             icon={Target}
           />
           <StatCard
