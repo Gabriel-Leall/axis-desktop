@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { Timer, Play, Pause, SkipForward, RotateCcw, Link2 } from 'lucide-react'
+import { motion } from 'motion/react'
 import { WidgetCard } from '../WidgetCard'
 import { usePomodoroStore } from '@/store/pomodoro-store'
 import { useTasksStore } from '@/store/tasks-store'
@@ -45,7 +46,7 @@ function CycleDots({
 
   return (
     <div
-      className="flex items-center gap-[3px]"
+      className="flex items-center gap-0.75"
       aria-label={`${completed % total || total} of ${total} pomodoros completed`}
     >
       {dots.map((filled, i) => (
@@ -74,7 +75,7 @@ function ProgressBar({
   type: 'focus' | 'short_break' | 'long_break'
 }) {
   return (
-    <div className="h-[3px] w-full overflow-hidden rounded-full bg-muted">
+    <div className="h-0.75 w-full overflow-hidden rounded-full bg-muted">
       <div
         className={cn(
           'h-full rounded-full transition-all duration-1000 ease-linear',
@@ -207,7 +208,9 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
 
         {/* Controls */}
         <div className="flex items-center justify-center gap-1">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             type="button"
             onClick={e => {
               e.stopPropagation()
@@ -217,9 +220,11 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
             className="rounded-md p-1.5 text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
           >
             <RotateCcw className="size-3.5" />
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             type="button"
             onClick={e => {
               e.stopPropagation()
@@ -238,9 +243,11 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
             ) : (
               <Play className="size-3.5 translate-x-px" fill="currentColor" />
             )}
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             type="button"
             onClick={e => {
               e.stopPropagation()
@@ -250,7 +257,7 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
             className="rounded-md p-1.5 text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
           >
             <SkipForward className="size-3.5" />
-          </button>
+          </motion.button>
         </div>
 
         {/* Linked task */}

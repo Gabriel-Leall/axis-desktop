@@ -12,13 +12,10 @@ interface WidgetCardProps {
 /**
  * Widget card wrapper with themed borders.
  *
- * Uses CSS variables for shadow/border treatment so it adapts
- * to both light and dark themes automatically.
- *
- * Features:
- * - Themed ring-shadow border via --widget-shadow
- * - Subtle header with icon + title
- * - Drag handle on the header area
+ * Design system:
+ * - Light: Mistral warm golden shadow, cream card surface
+ * - Dark:  Resend frost border ring, near-void surface
+ * - Both:  Cal.com multi-layer shadow approach via --widget-shadow
  */
 export function WidgetCard({
   title,
@@ -30,7 +27,9 @@ export function WidgetCard({
   return (
     <div
       className={cn(
-        'widget-card flex h-full w-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground',
+        'widget-card flex h-full w-full flex-col overflow-hidden rounded-lg border bg-card text-card-foreground',
+        /* Dark mode gets frost border, light mode gets warm tinted border */
+        'border-border',
         onClick && 'cursor-pointer',
         className
       )}
@@ -44,7 +43,7 @@ export function WidgetCard({
         {Icon && (
           <Icon className="size-3.5 text-muted-foreground" strokeWidth={2} />
         )}
-        <span className="text-xs font-medium text-muted-foreground select-none">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70 select-none">
           {title}
         </span>
       </div>

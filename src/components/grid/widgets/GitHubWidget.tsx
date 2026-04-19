@@ -2,6 +2,9 @@ import { useEffect } from 'react'
 import { GitPullRequest, RefreshCw, ExternalLink } from 'lucide-react'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { WidgetCard } from '../WidgetCard'
+import { motion, AnimatePresence } from 'motion/react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useGitHubStore } from '@/store/github-store'
 import { extractRepoName, formatRelativeTime } from '@/services/github-api'
 import { cn } from '@/lib/utils'
@@ -12,20 +15,29 @@ import type { PullRequest } from '@/types/github'
 function CIBadge({ status }: { status: PullRequest['ci_status'] }) {
   if (status === 'success') {
     return (
-      <span className="text-[10px] font-medium text-emerald-500" aria-label="CI passed">
+      <span
+        className="text-[10px] font-medium text-emerald-500"
+        aria-label="CI passed"
+      >
         ✓
       </span>
     )
   }
   if (status === 'failure') {
     return (
-      <span className="text-[10px] font-medium text-destructive" aria-label="CI failed">
+      <span
+        className="text-[10px] font-medium text-destructive"
+        aria-label="CI failed"
+      >
         ✗
       </span>
     )
   }
   return (
-    <span className="text-[10px] text-muted-foreground/50" aria-label="CI pending">
+    <span
+      className="text-[10px] text-muted-foreground/50"
+      aria-label="CI pending"
+    >
       ○
     </span>
   )
@@ -46,7 +58,11 @@ function PRRow({ pr }: { pr: PullRequest }) {
   }
 
   return (
-    <button
+    <motion.button
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10, transition: { duration: 0.15 } }}
       type="button"
       onClick={handleClick}
       className="group flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-start transition-colors hover:bg-accent/50"
@@ -56,10 +72,14 @@ function PRRow({ pr }: { pr: PullRequest }) {
           <span className="shrink-0 font-mono text-[10px] font-medium text-primary/70">
             #{pr.number}
           </span>
-          <span className="truncate text-[12px] text-foreground/90">{pr.title}</span>
+          <span className="truncate text-[12px] text-foreground/90">
+            {pr.title}
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-muted-foreground/60">{shortRepo}</span>
+          <span className="text-[10px] text-muted-foreground/60">
+            {shortRepo}
+          </span>
           <span className="text-muted-foreground/30">·</span>
           <span className="text-[10px] text-muted-foreground/50">
             {formatRelativeTime(pr.updated_at)}
@@ -68,7 +88,7 @@ function PRRow({ pr }: { pr: PullRequest }) {
           <CIBadge status={pr.ci_status} />
         </div>
       </div>
-    </button>
+    </motion.button>
   )
 }
 
@@ -102,13 +122,15 @@ function Section({
       {isLoading ? (
         <div className="space-y-1 px-2">
           {[1, 2].map(i => (
-            <div key={i} className="h-8 animate-pulse rounded bg-muted" />
+            <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
       ) : count === 0 ? (
-        <p className="px-2 py-1 text-[11px] text-muted-foreground/40">{emptyText}</p>
+        <p className="px-2 py-1 text-[11px] text-muted-foreground/40">
+          {emptyText}
+        </p>
       ) : (
-        children
+        <AnimatePresence mode="popLayout">{children}</AnimatePresence>
       )}
     </div>
   )
@@ -118,22 +140,16 @@ function Section({
 
 function ConnectPrompt({ onConnect }: { onConnect: () => void }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 py-4">
-      <GitPullRequest className="size-8 text-muted-foreground/30" strokeWidth={1.5} />
-      <div className="text-center">
-        <p className="text-[12px] font-medium text-foreground/80">Connect GitHub</p>
-        <p className="text-[11px] text-muted-foreground/50">
-          See PRs and reviews at a glance
-        </p>
-      </div>
-      <button
-        type="button"
-        id="github-widget-connect-btn"
-        onClick={onConnect}
-        className="rounded-md bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground transition-opacity hover:opacity-90"
-      >
-        Connect
-      </button>
+    <div className="flex h-full items-center justify-center">
+      <EmptyState
+        icon={GitPullRequest}
+        title="Connect GitHub"
+        description="See PRs and reviews at a glance"
+        action={{
+          label: 'Connect',
+          onClick: onConnect,
+        }}
+      />
     </div>
   )
 }
@@ -229,7 +245,9 @@ export function GitHubWidget({ onNavigateToGitHub }: GitHubWidgetProps) {
           {/* Footer */}
           <div className="mt-auto flex items-center justify-between pt-1">
             {updatedLabel && (
-              <span className="text-[10px] text-muted-foreground/40">{updatedLabel}</span>
+              <span className="text-[10px] text-muted-foreground/40">
+                {updatedLabel}
+              </span>
             )}
             <button
               type="button"

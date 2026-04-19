@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Brain, ArrowUpRight, Plus } from 'lucide-react'
+import { motion } from 'motion/react'
 import { useNotesStore } from '@/store/notes-store'
 import { cn } from '@/lib/utils'
 
@@ -61,27 +62,42 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
   const currentNote = notes[currentIndex] ?? null
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>
+
     if (notes.length === 0) {
-      setCurrentIndex(0)
-      return
+      timeoutId = setTimeout(() => setCurrentIndex(0), 0)
+    } else if (currentIndex > notes.length - 1) {
+      timeoutId = setTimeout(() => setCurrentIndex(notes.length - 1), 0)
     }
 
-    if (currentIndex > notes.length - 1) {
-      setCurrentIndex(notes.length - 1)
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
     }
   }, [currentIndex, notes.length])
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>
+
     if (!currentNote) {
-      setDraftTitle('')
-      setDraftBody('')
-      return
+      timeoutId = setTimeout(() => {
+        setDraftTitle('')
+        setDraftBody('')
+      }, 0)
+      return () => {
+        if (timeoutId) clearTimeout(timeoutId)
+      }
     }
 
     const parsed = splitNoteContent(currentNote.content)
-    setDraftTitle(parsed.title)
-    setDraftBody(parsed.body)
-  }, [currentNote?.id, currentNote?.content])
+    timeoutId = setTimeout(() => {
+      setDraftTitle(parsed.title)
+      setDraftBody(parsed.body)
+    }, 0)
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [currentNote])
 
   const handleContentChange = useCallback(
     (content: string) => {
@@ -177,22 +193,26 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
         <span className="flex-1 text-xs font-medium text-muted-foreground select-none">
           Brain Dump
         </span>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           type="button"
           onClick={handleOpenPage}
           className="rounded p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground"
           aria-label="Open notes page"
         >
           <ArrowUpRight className="size-3" />
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           type="button"
           onClick={() => void handleCreateNote()}
           className="rounded p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground"
           aria-label="New note"
         >
           <Plus className="size-3" />
-        </button>
+        </motion.button>
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -207,22 +227,22 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
           className="relative flex-1 overflow-hidden p-0"
           onClick={() => textareaRef.current?.focus()}
         >
-        <textarea
-          ref={textareaRef}
-          key={currentNote?.id ?? 'empty-body'}
-          value={draftBody}
-          onChange={e => handleBodyChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Dump it here..."
-          className="h-full w-full resize-none bg-transparent px-3 py-2 font-mono text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
-        />
-        <div
-          className={cn(
-            'absolute inset-e-2 top-2 size-1.5 rounded-full transition-opacity duration-700',
-            isSaving ? 'animate-pulse bg-primary/60 opacity-100' : 'opacity-0'
-          )}
-        />
-      </div>
+          <textarea
+            ref={textareaRef}
+            key={currentNote?.id ?? 'empty-body'}
+            value={draftBody}
+            onChange={e => handleBodyChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Dump it here..."
+            className="h-full w-full resize-none bg-transparent px-3 py-2 font-mono text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+          />
+          <div
+            className={cn(
+              'absolute inset-e-2 top-2 size-1.5 rounded-full transition-opacity duration-700',
+              isSaving ? 'animate-pulse bg-primary/60 opacity-100' : 'opacity-0'
+            )}
+          />
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t border-border px-3 py-1">

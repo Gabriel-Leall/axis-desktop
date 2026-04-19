@@ -1,9 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { MessageSquare, RefreshCw, ExternalLink } from 'lucide-react'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { WidgetCard } from '../WidgetCard'
+import { motion, AnimatePresence } from 'motion/react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useSlackStore } from '@/store/slack-store'
-import { formatSlackTs, stripSlackMarkdown, getSlackChannelUrl } from '@/services/slack-api'
+import {
+  formatSlackTs,
+  stripSlackMarkdown,
+  getSlackChannelUrl,
+} from '@/services/slack-api'
 import { cn } from '@/lib/utils'
 import type { SlackMessage, SlackDM } from '@/types/slack'
 import type { SlackUser } from '@/types/slack'
@@ -60,7 +67,11 @@ function MentionRow({
   }
 
   return (
-    <button
+    <motion.button
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10, transition: { duration: 0.15 } }}
       type="button"
       onClick={handleClick}
       className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start transition-colors hover:bg-accent/50"
@@ -68,7 +79,9 @@ function MentionRow({
       <UserAvatar name={displayName} avatarUrl={avatarUrl} />
       <div className="flex min-w-0 flex-1 flex-col gap-0">
         <div className="flex items-center gap-1">
-          <span className="text-[11px] font-medium text-foreground/90">{displayName}</span>
+          <span className="text-[11px] font-medium text-foreground/90">
+            {displayName}
+          </span>
           <span className="text-[10px] text-muted-foreground/50">
             #{message.channel.name}
           </span>
@@ -80,7 +93,7 @@ function MentionRow({
       <span className="shrink-0 text-[10px] text-muted-foreground/40">
         {formatSlackTs(message.ts)}
       </span>
-    </button>
+    </motion.button>
   )
 }
 
@@ -108,14 +121,20 @@ function DMRow({
   }
 
   return (
-    <button
+    <motion.button
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10, transition: { duration: 0.15 } }}
       type="button"
       onClick={handleClick}
       className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start transition-colors hover:bg-accent/50"
     >
       <UserAvatar name={displayName} avatarUrl={avatarUrl} />
       <div className="flex min-w-0 flex-1 flex-col gap-0">
-        <span className="text-[11px] font-medium text-foreground/90">{displayName}</span>
+        <span className="text-[11px] font-medium text-foreground/90">
+          {displayName}
+        </span>
         {dm.last_message && (
           <span className="truncate text-[10px] text-muted-foreground/60">
             {stripSlackMarkdown(dm.last_message.text)}
@@ -130,7 +149,7 @@ function DMRow({
           </span>
         )}
       </div>
-    </button>
+    </motion.button>
   )
 }
 
@@ -164,13 +183,15 @@ function Section({
       {isLoading ? (
         <div className="space-y-1 px-2">
           {[1, 2].map(i => (
-            <div key={i} className="h-8 animate-pulse rounded bg-muted" />
+            <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
       ) : count === 0 ? (
-        <p className="px-2 py-1 text-[11px] text-muted-foreground/40">{emptyText}</p>
+        <p className="px-2 py-1 text-[11px] text-muted-foreground/40">
+          {emptyText}
+        </p>
       ) : (
-        children
+        <AnimatePresence mode="popLayout">{children}</AnimatePresence>
       )}
     </div>
   )
@@ -180,22 +201,16 @@ function Section({
 
 function ConnectPrompt({ onConnect }: { onConnect: () => void }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 py-4">
-      <MessageSquare className="size-8 text-muted-foreground/30" strokeWidth={1.5} />
-      <div className="text-center">
-        <p className="text-[12px] font-medium text-foreground/80">Connect Slack</p>
-        <p className="text-[11px] text-muted-foreground/50">
-          See mentions and DMs at a glance
-        </p>
-      </div>
-      <button
-        type="button"
-        id="slack-widget-connect-btn"
-        onClick={onConnect}
-        className="rounded-md bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground transition-opacity hover:opacity-90"
-      >
-        Connect
-      </button>
+    <div className="flex h-full items-center justify-center">
+      <EmptyState
+        icon={MessageSquare}
+        title="Connect Slack"
+        description="See mentions and DMs at a glance"
+        action={{
+          label: 'Connect',
+          onClick: onConnect,
+        }}
+      />
     </div>
   )
 }
@@ -222,60 +237,34 @@ export function SlackWidget({ onNavigateToSlack }: SlackWidgetProps) {
   const startOAuthFlow = useSlackStore(state => state.startOAuthFlow)
   const resolveUser = useSlackStore(state => state.resolveUser)
 
-  // Track resolved users for mentions
-  const [resolvedMentionUsers, setResolvedMentionUsers] = useState<Record<string, SlackUser>>({})
-  const [resolvedDMUsers, setResolvedDMUsers] = useState<Record<string, SlackUser>>({})
-
   useEffect(() => {
     void initialize()
   }, [initialize])
 
-  // Resolve user IDs for mentions
+  // Resolve user IDs
   useEffect(() => {
     if (!isAuthenticated) return
     const visibleMentions = mentions.slice(0, 3)
-    const unresolved = visibleMentions.filter(m => !usersCache[m.user])
-    unresolved.forEach(m => {
-      void resolveUser(m.user).then(u => {
-        if (u) {
-          setResolvedMentionUsers(prev => ({ ...prev, [m.user]: u }))
-        }
-      })
-    })
-    // Also pick up from cache
-    const fromCache: Record<string, SlackUser> = {}
-    visibleMentions.forEach(m => {
-      if (usersCache[m.user]) fromCache[m.user] = usersCache[m.user]!
-    })
-    if (Object.keys(fromCache).length > 0) {
-      setResolvedMentionUsers(prev => ({ ...prev, ...fromCache }))
-    }
-  }, [isAuthenticated, mentions, usersCache, resolveUser])
-
-  // Resolve user IDs for DMs
-  useEffect(() => {
-    if (!isAuthenticated) return
     const visibleDMs = directMessages.slice(0, 3)
-    const unresolved = visibleDMs.filter(dm => !usersCache[dm.user])
-    unresolved.forEach(dm => {
-      void resolveUser(dm.user).then(u => {
-        if (u) {
-          setResolvedDMUsers(prev => ({ ...prev, [dm.user]: u }))
-        }
-      })
+
+    const allIds = new Set([
+      ...visibleMentions.map(m => m.user),
+      ...visibleDMs.map(dm => dm.user),
+    ])
+
+    allIds.forEach(uid => {
+      if (!usersCache[uid]) {
+        void resolveUser(uid)
+      }
     })
-    const fromCache: Record<string, SlackUser> = {}
-    visibleDMs.forEach(dm => {
-      if (usersCache[dm.user]) fromCache[dm.user] = usersCache[dm.user]!
-    })
-    if (Object.keys(fromCache).length > 0) {
-      setResolvedDMUsers(prev => ({ ...prev, ...fromCache }))
-    }
-  }, [isAuthenticated, directMessages, usersCache, resolveUser])
+  }, [isAuthenticated, mentions, directMessages, usersCache, resolveUser])
 
   const visibleMentions = mentions.slice(0, 3)
   const visibleDMs = directMessages.slice(0, 3)
-  const totalUnread = directMessages.reduce((sum, dm) => sum + dm.unread_count, 0)
+  const totalUnread = directMessages.reduce(
+    (sum, dm) => sum + dm.unread_count,
+    0
+  )
 
   const updatedLabel = lastUpdated
     ? `Updated ${formatSlackTs(String(lastUpdated.getTime() / 1000))}`
@@ -325,7 +314,7 @@ export function SlackWidget({ onNavigateToSlack }: SlackWidgetProps) {
                 <MentionRow
                   key={msg.ts}
                   message={msg}
-                  resolvedUser={resolvedMentionUsers[msg.user] ?? null}
+                  resolvedUser={usersCache[msg.user] ?? null}
                 />
               ))}
             </div>
@@ -343,7 +332,7 @@ export function SlackWidget({ onNavigateToSlack }: SlackWidgetProps) {
                 <DMRow
                   key={dm.id}
                   dm={dm}
-                  resolvedUser={resolvedDMUsers[dm.user] ?? null}
+                  resolvedUser={usersCache[dm.user] ?? null}
                   teamId={teamId}
                 />
               ))}
@@ -353,7 +342,9 @@ export function SlackWidget({ onNavigateToSlack }: SlackWidgetProps) {
           {/* Footer */}
           <div className="mt-auto flex items-center justify-between pt-1">
             {updatedLabel && (
-              <span className="text-[10px] text-muted-foreground/40">{updatedLabel}</span>
+              <span className="text-[10px] text-muted-foreground/40">
+                {updatedLabel}
+              </span>
             )}
             <button
               type="button"

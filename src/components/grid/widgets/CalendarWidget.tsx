@@ -9,6 +9,7 @@ import {
 import { useUIStore } from '@/store/ui-store'
 import { useCalendarStore } from '@/store/calendar-store'
 import { getEventsForDate, getLocalISODate } from '@/lib/calendar-domain'
+import { motion } from 'motion/react'
 
 const WEEKDAYS_EN = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 const WEEKDAYS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -59,7 +60,9 @@ export function CalendarWidget() {
         onClick={handleClick}
       >
         <div className="mb-2 flex items-center justify-between">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={e => {
               e.stopPropagation()
               prevMonth()
@@ -68,11 +71,13 @@ export function CalendarWidget() {
             type="button"
           >
             <ChevronLeft className="size-4 text-muted-foreground" />
-          </button>
+          </motion.button>
           <span className="text-sm font-medium text-foreground">
             {monthLabel}
           </span>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={e => {
               e.stopPropagation()
               nextMonth()
@@ -81,7 +86,7 @@ export function CalendarWidget() {
             type="button"
           >
             <ChevronRight className="size-4 text-muted-foreground" />
-          </button>
+          </motion.button>
         </div>
 
         <div className="grid grid-cols-7 gap-0.5 text-center">
@@ -95,10 +100,18 @@ export function CalendarWidget() {
           ))}
 
           {days.map((day, idx) => {
-            const dateISO = day
-              ? getLocalISODate(new Date(year, month, day))
-              : null
-            const dayEvents = dateISO ? getEventsForDate(events, dateISO) : []
+            let dateISO: string | null = null
+            let dayEvents: any[] = []
+            
+            try {
+              dateISO = day
+                ? getLocalISODate(new Date(year, month, day))
+                : null
+              dayEvents = dateISO ? getEventsForDate(events, dateISO) : []
+            } catch (e) {
+              console.error('Error calculating date in CalendarWidget', e)
+            }
+            
             const hasEvents = dayEvents.length > 0
 
             return (

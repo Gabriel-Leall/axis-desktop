@@ -11,6 +11,10 @@ import { cn } from '@/lib/utils'
 
 // ─── Priority Dot ──────────────────────────────────────────────────────────────
 
+import { motion, AnimatePresence } from 'motion/react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { listItemVariants } from '@/lib/motion-tokens'
+
 function PriorityDot({ priority }: { priority: Task['priority'] }) {
   return (
     <span
@@ -29,17 +33,27 @@ function PriorityDot({ priority }: { priority: Task['priority'] }) {
 
 function TaskRow({
   task,
+  index,
   onToggle,
   onSelect,
 }: {
   task: Task
+  index: number
   onToggle: () => void
   onSelect: () => void
 }) {
   const isDone = task.status === 'done'
 
   return (
-    <div className="group flex items-center gap-2 rounded-md px-2 py-[5px] transition-colors hover:bg-accent/50">
+    <motion.div
+      layout
+      variants={listItemVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      custom={index}
+      className="group flex items-center gap-2 rounded-md px-2 py-1.25 transition-colors hover:bg-accent/50"
+    >
       {/* Checkbox */}
       <button
         type="button"
@@ -56,7 +70,11 @@ function TaskRow({
         )}
       >
         {isDone && (
-          <span className="block size-2 rounded-full bg-muted-foreground/50" />
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="block size-2 rounded-full bg-muted-foreground/50"
+          />
         )}
       </button>
 
@@ -75,7 +93,7 @@ function TaskRow({
 
       {/* Priority */}
       <PriorityDot priority={task.priority} />
-    </div>
+    </motion.div>
   )
 }
 
@@ -162,34 +180,51 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
 
         {/* Task list */}
         <div className="flex flex-1 flex-col gap-0 overflow-y-auto">
-          {isLoading ? (
-            // Skeleton
-            Array.from({ length: 3 }).map((_, i) => (
-              <div
-                key={i}
-                className="mx-2 my-1 h-4 animate-pulse rounded bg-muted"
-              />
-            ))
-          ) : visibleTasks.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-1.5 py-4 text-center">
-              <CheckSquare
-                className="size-5 text-muted-foreground/30"
-                strokeWidth={1.5}
-              />
-              <span className="text-[12px] text-muted-foreground/50">
-                Nothing for today
-              </span>
-            </div>
-          ) : (
-            visibleTasks.map(task => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                onToggle={() => toggleComplete(task.id)}
-                onSelect={() => handleSelect(task.id)}
-              />
-            ))
-          )}
+          <AnimatePresence mode="popLayout" initial={false}>
+            {isLoading ? (
+              // Skeleton
+              <motion.div
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="px-1 py-1 space-y-2"
+              >
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <Skeleton className="size-4 shrink-0 rounded-full" />
+                    <Skeleton className="h-4 flex-1" />
+                  </div>
+                ))}
+              </motion.div>
+            ) : visibleTasks.length === 0 ? (
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex flex-1 flex-col items-center justify-center gap-1.5 py-4 text-center"
+              >
+                <CheckSquare
+                  className="size-5 text-muted-foreground/30"
+                  strokeWidth={1.5}
+                />
+                <span className="text-[12px] text-muted-foreground/50">
+                  Nothing for today
+                </span>
+              </motion.div>
+            ) : (
+              visibleTasks.map((task, i) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  index={i}
+                  onToggle={() => toggleComplete(task.id)}
+                  onSelect={() => handleSelect(task.id)}
+                />
+              ))
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Quick-add */}

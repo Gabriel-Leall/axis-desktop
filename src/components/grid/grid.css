@@ -7,19 +7,23 @@
 
 /* ============================================================
  * Widget shadow tokens — light & dark
+ *
+ * Light: Mistral-inspired warm golden shadow (amber-tinted)
+ * Dark:  Resend-inspired frost blue ring-shadow
  * ============================================================ */
 :root {
+  /* Cal.com multi-layer ring + diffuse + contact shadow — warm tinted */
   --widget-shadow:
-    rgba(19, 19, 22, 0.7) 0px 1px 5px -4px,
-    rgba(34, 42, 53, 0.08) 0px 0px 0px 1px,
-    rgba(34, 42, 53, 0.05) 0px 4px 8px 0px;
+    rgba(127, 99, 21, 0.08) 0px 1px 5px -4px,
+    rgba(127, 99, 21, 0.08) 0px 0px 0px 1px,
+    rgba(34, 42, 53, 0.04) 0px 4px 12px 0px;
 }
 
 .dark {
+  /* Resend frost: blue-tinted ring shadow — no traditional box-shadow on void */
   --widget-shadow:
-    rgba(0, 0, 0, 0.5) 0px 1px 5px -4px,
-    rgba(255, 255, 255, 0.06) 0px 0px 0px 1px,
-    rgba(0, 0, 0, 0.3) 0px 4px 8px 0px;
+    rgba(176, 199, 217, 0.145) 0px 0px 0px 1px,
+    rgba(0, 0, 0, 0.3) 0px 2px 8px 0px;
 }
 
 /* Apply the token to widget cards */

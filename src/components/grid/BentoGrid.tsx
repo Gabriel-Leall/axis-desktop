@@ -188,48 +188,58 @@ export function BentoGrid() {
   // Don't render grid until width is measured & data is loaded
   if (!mounted || !loaded) {
     return (
-      <div
-        ref={containerRef}
-        className="flex h-full items-center justify-center"
-      >
-        <div className="text-sm text-muted-foreground">Loading dashboard…</div>
+      <div className="h-full w-full min-w-0 overflow-auto">
+        <div className="flex w-full justify-center">
+          <div
+            ref={containerRef}
+            className="flex h-full w-full max-w-[min(90vw,1600px)] items-center justify-center"
+          >
+            <div className="text-sm text-muted-foreground">
+              Loading dashboard…
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div ref={containerRef} className="h-full overflow-auto">
-      <GridLayout
-        width={width}
-        layout={visibleLayout}
-        gridConfig={{
-          cols: GRID_COLS,
-          rowHeight: ROW_HEIGHT,
-          margin: GRID_MARGIN,
-          containerPadding: GRID_PADDING,
-        }}
-        dragConfig={{
-          enabled: true,
-          handle: '.widget-drag-handle',
-        }}
-        resizeConfig={{
-          enabled: true,
-          handles: ['se'],
-        }}
-        compactor={verticalCompactor}
-        onLayoutChange={handleLayoutChange}
-      >
-        {visibleLayout.map(item => {
-          const WidgetComponent = WIDGET_COMPONENTS[item.i]
-          if (!WidgetComponent) return null
+    <div className="h-full w-full min-w-0 overflow-auto">
+      <div className="flex w-full justify-center">
+        <div ref={containerRef} className="h-full w-full max-w-[min(90vw,1600px)]">
+          <GridLayout
+            width={width}
+            layout={visibleLayout}
+            gridConfig={{
+              cols: GRID_COLS,
+              rowHeight: ROW_HEIGHT,
+              margin: GRID_MARGIN,
+              containerPadding: GRID_PADDING,
+            }}
+            dragConfig={{
+              enabled: true,
+              handle: '.widget-drag-handle',
+            }}
+            resizeConfig={{
+              enabled: true,
+              handles: ['se'],
+            }}
+            compactor={verticalCompactor}
+            onLayoutChange={handleLayoutChange}
+          >
+            {visibleLayout.map(item => {
+              const WidgetComponent = WIDGET_COMPONENTS[item.i]
+              if (!WidgetComponent) return null
 
-          return (
-            <div key={item.i}>
-              <WidgetComponent />
-            </div>
-          )
-        })}
-      </GridLayout>
+              return (
+                <div key={item.i}>
+                  <WidgetComponent />
+                </div>
+              )
+            })}
+          </GridLayout>
+        </div>
+      </div>
     </div>
   )
 }

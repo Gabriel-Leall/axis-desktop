@@ -21,6 +21,7 @@ import { ArrowUpRight, Plus } from 'lucide-react'
 import { WidgetCard } from '../WidgetCard'
 import { cn } from '@/lib/utils'
 import { useKanbanStore } from '@/store/kanban-store'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { KanbanCard } from '@/lib/bindings'
 
 interface KanbanWidgetProps {
@@ -271,8 +272,10 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
         </div>
 
         {isLoading || !fullBoard ? (
-          <div className="flex flex-1 items-center justify-center text-[11px] text-muted-foreground">
-            Loading board...
+          <div className="flex flex-1 gap-2 overflow-hidden pb-1">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="w-44 h-full shrink-0" />
+            ))}
           </div>
         ) : (
           <DndContext

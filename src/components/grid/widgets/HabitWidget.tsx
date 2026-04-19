@@ -11,6 +11,9 @@ import {
 } from '@/store/habits-store'
 import { HeatMap } from '@/components/habits/HeatMap'
 import { cn } from '@/lib/utils'
+import { motion, AnimatePresence } from 'motion/react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { listItemVariants } from '@/lib/motion-tokens'
 
 interface HabitWidgetProps {
   onNavigateToHabits?: (selectedHabitId?: string) => void
@@ -102,82 +105,128 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
           />
         </div>
 
-        <div className="flex-1 space-y-1 overflow-y-auto pr-1">
-          {isLoading ? (
-            <div className="text-xs text-muted-foreground">
-              Loading habits...
-            </div>
-          ) : visibleHabits.length === 0 ? (
-            <div className="flex h-full items-center justify-center rounded-md border border-dashed border-border/70 px-3 text-center text-xs text-muted-foreground">
-              No habits yet. Add your first one.
-            </div>
-          ) : (
-            visibleHabits.map(habit => {
-              const doneToday = todayLogs.some(log => log.habit_id === habit.id)
-              const streak = selectStreakByHabit(monthLogs, habit.id)
-              const logDates = selectHabitCompletionDates(monthLogs, habit.id)
-              return (
-                <div
-                  key={habit.id}
-                  className={cn(
-                    'rounded-md border border-border/70 px-2 py-1.5',
-                    doneToday && 'opacity-70'
-                  )}
-                  style={{ borderInlineStart: `3px solid ${habit.color}` }}
-                >
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      aria-label={
-                        doneToday
-                          ? 'Mark habit as not done'
-                          : 'Mark habit as done'
-                      }
-                      onClick={() => void toggleHabit(habit.id)}
+        <div className="flex-1 overflow-y-auto pr-1 overflow-x-hidden">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {isLoading ? (
+              <motion.div
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-1"
+              >
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col gap-2 rounded-md border border-border/70 px-2 py-1.5"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="size-4 rounded-full" />
+                      <Skeleton className="h-3 w-1/2" />
+                      <Skeleton className="h-3 w-6 ml-auto" />
+                    </div>
+                    <Skeleton className="h-2 w-full mt-1" />
+                  </div>
+                ))}
+              </motion.div>
+            ) : visibleHabits.length === 0 ? (
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex h-full flex-col items-center justify-center rounded-md border border-dashed border-border/70 px-3 text-center gap-1.5 py-4"
+              >
+                <CheckCircle2
+                  className="size-5 text-muted-foreground/30"
+                  strokeWidth={1.5}
+                />
+                <span className="text-xs text-muted-foreground/50">
+                  No habits yet. Add your first one.
+                </span>
+              </motion.div>
+            ) : (
+              <div className="space-y-1">
+                {visibleHabits.map((habit, i) => {
+                  const doneToday = todayLogs.some(
+                    log => log.habit_id === habit.id
+                  )
+                  const streak = selectStreakByHabit(monthLogs, habit.id)
+                  const logDates = selectHabitCompletionDates(
+                    monthLogs,
+                    habit.id
+                  )
+                  return (
+                    <motion.div
+                      key={habit.id}
+                      layout
+                      variants={listItemVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      custom={i}
                       className={cn(
-                        'size-4 rounded-full border transition-colors',
-                        doneToday
-                          ? 'border-transparent'
-                          : 'border-muted-foreground/60'
+                        'rounded-md border border-border/70 px-2 py-1.5 transition-colors',
+                        doneToday && 'opacity-70',
+                        'hover:bg-accent/30'
                       )}
-                      style={{
-                        backgroundColor: doneToday
-                          ? habit.color
-                          : 'transparent',
-                      }}
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedHabit(habit.id)
-                        onNavigateToHabits?.(habit.id)
-                      }}
-                      className={cn(
-                        'flex-1 truncate text-left text-[12px] text-foreground',
-                        doneToday && 'line-through'
-                      )}
+                      style={{ borderInlineStart: `3px solid ${habit.color}` }}
                     >
-                      {habit.name}
-                    </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          aria-label={
+                            doneToday
+                              ? 'Mark habit as not done'
+                              : 'Mark habit as done'
+                          }
+                          onClick={() => void toggleHabit(habit.id)}
+                          className={cn(
+                            'size-4 rounded-full border transition-colors flex items-center justify-center',
+                            doneToday
+                              ? 'border-transparent'
+                              : 'border-muted-foreground/60 hover:border-primary'
+                          )}
+                          style={{
+                            backgroundColor: doneToday
+                              ? habit.color
+                              : 'transparent',
+                          }}
+                        />
 
-                    <span className="font-mono text-[11px] text-muted-foreground">
-                      {streak}d
-                    </span>
-                  </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedHabit(habit.id)
+                            onNavigateToHabits?.(habit.id)
+                          }}
+                          className={cn(
+                            'flex-1 truncate text-left text-[12px] text-foreground transition-all',
+                            doneToday && 'line-through'
+                          )}
+                        >
+                          {habit.name}
+                        </button>
 
-                  <div className="mt-1">
-                    <HeatMap
-                      logs={logDates}
-                      days={7}
-                      color={habit.color}
-                      size="sm"
-                    />
-                  </div>
-                </div>
-              )
-            })
-          )}
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {streak}d
+                        </span>
+                      </div>
+
+                      <div className="mt-1">
+                        <HeatMap
+                          logs={logDates}
+                          days={7}
+                          color={habit.color}
+                          size="sm"
+                        />
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            )}
+          </AnimatePresence>
         </div>
 
         <button
