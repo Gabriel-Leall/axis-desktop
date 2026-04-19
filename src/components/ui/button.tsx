@@ -36,6 +36,10 @@ const buttonVariants = cva(
   }
 )
 
+import { motion } from 'motion/react'
+
+const MotionSlot = motion.create(Slot)
+
 function Button({
   className,
   variant,
@@ -46,13 +50,16 @@ function Button({
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
   }) {
-  const Comp = asChild ? Slot : 'button'
+  const Comp = asChild ? MotionSlot : motion.button
 
   return (
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
+      whileHover={{ scale: 1.01 }}
+      whileTap={{ scale: 0.97 }}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      {...(props as any)}
     />
   )
 }

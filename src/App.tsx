@@ -14,7 +14,9 @@ import './App.css'
 import { MainWindow } from './components/layout/MainWindow'
 import { ThemeProvider } from './components/ThemeProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { TooltipProvider } from './components/ui/tooltip'
 import { useSquareCornersEffect } from './hooks/useSquareCornersEffect'
+import { Toaster } from './components/ui/sonner'
 
 function App() {
   useSquareCornersEffect()
@@ -124,7 +126,10 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <MainWindow />
+        <TooltipProvider delayDuration={300}>
+          <MainWindow />
+          <Toaster position="bottom-right" closeButton />
+        </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
   )

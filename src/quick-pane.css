@@ -20,9 +20,18 @@ body,
 }
 
 body {
-  font-family: -apple-system, 'Segoe UI', 'Roboto', sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    'Segoe UI',
+    'Roboto',
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 /* Allow text input */

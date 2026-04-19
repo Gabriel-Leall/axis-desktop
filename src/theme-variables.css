@@ -1,9 +1,12 @@
 /*
- * Theme Variables (shadcn/ui compatible)
+ * Theme Variables — Axis Design System
  *
- * To customize the theme, visit https://ui.shadcn.com/themes and use the
- * theme builder. You can copy and paste the generated CSS blocks directly
- * into this file, replacing the @theme inline, :root, and .dark sections.
+ * Inspired by:
+ *  · Dark mode  → Resend (cinematic void, frost borders, icy accents)
+ *  · Light mode → Mistral (warm ivory, golden amber, sharp warmth) — LIGHT ONLY
+ *  · Both modes → Cal.com (multi-layer shadow depth, precise radii)
+ *
+ * To adjust, edit the :root (light) or .dark sections below.
  */
 
 @theme inline {
@@ -49,71 +52,126 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* ═══════════════════════════════════════════════
+   LIGHT MODE — Mistral-inspired warm ivory theme
+   (User requested Mistral only on light mode)
+   ═══════════════════════════════════════════════ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  /* Mistral Warm Canvas */
+  --background: oklch(0.993 0.01 90);      /* #fffaeb Warm Ivory */
+  --foreground: oklch(0.18 0.005 60);      /* #1f1f1f Mistral Black */
+
+  /* Card / Surface — Cream */
+  --card: oklch(0.977 0.018 90);           /* #fff0c2-ish warm cream */
+  --card-foreground: oklch(0.18 0.005 60);
+
+  /* Popover — Pure White for contrast */
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.18 0.005 60);
+
+  /* Primary — Mistral Black buttons */
+  --primary: oklch(0.18 0.005 60);         /* #1f1f1f */
+  --primary-foreground: oklch(1 0 0);      /* white text */
+
+  /* Secondary — Cream surface */
+  --secondary: oklch(0.96 0.03 88);        /* warm cream */
+  --secondary-foreground: oklch(0.18 0.005 60);
+
+  /* Muted — Slightly dimmed warm surface */
+  --muted: oklch(0.965 0.022 88);
+  --muted-foreground: oklch(0.42 0.015 60); /* mid warm gray */
+
+  /* Accent — Sunshine Amber (#ffa110) */
+  --accent: oklch(0.82 0.12 65);           /* amber-gold */
+  --accent-foreground: oklch(0.18 0.005 60);
+
+  /* Destructive */
   --destructive: oklch(0.58 0.22 27);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Border — Warm tinted border */
+  --border: oklch(0.88 0.025 80);          /* warm ivory border */
+  --input: oklch(0.90 0.02 80);
+  --ring: oklch(0.82 0.12 65);             /* amber ring */
+
+  /* Chart colors — warm amber spectrum */
+  --chart-1: oklch(0.72 0.17 52);          /* Mistral Orange */
+  --chart-2: oklch(0.80 0.15 65);          /* Sunshine 700 amber */
+  --chart-3: oklch(0.87 0.13 78);          /* Sunshine 500 gold */
+  --chart-4: oklch(0.93 0.10 90);          /* Sunshine 300 */
+  --chart-5: oklch(0.55 0.20 40);          /* Deep burnt orange */
+
+  /* Base radius — Mistral uses near-zero, but we add slight softness for desktop */
+  --radius: 0.375rem;                      /* 6px — subtle, architectural */
+
+  /* Sidebar — Slightly warmer than main background */
+  --sidebar: oklch(0.985 0.014 88);
+  --sidebar-foreground: oklch(0.18 0.005 60);
+  --sidebar-primary: oklch(0.18 0.005 60);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.03 88);
+  --sidebar-accent-foreground: oklch(0.18 0.005 60);
+  --sidebar-border: oklch(0.88 0.025 80);
+  --sidebar-ring: oklch(0.82 0.12 65);
 }
 
+/* ═══════════════════════════════════════════════
+   DARK MODE — Resend-inspired cinematic void
+   Pure black canvas, frost borders, icy accents
+   ═══════════════════════════════════════════════ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.87 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+   /* Resend Void Canvas */
+   --background: oklch(0.07 0 0);           /* ~#0a0a0a near-void black */
+   --foreground: oklch(0.94 0 0);           /* #f0f0f0 near-white */
+
+   /* Card — slightly lifted dark surface */
+   --card: oklch(0.11 0.002 240);           /* very dark with faint blue tint */
+   --card-foreground: oklch(0.94 0 0);
+
+   /* Popover — slightly elevated */
+   --popover: oklch(0.13 0.003 240);
+   --popover-foreground: oklch(0.94 0 0);
+
+   /* Primary — near-white for primary actions */
+   --primary: oklch(0.94 0 0);             /* #f0f0f0 */
+   --primary-foreground: oklch(0.07 0 0);
+
+   /* Secondary — dark lifted surface */
+   --secondary: oklch(0.16 0.004 240);
+   --secondary-foreground: oklch(0.94 0 0);
+
+   /* Muted — dim silver tone */
+   --muted: oklch(0.16 0.003 240);
+   --muted-foreground: oklch(0.65 0.01 220); /* #a1a4a5 Resend Silver */
+
+   /* Accent — Resend Blue accent (#3b9eff) */
+   --accent: oklch(0.65 0.14 240);
+   --accent-foreground: oklch(0.07 0 0);
+
+   /* Destructive — Resend Red (#ff2047) */
+   --destructive: oklch(0.65 0.22 15);
+
+   /* Resend Frost Border — rgba(214,235,253,0.19) expressed as oklch */
+   --border: oklch(0.88 0.02 230 / 0.18);   /* icy blue-tinted at ~19% opacity */
+   --input: oklch(0.88 0.02 230 / 0.15);
+   --ring: oklch(0.65 0.14 240 / 0.6);     /* accent blue focus ring */
+
+   /* Chart colors — Resend multi-color accent scale */
+   --chart-1: oklch(0.72 0.18 30);         /* Orange #ff801f */
+   --chart-2: oklch(0.88 0.14 160);        /* Green #22ff99 */
+   --chart-3: oklch(0.65 0.14 240);        /* Blue #3b9eff */
+   --chart-4: oklch(0.85 0.13 80);         /* Yellow #ffc53d */
+   --chart-5: oklch(0.60 0.22 15);         /* Red #ff2047 */
+
+   /* Base radius */
+   --radius: 0.375rem;                      /* 6px */
+
+   /* Sidebar — slightly lifted from background */
+   --sidebar: oklch(0.10 0.002 240);
+   --sidebar-foreground: oklch(0.94 0 0);
+   --sidebar-primary: oklch(0.94 0 0);
+   --sidebar-primary-foreground: oklch(0.07 0 0);
+   --sidebar-accent: oklch(0.16 0.003 240);
+   --sidebar-accent-foreground: oklch(0.94 0 0);
+   --sidebar-border: oklch(0.88 0.02 230 / 0.18);
+   --sidebar-ring: oklch(0.65 0.14 240 / 0.6);
 }

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import './theme-variables.css';
@@ -7,9 +8,28 @@
 @layer base {
   :root {
     --app-corner-radius: 12px;
+
+    /* ── Cal.com-inspired shadow system ────────────────────────
+       Light mode: warm-tinted amber shadows (Mistral golden)
+       Dark mode:  frost blue ring shadows (Resend style)
+    ────────────────────────────────────────────────────────── */
+    --shadow-xs:   0px 1px 2px rgba(34, 42, 53, 0.06);
+    --shadow-sm:   0px 1px 5px -4px rgba(19, 19, 22, 0.55),
+                   0px 0px 0px 1px rgba(34, 42, 53, 0.08),
+                   0px 4px 8px rgba(34, 42, 53, 0.04);
+    --shadow-md:   0px 2px 12px -4px rgba(19, 19, 22, 0.45),
+                   0px 0px 0px 1px rgba(34, 42, 53, 0.08),
+                   0px 6px 16px rgba(34, 42, 53, 0.06);
+    --shadow-lg:   0px 4px 24px -6px rgba(19, 19, 22, 0.35),
+                   0px 0px 0px 1px rgba(34, 42, 53, 0.06),
+                   0px 12px 32px rgba(34, 42, 53, 0.08);
+    --shadow-warm: /* Mistral golden shadow for light mode cards */
+                   rgba(127, 99, 21, 0.10) -4px 8px 24px,
+                   rgba(127, 99, 21, 0.06) -12px 24px 48px,
+                   rgba(127, 99, 21, 0.04) -24px 48px 64px;
   }
 
-  /* Square corners - used on Windows/Linux when fullscreen */
+  /* Square corners — Windows/Linux fullscreen */
   .square-corners {
     --app-corner-radius: 0px;
   }
@@ -18,15 +38,48 @@
     @apply border-border outline-ring/50;
     box-sizing: border-box;
     cursor: default;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
   }
 
   body {
     @apply text-foreground;
-    font-family: -apple-system, 'Segoe UI', 'Roboto', sans-serif;
-    font-size: 16px;
-    line-height: 1.6;
+    /* Inter as primary — clean, precise, Cal.com approved */
+    font-family:
+      'Inter',
+      -apple-system,
+      'Segoe UI',
+      'Roboto',
+      ui-sans-serif,
+      system-ui,
+      sans-serif;
+    font-size: 14px;            /* Tighter default — desktop app feel */
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11'; /* Inter alternates */
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -53,7 +106,6 @@
     cursor: text !important;
   }
 
-  /* Utility class for when pointer cursor is explicitly needed */
   .cursor-pointer {
     cursor: pointer !important;
   }
@@ -65,7 +117,73 @@
   }
 }
 
-/* Inline notes editor (Toast UI) overrides */
+/* ═══════════════════════════════════════════════════════════
+   DESIGN SYSTEM UTILITIES
+   Cards, surfaces, and depth using Cal.com shadow philosophy
+   ═══════════════════════════════════════════════════════════ */
+
+/* Card elevation levels */
+.card-elevated {
+  box-shadow: var(--shadow-sm);
+}
+
+.card-elevated-md {
+  box-shadow: var(--shadow-md);
+}
+
+/* Light mode: Mistral golden warm card glow */
+:root .card-warm {
+  box-shadow: var(--shadow-warm);
+}
+
+/* Dark mode: Resend frost-ring borders */
+.dark .card-frost {
+  border: 1px solid rgba(214, 235, 253, 0.19);
+}
+
+/* Frost border utility (Resend signature) */
+.border-frost {
+  border-color: rgba(214, 235, 253, 0.19) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIGHT MODE — Mistral golden texture on key surfaces
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  /* Mistral block gradient — used for accent strips and badges */
+  --gradient-mistral: linear-gradient(
+    135deg,
+    #ffd900,
+    #ffa110,
+    #ff8105,
+    #fa520f
+  );
+  /* Subtle warm tint for interactive hover states */
+  --hover-warm: rgba(255, 161, 16, 0.08);
+  --active-warm: rgba(255, 161, 16, 0.14);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DARK MODE — Resend frost & icy accent system
+   ═══════════════════════════════════════════════════════════ */
+.dark {
+  /* Frost text shadow for subtle glow on text */
+  --text-glow: 0 0 20px rgba(59, 158, 255, 0.18);
+  /* Dark hover — white glass effect */
+  --hover-glass: rgba(255, 255, 255, 0.05);
+  --active-glass: rgba(255, 255, 255, 0.09);
+
+  /* Override shadow with Resend-style frost rings */
+  --shadow-sm:   0px 0px 0px 1px rgba(176, 199, 217, 0.145);
+  --shadow-md:   0px 0px 0px 1px rgba(176, 199, 217, 0.145),
+                 0px 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-lg:   0px 0px 0px 1px rgba(176, 199, 217, 0.145),
+                 0px 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NOTES EDITOR — Inline (Toast UI) overrides
+   ═══════════════════════════════════════════════════════════ */
 .notes-inline-editor .toastui-editor-defaultUI {
   height: 100%;
   border: 0;
@@ -80,7 +198,7 @@
 }
 
 .notes-inline-editor .toastui-editor-toolbar button {
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .notes-inline-editor .toastui-editor-toolbar button:hover,
@@ -98,7 +216,7 @@
 
 .notes-inline-editor .toastui-editor-contents {
   font-family: 'Charter', 'Iowan Old Style', 'Palatino Linotype', serif;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.75;
   color: var(--foreground);
 }

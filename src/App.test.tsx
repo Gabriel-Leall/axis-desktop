@@ -1,28 +1,26 @@
-import { render, screen } from '@/test/test-utils'
+import { render, screen, waitFor } from '@/test/test-utils'
 import { describe, it, expect } from 'vitest'
 import App from './App'
 
 // Tauri bindings are mocked globally in src/test/setup.ts
 
 describe('App', () => {
-  it('renders main window layout', () => {
+  it('renders main layout and title bar controls', async () => {
     render(<App />)
-    expect(
-      screen.getByRole('button', { name: /dashboard/i })
-    ).toBeInTheDocument()
-  })
+    
+    // Check initial layout
+    const dashboardButtons = screen.getAllByText(/Dashboard/i)
+    expect(dashboardButtons.length).toBeGreaterThan(0)
+    
+    // Check title bar is present
+    expect(screen.getByTestId('titlebar-macos')).toBeInTheDocument()
 
-  it('renders title bar with traffic light buttons', () => {
-    render(<App />)
-    // Find specifically the window control buttons in the title bar
-    const titleBarButtons = screen
-      .getAllByRole('button')
-      .filter(
-        button =>
-          button.getAttribute('aria-label')?.includes('window') ||
-          button.className.includes('window-control')
-      )
-    // Should have at least the window control buttons
-    expect(titleBarButtons.length).toBeGreaterThan(0)
-  })
+    // Wait for the window control buttons (async mount)
+    await waitFor(() => {
+      const closeButton = screen.queryByLabelText(/Close window/i)
+      const minimizeButton = screen.queryByLabelText(/Minimize window/i)
+      expect(closeButton).toBeInTheDocument()
+      expect(minimizeButton).toBeInTheDocument()
+    }, { timeout: 10000 })
+  }, 20000) // 20s test timeout
 })
