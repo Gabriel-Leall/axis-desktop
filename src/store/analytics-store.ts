@@ -59,9 +59,13 @@ export const useAnalyticsStore = create<AnalyticsState>()(
       loadData: async () => {
         const { period } = get()
         const { start, end, prevStart, prevEnd } = getPeriodRange(period)
-        
-        set({ isLoading: true, error: null }, undefined, 'analytics/loadData/start')
-        
+
+        set(
+          { isLoading: true, error: null },
+          undefined,
+          'analytics/loadData/start'
+        )
+
         try {
           const startStr = start.toISOString()
           const endStr = end.toISOString()
@@ -73,13 +77,21 @@ export const useAnalyticsStore = create<AnalyticsState>()(
             focusTimeResult,
             taskCountResult,
             pomodoroSummaryResult,
-            habitLogsResult
+            habitLogsResult,
           ] = await Promise.all([
-            commands.getAnalyticsSummary(startStr, endStr, prevStartStr, prevEndStr),
+            commands.getAnalyticsSummary(
+              startStr,
+              endStr,
+              prevStartStr,
+              prevEndStr
+            ),
             commands.getFocusTimeByDay(startStr, endStr),
             commands.getTaskCountsByDay(startStr, endStr),
             commands.getPomodoroSummary(startStr, endStr),
-            commands.getHabitLogsRange(startStr.slice(0, 10), endStr.slice(0, 10))
+            commands.getHabitLogsRange(
+              startStr.slice(0, 10),
+              endStr.slice(0, 10)
+            ),
           ])
 
           const summary = unwrapOrThrow(summaryResult)

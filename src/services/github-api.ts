@@ -13,7 +13,12 @@
  * Rate limits: 5000 req/h with token. Polling every 5 min = 12 req/h per endpoint.
  */
 
-import type { GitHubUser, PullRequest, GitHubIssue, GitHubSearchResult } from '@/types/github'
+import type {
+  GitHubUser,
+  PullRequest,
+  GitHubIssue,
+  GitHubSearchResult,
+} from '@/types/github'
 
 const GITHUB_API = 'https://api.github.com'
 
@@ -39,7 +44,9 @@ async function fetchGitHub<T>(token: string, path: string): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new Error(`GitHub API error: ${response.status} ${response.statusText}`)
+    throw new Error(
+      `GitHub API error: ${response.status} ${response.statusText}`
+    )
   }
 
   return response.json() as Promise<T>
@@ -140,11 +147,16 @@ export async function exchangeCodeForToken(
     throw new Error(`Token exchange failed: ${response.status}`)
   }
 
-  const data = (await response.json()) as { access_token?: string; error?: string }
+  const data = (await response.json()) as {
+    access_token?: string
+    error?: string
+  }
 
-  if (data.error ?? !data.access_token) {
+  const token = data.access_token
+
+  if (data.error ?? !token) {
     throw new Error(`GitHub OAuth error: ${data.error ?? 'no token returned'}`)
   }
 
-  return data.access_token!
+  return token
 }

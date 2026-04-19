@@ -40,7 +40,7 @@ export function getPeriodRange(period: AnalyticsPeriod): {
       end = thisWeekStart
       start = new Date(thisWeekStart)
       start.setDate(start.getDate() - 7)
-      
+
       prevEnd = new Date(start)
       prevStart = new Date(start)
       prevStart.setDate(prevStart.getDate() - 7)
@@ -98,7 +98,7 @@ export function fillMissingDays(
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const map = new Map<string, any>()
-  data.forEach((d) => map.set(d.day, d))
+  data.forEach(d => map.set(d.day, d))
 
   const result = []
   const curr = new Date(start)
@@ -106,9 +106,9 @@ export function fillMissingDays(
     const dateStr = [
       curr.getFullYear(),
       String(curr.getMonth() + 1).padStart(2, '0'),
-      String(curr.getDate()).padStart(2, '0')
+      String(curr.getDate()).padStart(2, '0'),
     ].join('-')
-    
+
     const existing = map.get(dateStr)
     if (existing) {
       result.push({
@@ -116,7 +116,13 @@ export function fillMissingDays(
         day: dateStr,
       })
     } else {
-      result.push({ day: dateStr, value: 0, created: 0, completed: 0, total_seconds: 0 })
+      result.push({
+        day: dateStr,
+        value: 0,
+        created: 0,
+        completed: 0,
+        total_seconds: 0,
+      })
     }
     curr.setDate(curr.getDate() + 1)
   }
@@ -137,9 +143,15 @@ export function formatAxisLabel(day: string, period: AnalyticsPeriod): string {
       return date.toLocaleDateString('en-US', { weekday: 'short' })
     case 'this_month':
     case 'last_30_days':
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      })
     case 'last_90_days':
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      })
     default:
       return date.toLocaleDateString()
   }
@@ -159,20 +171,23 @@ export function groupByWeek(
     const key = [
       weekStart.getUTCFullYear(),
       String(weekStart.getUTCMonth() + 1).padStart(2, '0'),
-      String(weekStart.getUTCDate()).padStart(2, '0')
+      String(weekStart.getUTCDate()).padStart(2, '0'),
     ].join('-')
-    
+
     grouped.set(key, (grouped.get(key) || 0) + item.total_seconds)
   }
   return Array.from(grouped.entries())
-    .sort((a,b) => a[0].localeCompare(b[0]))
+    .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([week, total_seconds]) => ({
       week,
       total_seconds,
     }))
 }
 
-export function formatDelta(current: number, previous: number): {
+export function formatDelta(
+  current: number,
+  previous: number
+): {
   value: string
   isPositive: boolean
 } {

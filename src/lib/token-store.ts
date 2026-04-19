@@ -8,12 +8,14 @@
  * before this module can be used.
  */
 
+import type { Store } from '@tauri-apps/plugin-store'
+
 const TOKEN_STORE_FILE = 'auth.json'
 
 // Lazy-loaded store instance
-let _store: import('@tauri-apps/plugin-store').Store | null = null
+let _store: Store | null = null
 
-async function getStore(): Promise<import('@tauri-apps/plugin-store').Store> {
+async function getStore(): Promise<Store> {
   if (!_store) {
     const { Store } = await import('@tauri-apps/plugin-store')
     _store = await Store.load(TOKEN_STORE_FILE)

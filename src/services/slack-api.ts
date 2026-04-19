@@ -11,11 +11,17 @@
  * Rate limits: Tier 2 = ~20 req/min. Polling every 2 min is safe.
  */
 
-import type { SlackUser, SlackMessage, SlackDM, SlackAuthTestResponse } from '@/types/slack'
+import type {
+  SlackUser,
+  SlackMessage,
+  SlackDM,
+  SlackAuthTestResponse,
+} from '@/types/slack'
 
 const SLACK_API = 'https://slack.com/api'
 const SLACK_REDIRECT_URI =
-  (import.meta.env.VITE_SLACK_REDIRECT_URI as string | undefined) ?? 'axis://oauth/slack'
+  (import.meta.env.VITE_SLACK_REDIRECT_URI as string | undefined) ??
+  'axis://oauth/slack'
 
 interface SlackResponse {
   ok: boolean
@@ -59,7 +65,9 @@ async function callSlack<T extends SlackResponse>(
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
-export async function getSlackAuthInfo(token: string): Promise<SlackAuthTestResponse> {
+export async function getSlackAuthInfo(
+  token: string
+): Promise<SlackAuthTestResponse> {
   return callSlack<SlackAuthTestResponse & SlackResponse>(token, 'auth.test')
 }
 
@@ -69,8 +77,13 @@ interface SlackUserInfoResponse extends SlackResponse {
   user: SlackUser
 }
 
-export async function getSlackUser(token: string, userId: string): Promise<SlackUser> {
-  const data = await callSlack<SlackUserInfoResponse>(token, 'users.info', { user: userId })
+export async function getSlackUser(
+  token: string,
+  userId: string
+): Promise<SlackUser> {
+  const data = await callSlack<SlackUserInfoResponse>(token, 'users.info', {
+    user: userId,
+  })
   return data.user
 }
 
@@ -78,14 +91,14 @@ export async function getSlackUser(token: string, userId: string): Promise<Slack
 
 interface SlackSearchResponse extends SlackResponse {
   messages: {
-    matches: Array<{
+    matches: {
       ts: string
       text: string
       user: string
       channel: { id: string; name: string }
       permalink: string
       username?: string
-    }>
+    }[]
   }
 }
 
@@ -102,16 +115,16 @@ export async function getMentions(token: string): Promise<SlackMessage[]> {
 // ─── Direct Messages ──────────────────────────────────────────────────────────
 
 interface SlackConversationsListResponse extends SlackResponse {
-  channels: Array<{
+  channels: {
     id: string
     user: string
     unread_count?: number
     unread_count_display?: number
-  }>
+  }[]
 }
 
 interface SlackConversationsHistoryResponse extends SlackResponse {
-  messages: Array<{ ts: string; text: string; user?: string }>
+  messages: { ts: string; text: string; user?: string }[]
 }
 
 export async function getDirectMessages(token: string): Promise<SlackDM[]> {
@@ -156,7 +169,8 @@ export async function getDirectMessages(token: string): Promise<SlackDM[]> {
 
   // Sort: unread first, then by latest message
   return dms.sort((a, b) => {
-    if (b.unread_count !== a.unread_count) return b.unread_count - a.unread_count
+    if (b.unread_count !== a.unread_count)
+      return b.unread_count - a.unread_count
     const tsA = a.last_message?.ts ?? '0'
     const tsB = b.last_message?.ts ?? '0'
     return tsB.localeCompare(tsA)

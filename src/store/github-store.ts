@@ -24,15 +24,24 @@ import {
   buildGitHubAuthUrl,
   exchangeCodeForToken,
 } from '@/services/github-api'
-import { saveToken, loadToken, deleteToken, TOKEN_KEYS } from '@/lib/token-store'
+import {
+  saveToken,
+  loadToken,
+  deleteToken,
+  TOKEN_KEYS,
+} from '@/lib/token-store'
 import type { GitHubUser, PullRequest, GitHubIssue } from '@/types/github'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
 const RATE_LIMIT_BACKOFF_MS = 60 * 1000 // 1 minute
 
 // Read from Vite env — user must configure these in their .env.local
-const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID as string | undefined
-const GITHUB_CLIENT_SECRET = import.meta.env.VITE_GITHUB_CLIENT_SECRET as string | undefined
+const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID as
+  | string
+  | undefined
+const GITHUB_CLIENT_SECRET = import.meta.env.VITE_GITHUB_CLIENT_SECRET as
+  | string
+  | undefined
 
 interface GitHubStoreState {
   isAuthenticated: boolean
@@ -87,7 +96,11 @@ export const useGitHubStore = create<GitHubStoreState>()(
         const token = await loadToken(TOKEN_KEYS.GITHUB)
         if (!token) return
 
-        set({ token, isAuthenticated: true, isLoading: true }, undefined, 'github/init/start')
+        set(
+          { token, isAuthenticated: true, isLoading: true },
+          undefined,
+          'github/init/start'
+        )
 
         try {
           const user = await getAuthenticatedUser(token)
@@ -100,7 +113,11 @@ export const useGitHubStore = create<GitHubStoreState>()(
             await get().logout()
           } else {
             logger.error(`GitHub initialize error: ${msg}`)
-            set({ isLoading: false, error: msg }, undefined, 'github/init/error')
+            set(
+              { isLoading: false, error: msg },
+              undefined,
+              'github/init/error'
+            )
           }
         }
       },
@@ -146,7 +163,11 @@ export const useGitHubStore = create<GitHubStoreState>()(
           await deleteToken(TOKEN_KEYS.GITHUB_STATE)
         }
 
-        set({ isLoading: true, error: null }, undefined, 'github/oauth/exchanging')
+        set(
+          { isLoading: true, error: null },
+          undefined,
+          'github/oauth/exchanging'
+        )
 
         try {
           const token = await exchangeCodeForToken(
@@ -181,7 +202,12 @@ export const useGitHubStore = create<GitHubStoreState>()(
 
         // Parallel section loads — each has its own loading flag
         set(
-          { isLoadingReviews: true, isLoadingMyPRs: true, isLoadingIssues: true, error: null },
+          {
+            isLoadingReviews: true,
+            isLoadingMyPRs: true,
+            isLoadingIssues: true,
+            error: null,
+          },
           undefined,
           'github/refresh/start'
         )
@@ -224,7 +250,11 @@ export const useGitHubStore = create<GitHubStoreState>()(
           handleFetchError(issuesResult.reason, 'issues', set, get)
         }
 
-        set({ lastUpdated: new Date(), isLoading: false }, undefined, 'github/refresh/done')
+        set(
+          { lastUpdated: new Date(), isLoading: false },
+          undefined,
+          'github/refresh/done'
+        )
       },
 
       logout: async () => {
@@ -253,8 +283,11 @@ export const useGitHubStore = create<GitHubStoreState>()(
 
 // ─── Private helpers ───────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SetFn = (partial: Partial<GitHubStoreState>, replace?: any, name?: string) => void
+type SetFn = (
+  partial: Partial<GitHubStoreState>,
+  replace?: false,
+  name?: string
+) => void
 type GetFn = () => GitHubStoreState
 
 function handleFetchError(
@@ -285,7 +318,11 @@ function handleFetchError(
         ? 'isLoadingMyPRs'
         : 'isLoadingIssues'
 
-  set({ [loadingKey]: false, error: msg } as Partial<GitHubStoreState>, undefined, `github/${section}/error`)
+  set(
+    { [loadingKey]: false, error: msg } as Partial<GitHubStoreState>,
+    undefined,
+    `github/${section}/error`
+  )
 }
 
 function startPolling(get: GetFn) {

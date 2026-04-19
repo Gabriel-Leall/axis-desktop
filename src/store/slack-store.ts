@@ -19,14 +19,23 @@ import {
   buildSlackAuthUrl,
   exchangeSlackCode,
 } from '@/services/slack-api'
-import { saveToken, loadToken, deleteToken, TOKEN_KEYS } from '@/lib/token-store'
+import {
+  saveToken,
+  loadToken,
+  deleteToken,
+  TOKEN_KEYS,
+} from '@/lib/token-store'
 import type { SlackUser, SlackMessage, SlackDM } from '@/types/slack'
 
 const POLL_INTERVAL_MS = 2 * 60 * 1000 // 2 minutes
 const RATE_LIMIT_BACKOFF_MS = 60 * 1000 // 1 minute
 
-const SLACK_CLIENT_ID = import.meta.env.VITE_SLACK_CLIENT_ID as string | undefined
-const SLACK_CLIENT_SECRET = import.meta.env.VITE_SLACK_CLIENT_SECRET as string | undefined
+const SLACK_CLIENT_ID = import.meta.env.VITE_SLACK_CLIENT_ID as
+  | string
+  | undefined
+const SLACK_CLIENT_SECRET = import.meta.env.VITE_SLACK_CLIENT_SECRET as
+  | string
+  | undefined
 
 interface SlackStoreState {
   isAuthenticated: boolean
@@ -84,14 +93,23 @@ export const useSlackStore = create<SlackStoreState>()(
         const token = await loadToken(TOKEN_KEYS.SLACK)
         if (!token) return
 
-        set({ token, isAuthenticated: true, isLoading: true }, undefined, 'slack/init/start')
+        set(
+          { token, isAuthenticated: true, isLoading: true },
+          undefined,
+          'slack/init/start'
+        )
 
         try {
           const auth = await getSlackAuthInfo(token)
           // Fetch full user profile
           const user = await getSlackUser(token, auth.user_id)
           set(
-            { user, teamName: auth.team, teamId: auth.team_id, isLoading: false },
+            {
+              user,
+              teamName: auth.team,
+              teamId: auth.team_id,
+              isLoading: false,
+            },
             undefined,
             'slack/init/user-loaded'
           )
@@ -143,15 +161,27 @@ export const useSlackStore = create<SlackStoreState>()(
         const savedState = await loadToken(TOKEN_KEYS.SLACK_STATE)
         if (!incomingState || savedState !== incomingState) {
           logger.error('Slack OAuth: state mismatch — possible CSRF attack')
-          set({ error: 'Slack OAuth state mismatch' }, undefined, 'slack/oauth/state-mismatch')
+          set(
+            { error: 'Slack OAuth state mismatch' },
+            undefined,
+            'slack/oauth/state-mismatch'
+          )
           return
         }
         await deleteToken(TOKEN_KEYS.SLACK_STATE)
 
-        set({ isLoading: true, error: null }, undefined, 'slack/oauth/exchanging')
+        set(
+          { isLoading: true, error: null },
+          undefined,
+          'slack/oauth/exchanging'
+        )
 
         try {
-          const token = await exchangeSlackCode(SLACK_CLIENT_ID, SLACK_CLIENT_SECRET, code)
+          const token = await exchangeSlackCode(
+            SLACK_CLIENT_ID,
+            SLACK_CLIENT_SECRET,
+            code
+          )
           await saveToken(TOKEN_KEYS.SLACK, token)
 
           const auth = await getSlackAuthInfo(token)
@@ -271,8 +301,11 @@ export const useSlackStore = create<SlackStoreState>()(
 
 // ─── Private helpers ───────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SetFn = (partial: Partial<SlackStoreState>, replace?: any, name?: string) => void
+type SetFn = (
+  partial: Partial<SlackStoreState>,
+  replace?: false,
+  name?: string
+) => void
 type GetFn = () => SlackStoreState
 
 function handleFetchError(
@@ -296,8 +329,13 @@ function handleFetchError(
     }, RATE_LIMIT_BACKOFF_MS)
   }
 
-  const loadingKey = section === 'mentions' ? 'isLoadingMentions' : 'isLoadingDMs'
-  set({ [loadingKey]: false, error: msg } as Partial<SlackStoreState>, undefined, `slack/${section}/error`)
+  const loadingKey =
+    section === 'mentions' ? 'isLoadingMentions' : 'isLoadingDMs'
+  set(
+    { [loadingKey]: false, error: msg } as Partial<SlackStoreState>,
+    undefined,
+    `slack/${section}/error`
+  )
 }
 
 function startPolling(get: GetFn) {

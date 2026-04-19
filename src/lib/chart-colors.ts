@@ -8,4 +8,4 @@ export const CHART_COLORS = {
   border: 'var(--color-border)',
   text: 'var(--color-text)',
   textMuted: 'var(--color-text-muted)',
-};
+}
