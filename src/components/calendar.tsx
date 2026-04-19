@@ -596,16 +596,19 @@ export const Calendar = ({
   const [endDateError, setEndDateError] = useState<boolean>(false);
   const [endTimeError, setEndTimeError] = useState<boolean>(false);
   const calendarRef = useRef<HTMLDivElement | null>(null);
+  const normalizedMinValue = minValue ? startOfDay(minValue) : null;
+  const normalizedMaxValue = maxValue ? endOfDay(maxValue) : null;
 
   useClickOutside(calendarRef, () => setIsOpen(false));
 
   useEffect(() => {
-    window.addEventListener("resize", () => setIsOpen(false));
-    window.addEventListener("scroll", () => setIsOpen(false));
+    const closeCalendar = () => setIsOpen(false);
+    window.addEventListener("resize", closeCalendar);
+    window.addEventListener("scroll", closeCalendar);
 
     return () => {
-      window.removeEventListener("resize", () => setIsOpen(false));
-      window.removeEventListener("scroll", () => setIsOpen(false));
+      window.removeEventListener("resize", closeCalendar);
+      window.removeEventListener("scroll", closeCalendar);
     };
   }, []);
 
@@ -620,11 +623,11 @@ export const Calendar = ({
   }
 
   const handleDateClick = (day: Date) => {
-    if (!value?.start || (value.start && value.end)) {
+    if (!isSelecting) {
       onChange({ start: startOfDay(day), end: null });
       setHoverDate(day);
       setIsSelecting(true);
-    } else if (isSelecting) {
+    } else if (value?.start) {
       if (day > value.start) {
         onChange({ ...value, end: endOfDay(day) });
       } else {
@@ -637,20 +640,17 @@ export const Calendar = ({
   };
 
   const handleMouseEnter = (day: Date) => {
-    if (value?.start && !value.end) {
+    if (isSelecting && value?.start && !value.end) {
       setHoverDate(day);
     }
   };
 
   useEffect(() => {
-    // Keep internal selection state aligned with external controlled value.
+    // Stop selection mode after a committed range or when cleared externally.
     if (!value?.start || value.end) {
       setIsSelecting(false);
       setHoverDate(null);
-      return;
     }
-
-    setIsSelecting(true);
   }, [value?.start, value?.end]);
 
   const onApply = () => {
@@ -688,7 +688,7 @@ export const Calendar = ({
     setStartTime(formatInTimeZone(value?.start || startOfDay(new Date()), selectedTimezone, "HH:mm"));
     setEndDate(formatInTimeZone(value?.end || new Date(), selectedTimezone, "MMM dd, yyyy"));
     setEndTime(formatInTimeZone(value?.end || endOfDay(new Date()), selectedTimezone, "HH:mm"));
-  }, [isOpen, value]);
+  }, [isOpen, selectedTimezone, value]);
 
   return (
     <div className="relative">
@@ -724,13 +724,12 @@ export const Calendar = ({
               onClick={() => setIsOpen((prevState) => !prevState)}
             >
               <div className="truncate pr-4">
-                {value?.start && value?.end ?
-                  formatDateRange(value.start, value.end, selectedTimezone)
-                  : "Select Date Range"
-                }
+                {value?.start
+                  ? formatDateRange(value.start, value.end ?? value.start, selectedTimezone)
+                  : "Select Date Range"}
               </div>
             </Button>
-            {value?.start && value?.end && (
+            {allowClear && value?.start && (
               <Button
                 aria-label="Clear input value"
                 svgOnly
@@ -826,7 +825,9 @@ export const Calendar = ({
                       : false;
 
                   const isInRange = isInCommittedRange || isInHoverRange;
-                  const isAllowedDate = (minValue ? day >= minValue : true) && (maxValue ? day <= maxValue : true);
+                  const isAllowedDate =
+                    (normalizedMinValue ? day >= normalizedMinValue : true) &&
+                    (normalizedMaxValue ? day <= normalizedMaxValue : true);
 
                   return (
                     <div
@@ -834,7 +835,7 @@ export const Calendar = ({
                       className={clsx(
                         "flex items-center justify-center text-sm text-center rounded transition",
                         isSameMonth(day, currentDate) && isAllowedDate ? "bg-background-100 text-gray-1000" : "bg-background-100 text-gray-700",
-                        !isAllowedDate && "opacity-35 saturate-50",
+                        !isAllowedDate && "opacity-30 grayscale",
                         isInRange && !isStart && !isEnd && !currentHover && "bg-accents-2! rounded-none",
                         isAllowedDate ? "cursor-pointer" : "cursor-not-allowed"
                       )}

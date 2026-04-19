@@ -25,7 +25,10 @@ import { KanbanPage } from '@/pages/KanbanPage'
 /** Convert ISO date string to Date object at midnight */
 function isoToDate(isoDate: string | undefined): Date | undefined {
   if (!isoDate) return undefined
-  const date = new Date(isoDate)
+  const [year, month, day] = isoDate.split('-').map(Number)
+  if (!year || !month || !day) return undefined
+
+  const date = new Date(year, month - 1, day)
   date.setHours(0, 0, 0, 0)
   return date
 }
@@ -33,22 +36,33 @@ function isoToDate(isoDate: string | undefined): Date | undefined {
 /** Convert Date object to ISO date string (YYYY-MM-DD) */
 function dateToIso(date: Date | null | undefined): string | undefined {
   if (!date) return undefined
-  return date.toISOString().slice(0, 10)
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getLocalTodayDate(): Date {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return today
 }
 
 function formatRelativeDate(isoDate: string): string {
   const today = getTodayISO()
-  const tomorrow = new Date()
+  const tomorrow = getLocalTodayDate()
   tomorrow.setDate(tomorrow.getDate() + 1)
-  const tomorrowISO = tomorrow.toISOString().slice(0, 10)
+  const tomorrowISO = dateToIso(tomorrow)
 
   if (isoDate === today) return 'Today'
   if (isoDate === tomorrowISO) return 'Tomorrow'
 
-  const date = new Date(isoDate)
-  const now = new Date()
+  const date = isoToDate(isoDate)
+  if (!date) return isoDate
+
   const diffDays = Math.round(
-    (date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    (date.getTime() - getLocalTodayDate().getTime()) / (1000 * 60 * 60 * 24)
   )
 
   if (diffDays < 0) return `${Math.abs(diffDays)}d ago`
@@ -65,9 +79,9 @@ function groupTasks(tasks: Task[]): {
   completed: Task[]
 } {
   const today = getTodayISO()
-  const sevenDaysLater = new Date()
+  const sevenDaysLater = getLocalTodayDate()
   sevenDaysLater.setDate(sevenDaysLater.getDate() + 7)
-  const sevenDaysISO = sevenDaysLater.toISOString().slice(0, 10)
+  const sevenDaysISO = dateToIso(sevenDaysLater) || today
 
   const completed: Task[] = []
   const todayList: Task[] = []
@@ -538,7 +552,8 @@ function TaskDetailPanel({
               setDateRange(newRange)
               // Immediately update the task when a date is selected
               if (newRange?.start) {
-                const isoDate = dateToIso(newRange.start)
+                const effectiveDate = newRange.end ?? newRange.start
+                const isoDate = dateToIso(effectiveDate)
                 if (isoDate) onUpdate(task.id, { due_date: isoDate })
               } else {
                 onUpdate(task.id, { due_date: undefined })
@@ -547,6 +562,7 @@ function TaskDetailPanel({
             compact
             allowClear
             showTimeInput={false}
+            minValue={getLocalTodayDate()}
           />
         </div>
 
@@ -659,16 +675,21 @@ function NewTaskModal({
 }: {
   onAdd: (
     title: string,
-    options?: { priority: Priority; due_date?: string }
+    options?: {
+      priority: Priority
+      due_date?: string
+      description?: string
+      subtasks?: string[]
+    }
   ) => Promise<void>
   onClose: () => void
 }) {
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<Priority>('medium')
-  const [dateRange, setDateRange] = useState<RangeValue | null>(() => {
-    const today = isoToDate(getTodayISO())
-    return today ? { start: today, end: null } : null
-  })
+  const [dateRange, setDateRange] = useState<RangeValue | null>(null)
+  const [subtaskInput, setSubtaskInput] = useState('')
+  const [subtasks, setSubtasks] = useState<string[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -686,15 +707,31 @@ function NewTaskModal({
   const handleSubmit = async () => {
     const trimmed = title.trim()
     if (!trimmed) return
-    
-    // Use start date as the due date
-    const dueDateIso = dateRange?.start ? dateToIso(dateRange.start) : undefined
-    
+
+    // For ranges, the task due date is the last selected day.
+    const dueDateIso = dateRange?.start
+      ? dateToIso(dateRange.end ?? dateRange.start)
+      : undefined
+
+    const normalizedSubtasks = subtasks
+      .map(item => item.trim())
+      .filter(Boolean)
+
     await onAdd(trimmed, {
       priority,
       due_date: dueDateIso,
+      description: description.trim() || undefined,
+      subtasks: normalizedSubtasks.length > 0 ? normalizedSubtasks : undefined,
     })
     onClose()
+  }
+
+  const handleAddSubtask = () => {
+    const trimmed = subtaskInput.trim()
+    if (!trimmed) return
+
+    setSubtasks(prev => [...prev, trimmed])
+    setSubtaskInput('')
   }
 
   return (
@@ -708,61 +745,137 @@ function NewTaskModal({
       aria-modal="true"
       aria-label="Create new task"
     >
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl">
-        {/* Title */}
-        <input
-          ref={inputRef}
-          type="text"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') handleSubmit()
-          }}
-          placeholder="Task name"
-          aria-label="New task title"
-          className="mb-4 w-full bg-transparent text-[16px] font-medium text-foreground placeholder:text-muted-foreground/40 outline-none"
-        />
-
-        {/* Priority + Date row */}
-        <div className="mb-5 flex flex-col gap-4">
-          <div className="flex items-center gap-1.5">
-            {(['low', 'medium', 'high'] as Priority[]).map(p => (
-              <PriorityButton
-                key={p}
-                value={p}
-                active={priority === p}
-                onClick={() => setPriority(p)}
+      <div className="w-full max-w-3xl rounded-xl border border-border bg-card p-5 shadow-2xl">
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+            <div>
+              <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+                Task name
+              </label>
+              <input
+                ref={inputRef}
+                type="text"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleSubmit()
+                }}
+                placeholder="Task name"
+                aria-label="New task title"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-[14px] text-foreground placeholder:text-muted-foreground/40 outline-none transition-colors focus:border-primary"
               />
-            ))}
+            </div>
+
+            <div>
+              <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+                Priority
+              </label>
+              <div className="flex items-center gap-1.5">
+                {(['low', 'medium', 'high'] as Priority[]).map(p => (
+                  <PriorityButton
+                    key={p}
+                    value={p}
+                    active={priority === p}
+                    onClick={() => setPriority(p)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={4}
+                placeholder="Describe the task..."
+                aria-label="Task description"
+                className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/40 outline-none transition-colors focus:border-primary"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+                Task date
+              </label>
+              <Calendar
+                value={dateRange}
+                onChange={setDateRange}
+                compact
+                allowClear
+                showTimeInput={false}
+                minValue={getLocalTodayDate()}
+              />
+            </div>
           </div>
 
-          {/* Calendar date picker */}
-          <Calendar
-            value={dateRange}
-            onChange={setDateRange}
-            compact
-            allowClear
-            showTimeInput={false}
-          />
-        </div>
+          <div>
+            <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+              Subtask
+            </label>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-border px-3 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-accent"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!title.trim()}
-            className="rounded-lg bg-foreground px-3 py-1.5 text-[13px] text-background transition-all hover:opacity-80 disabled:opacity-30"
-          >
-            Create task
-          </button>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={subtaskInput}
+                onChange={e => setSubtaskInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleAddSubtask()
+                  }
+                }}
+                placeholder="Add a subtask and press Enter"
+                aria-label="New subtask"
+                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/40 outline-none transition-colors focus:border-primary"
+              />
+              <button
+                type="button"
+                onClick={handleAddSubtask}
+                className="rounded-md border border-border px-3 py-2 text-[12px] text-muted-foreground transition-colors hover:bg-accent"
+              >
+                Add
+              </button>
+            </div>
+
+            {subtasks.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {subtasks.map((subtask, index) => (
+                  <button
+                    key={`${subtask}-${index}`}
+                    type="button"
+                    onClick={() => {
+                      setSubtasks(prev => prev.filter((_, itemIndex) => itemIndex !== index))
+                    }}
+                    className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent"
+                    aria-label={`Remove subtask ${subtask}`}
+                  >
+                    {subtask} ×
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-border px-3 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-accent"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!title.trim()}
+              className="rounded-lg bg-foreground px-3 py-1.5 text-[13px] text-background transition-all hover:opacity-80 disabled:opacity-30"
+            >
+              Create task
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -907,6 +1020,7 @@ export function TasksPage({ initialSelectedTaskId, initialViewMode = 'stack' }: 
   const isLoading = useTasksStore(state => state.isLoading)
   const loadTasks = useTasksStore(state => state.loadTasks)
   const addTask = useTasksStore(state => state.addTask)
+  const addSubtask = useTasksStore(state => state.addSubtask)
   const updateTask = useTasksStore(state => state.updateTask)
   const deleteTask = useTasksStore(state => state.deleteTask)
   const toggleComplete = useTasksStore(state => state.toggleComplete)
@@ -970,9 +1084,9 @@ export function TasksPage({ initialSelectedTaskId, initialViewMode = 'stack' }: 
 
   const today = getTodayISO()
   const sevenDaysLater = (() => {
-    const d = new Date()
+    const d = getLocalTodayDate()
     d.setDate(d.getDate() + 7)
-    return d.toISOString().slice(0, 10)
+    return dateToIso(d) || today
   })()
 
   const tabFiltered = baseFiltered.filter(task => {
@@ -1004,11 +1118,26 @@ export function TasksPage({ initialSelectedTaskId, initialViewMode = 'stack' }: 
   const handleAddTask = useCallback(
     async (
       title: string,
-      options?: { priority: Priority; due_date?: string }
+      options?: {
+        priority: Priority
+        due_date?: string
+        description?: string
+        subtasks?: string[]
+      }
     ) => {
-      await addTask(title, options)
+      const newTask = await addTask(title, {
+        priority: options?.priority,
+        due_date: options?.due_date,
+        description: options?.description,
+      })
+
+      if (options?.subtasks?.length) {
+        for (const subtask of options.subtasks) {
+          await addSubtask(newTask.id, subtask)
+        }
+      }
     },
-    [addTask]
+    [addTask, addSubtask]
   )
 
   return (
