@@ -85,7 +85,7 @@ function SortableColumnCard({
         type="button"
         {...attributes}
         {...listeners}
-        className="absolute inset-y-0 start-0 hidden w-5 items-center justify-center text-muted-foreground/40 group-hover:flex"
+        className="absolute inset-y-0 inset-s-0 hidden w-5 items-center justify-center text-muted-foreground/40 group-hover:flex"
       >
         <GripVertical className="size-3" />
       </button>
@@ -163,7 +163,7 @@ function SortableBoardColumn({
         opacity: isDragging ? 0.5 : 1,
       }}
       className={cn(
-        'flex h-full w-[260px] shrink-0 flex-col rounded-lg border border-border bg-muted/25 p-2',
+        'flex h-full w-65 shrink-0 flex-col rounded-lg border border-border bg-muted/25 p-2',
         isCardOver && 'ring-1 ring-ring/40'
       )}
     >
@@ -211,7 +211,7 @@ function SortableBoardColumn({
           <summary className="cursor-pointer list-none rounded p-1 text-muted-foreground/60 hover:bg-accent hover:text-foreground">
             <MoreHorizontal className="size-3.5" />
           </summary>
-          <div className="absolute end-0 top-6 z-30 w-44 rounded-md border border-border bg-card p-1 text-[12px] shadow-xl">
+          <div className="absolute inset-e-0 top-6 z-30 w-44 rounded-md border border-border bg-card p-1 text-[12px] shadow-xl">
             <button
               type="button"
               onClick={onStartEditing}
@@ -832,14 +832,14 @@ export function KanbanPage({ compact = false }: KanbanPageProps) {
         <DragOverlay>
           {activeDragType === 'card' && draggedCard ? (
             <div
-              className="w-[240px] rounded-md border border-border/80 bg-card px-2 py-2 opacity-50"
+              className="w-60 rounded-md border border-border/80 bg-card px-2 py-2 opacity-50"
               style={{ pointerEvents: 'none' }}
             >
               <p className="line-clamp-2 text-[12px]">{draggedCard.title}</p>
             </div>
           ) : activeDragType === 'column' && draggedColumn ? (
             <div
-              className="w-[260px] rounded-md border border-border/80 bg-muted/80 p-2 opacity-50"
+              className="w-65 rounded-md border border-border/80 bg-muted/80 p-2 opacity-50"
               style={{ pointerEvents: 'none' }}
             >
               <p className="text-[12px] font-medium">

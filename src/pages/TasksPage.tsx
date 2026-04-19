@@ -18,6 +18,7 @@ import {
 import type { Task, Priority, Status } from '@/store/tasks-store'
 import { cn } from '@/lib/utils'
 import { Calendar, type RangeValue } from '@/components/calendar'
+import { KanbanPage } from '@/pages/KanbanPage'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -898,9 +899,10 @@ function TabBar({
 
 interface TasksPageProps {
   initialSelectedTaskId?: string
+  initialViewMode?: 'stack' | 'kanban'
 }
 
-export function TasksPage({ initialSelectedTaskId }: TasksPageProps) {
+export function TasksPage({ initialSelectedTaskId, initialViewMode = 'stack' }: TasksPageProps) {
   const tasks = useTasksStore(state => state.tasks)
   const isLoading = useTasksStore(state => state.isLoading)
   const loadTasks = useTasksStore(state => state.loadTasks)
@@ -914,6 +916,7 @@ export function TasksPage({ initialSelectedTaskId }: TasksPageProps) {
   const setFilter = useTasksStore(state => state.setFilter)
 
   const [activeTab, setActiveTab] = useState<TabKey>('all')
+  const [viewMode, setViewMode] = useState<'stack' | 'kanban'>(initialViewMode)
   const [searchVisible, setSearchVisible] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
@@ -1019,264 +1022,304 @@ export function TasksPage({ initialSelectedTaskId }: TasksPageProps) {
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setNewTaskOpen(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-[13px] text-background transition-all hover:opacity-80"
-        >
-          <Plus className="size-3.5" strokeWidth={2.5} />
-          New Task
-        </button>
-      </div>
-
-      {/* ── Filter Bar ─────────────────────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-6 py-2">
-        <TabBar active={activeTab} onChange={setActiveTab} />
-
-        <div className="ml-auto flex items-center gap-1.5">
-          {/* Search */}
-          {searchVisible ? (
-            <div className="flex items-center gap-1.5 rounded-md border border-border bg-accent/30 px-2 py-1 focus-within:border-border">
-              <Search className="size-3 text-muted-foreground/50" />
-              <input
-                ref={searchRef}
-                type="text"
-                value={filters.search}
-                onChange={e => setFilter({ search: e.target.value })}
-                onKeyDown={e => {
-                  if (e.key === 'Escape') {
-                    setFilter({ search: '' })
-                    setSearchVisible(false)
-                  }
-                }}
-                placeholder="Search tasks..."
-                aria-label="Search tasks"
-                className="w-40 bg-transparent text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setFilter({ search: '' })
-                  setSearchVisible(false)
-                }}
-                aria-label="Close search"
-                className="text-muted-foreground/40 hover:text-foreground"
-              >
-                <X className="size-3" />
-              </button>
-            </div>
-          ) : (
+        <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex items-center rounded-lg border border-border p-0.5">
             <button
               type="button"
-              onClick={() => setSearchVisible(true)}
-              aria-label="Search"
-              className="flex size-7 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <Search className="size-3.5" />
-            </button>
-          )}
-
-          {/* Filter */}
-          <div ref={filterRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setFilterOpen(v => !v)}
-              aria-label="Filter"
+              onClick={() => setViewMode('stack')}
               className={cn(
-                'flex items-center gap-1.5 rounded text-[12px] transition-colors',
-                filterOpen || activeFilterCount > 0
-                  ? 'bg-accent px-2 py-1 text-foreground'
-                  : 'size-7 justify-center text-muted-foreground/40 hover:bg-accent hover:text-foreground'
+                'rounded-md px-2.5 py-1 text-[12px] transition-colors',
+                viewMode === 'stack'
+                  ? 'bg-accent text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <Filter className="size-3.5" />
-              {activeFilterCount > 0 && (
-                <span className="font-mono text-[10px]">
-                  {activeFilterCount}
-                </span>
-              )}
+              Formato de pilha
             </button>
-            <FilterDropdown
-              open={filterOpen}
-              onClose={() => setFilterOpen(false)}
-            />
+            <button
+              type="button"
+              onClick={() => setViewMode('kanban')}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-[12px] transition-colors',
+                viewMode === 'kanban'
+                  ? 'bg-accent text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Formato kanban
+            </button>
           </div>
+
+          {/* New Task Button - appears in both modes */}
+          <button
+            type="button"
+            onClick={() => setNewTaskOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-[13px] text-background transition-all hover:opacity-80"
+          >
+            <Plus className="size-3.5" strokeWidth={2.5} />
+            New Task
+          </button>
         </div>
       </div>
 
-      {/* ── Task List + Detail ───────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Task List */}
-        <div className="flex flex-1 flex-col overflow-y-auto px-4 py-3">
-          {isLoading ? (
-            // Skeleton loaders
-            <div className="flex flex-col gap-2 px-3 py-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3"
-                  style={{ opacity: 1 - i * 0.15 }}
-                >
-                  <div className="size-4 animate-pulse rounded-full bg-muted" />
-                  <div
-                    className="h-3.5 animate-pulse rounded bg-muted"
-                    style={{ width: `${60 + (i % 3) * 15}%` }}
+      {/* ── Content ────────────────────────────────────────────────────────── */}
+      {viewMode === 'kanban' ? (
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <KanbanPage />
+        </div>
+      ) : (
+        <>
+          {/* ── Filter Bar ─────────────────────────────────────────────────────── */}
+          <div className="flex shrink-0 items-center gap-2 border-b border-border px-6 py-2">
+            <TabBar active={activeTab} onChange={setActiveTab} />
+
+            <div className="ml-auto flex items-center gap-1.5">
+              {/* Search */}
+              {searchVisible ? (
+                <div className="flex items-center gap-1.5 rounded-md border border-border bg-accent/30 px-2 py-1 focus-within:border-border">
+                  <Search className="size-3 text-muted-foreground/50" />
+                  <input
+                    ref={searchRef}
+                    type="text"
+                    value={filters.search}
+                    onChange={e => setFilter({ search: e.target.value })}
+                    onKeyDown={e => {
+                      if (e.key === 'Escape') {
+                        setFilter({ search: '' })
+                        setSearchVisible(false)
+                      }
+                    }}
+                    placeholder="Search tasks..."
+                    aria-label="Search tasks"
+                    className="w-40 bg-transparent text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none"
                   />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilter({ search: '' })
+                      setSearchVisible(false)
+                    }}
+                    aria-label="Close search"
+                    className="text-muted-foreground/40 hover:text-foreground"
+                  >
+                    <X className="size-3" />
+                  </button>
                 </div>
-              ))}
-            </div>
-          ) : tabFiltered.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 py-20 text-center">
-              <AlertCircle
-                className="size-7 text-muted-foreground/20"
-                strokeWidth={1.5}
-              />
-              <p className="text-[13px] text-muted-foreground/50">
-                {filters.search || activeFilterCount > 0
-                  ? 'No tasks match your filters.'
-                  : 'No tasks yet. Press N to create one.'}
-              </p>
-              {(filters.search || activeFilterCount > 0) && (
+              ) : (
                 <button
                   type="button"
-                  onClick={() =>
-                    setFilter({ priority: null, status: null, search: '' })
-                  }
-                  className="text-[12px] text-muted-foreground/40 underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                  onClick={() => setSearchVisible(true)}
+                  aria-label="Search"
+                  className="flex size-7 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:bg-accent hover:text-foreground"
                 >
-                  Clear all filters
+                  <Search className="size-3.5" />
                 </button>
               )}
-            </div>
-          ) : activeTab === 'all' ||
-            activeTab === 'today' ||
-            activeTab === 'upcoming' ? (
-            <>
-              {activeTab === 'all' && (
-                <>
-                  <TaskSection
-                    label="Today"
-                    tasks={groups.today}
-                    sectionKey="today"
-                    selectedId={selectedTaskId}
-                    onSelect={setSelectedTask}
-                    onToggle={toggleComplete}
-                    onDelete={id => {
-                      if (selectedTaskId === id) setSelectedTask(null)
-                      deleteTask(id)
-                    }}
-                  />
-                  <TaskSection
-                    label="Upcoming"
-                    tasks={groups.upcoming}
-                    sectionKey="upcoming"
-                    selectedId={selectedTaskId}
-                    onSelect={setSelectedTask}
-                    onToggle={toggleComplete}
-                    onDelete={id => {
-                      if (selectedTaskId === id) setSelectedTask(null)
-                      deleteTask(id)
-                    }}
-                  />
-                  <TaskSection
-                    label="Inbox"
-                    tasks={groups.inbox}
-                    sectionKey="inbox"
-                    selectedId={selectedTaskId}
-                    onSelect={setSelectedTask}
-                    onToggle={toggleComplete}
-                    onDelete={id => {
-                      if (selectedTaskId === id) setSelectedTask(null)
-                      deleteTask(id)
-                    }}
-                  />
-                  <TaskSection
-                    label="Someday"
-                    tasks={groups.someday}
-                    sectionKey="someday"
-                    selectedId={selectedTaskId}
-                    onSelect={setSelectedTask}
-                    onToggle={toggleComplete}
-                    onDelete={id => {
-                      if (selectedTaskId === id) setSelectedTask(null)
-                      deleteTask(id)
-                    }}
-                  />
-                  {/* Completed section hidden by default */}
-                  {groups.completed.length > 0 && (
-                    <TaskSection
-                      label="Completed"
-                      tasks={groups.completed}
-                      sectionKey="completed_all"
-                      selectedId={selectedTaskId}
-                      onSelect={setSelectedTask}
-                      onToggle={toggleComplete}
-                      onDelete={id => {
-                        if (selectedTaskId === id) setSelectedTask(null)
-                        deleteTask(id)
-                      }}
-                    />
-                  )}
-                </>
-              )}
-              {activeTab === 'today' &&
-                tabFiltered.map(task => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    isSelected={task.id === selectedTaskId}
-                    onToggle={() => toggleComplete(task.id)}
-                    onSelect={() => setSelectedTask(task.id)}
-                    onDelete={() => {
-                      if (selectedTaskId === task.id) setSelectedTask(null)
-                      deleteTask(task.id)
-                    }}
-                  />
-                ))}
-              {activeTab === 'upcoming' &&
-                tabFiltered.map(task => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    isSelected={task.id === selectedTaskId}
-                    onToggle={() => toggleComplete(task.id)}
-                    onSelect={() => setSelectedTask(task.id)}
-                    onDelete={() => {
-                      if (selectedTaskId === task.id) setSelectedTask(null)
-                      deleteTask(task.id)
-                    }}
-                  />
-                ))}
-            </>
-          ) : (
-            // Completed tab
-            tabFiltered.map(task => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                isSelected={task.id === selectedTaskId}
-                onToggle={() => toggleComplete(task.id)}
-                onSelect={() => setSelectedTask(task.id)}
-                onDelete={() => {
-                  if (selectedTaskId === task.id) setSelectedTask(null)
-                  deleteTask(task.id)
-                }}
-              />
-            ))
-          )}
-        </div>
 
-        {/* Detail panel (slide-over style) */}
-        {selectedTask && (
-          <TaskDetailPanel
-            key={selectedTask.id}
-            task={selectedTask}
-            onClose={() => setSelectedTask(null)}
-            onUpdate={(id, updates) => updateTask(id, updates)}
-            onDelete={id => deleteTask(id)}
-          />
-        )}
-      </div>
+              {/* Filter */}
+              <div ref={filterRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setFilterOpen(v => !v)}
+                  aria-label="Filter"
+                  className={cn(
+                    'flex items-center gap-1.5 rounded text-[12px] transition-colors',
+                    filterOpen || activeFilterCount > 0
+                      ? 'bg-accent px-2 py-1 text-foreground'
+                      : 'size-7 justify-center text-muted-foreground/40 hover:bg-accent hover:text-foreground'
+                  )}
+                >
+                  <Filter className="size-3.5" />
+                  {activeFilterCount > 0 && (
+                    <span className="font-mono text-[10px]">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+                <FilterDropdown
+                  open={filterOpen}
+                  onClose={() => setFilterOpen(false)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Task List + Detail ───────────────────────────────────────────────── */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Task List */}
+            <div className="flex flex-1 flex-col overflow-y-auto px-4 py-3">
+              {isLoading ? (
+                // Skeleton loaders
+                <div className="flex flex-col gap-2 px-3 py-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3"
+                      style={{ opacity: 1 - i * 0.15 }}
+                    >
+                      <div className="size-4 animate-pulse rounded-full bg-muted" />
+                      <div
+                        className="h-3.5 animate-pulse rounded bg-muted"
+                        style={{ width: `${60 + (i % 3) * 15}%` }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : tabFiltered.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-2 py-20 text-center">
+                  <AlertCircle
+                    className="size-7 text-muted-foreground/20"
+                    strokeWidth={1.5}
+                  />
+                  <p className="text-[13px] text-muted-foreground/50">
+                    {filters.search || activeFilterCount > 0
+                      ? 'No tasks match your filters.'
+                      : 'No tasks yet. Press N to create one.'}
+                  </p>
+                  {(filters.search || activeFilterCount > 0) && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFilter({ priority: null, status: null, search: '' })
+                      }
+                      className="text-[12px] text-muted-foreground/40 underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                    >
+                      Clear all filters
+                    </button>
+                  )}
+                </div>
+              ) : activeTab === 'all' ||
+                activeTab === 'today' ||
+                activeTab === 'upcoming' ? (
+                <>
+                  {activeTab === 'all' && (
+                    <>
+                      <TaskSection
+                        label="Today"
+                        tasks={groups.today}
+                        sectionKey="today"
+                        selectedId={selectedTaskId}
+                        onSelect={setSelectedTask}
+                        onToggle={toggleComplete}
+                        onDelete={id => {
+                          if (selectedTaskId === id) setSelectedTask(null)
+                          deleteTask(id)
+                        }}
+                      />
+                      <TaskSection
+                        label="Upcoming"
+                        tasks={groups.upcoming}
+                        sectionKey="upcoming"
+                        selectedId={selectedTaskId}
+                        onSelect={setSelectedTask}
+                        onToggle={toggleComplete}
+                        onDelete={id => {
+                          if (selectedTaskId === id) setSelectedTask(null)
+                          deleteTask(id)
+                        }}
+                      />
+                      <TaskSection
+                        label="Inbox"
+                        tasks={groups.inbox}
+                        sectionKey="inbox"
+                        selectedId={selectedTaskId}
+                        onSelect={setSelectedTask}
+                        onToggle={toggleComplete}
+                        onDelete={id => {
+                          if (selectedTaskId === id) setSelectedTask(null)
+                          deleteTask(id)
+                        }}
+                      />
+                      <TaskSection
+                        label="Someday"
+                        tasks={groups.someday}
+                        sectionKey="someday"
+                        selectedId={selectedTaskId}
+                        onSelect={setSelectedTask}
+                        onToggle={toggleComplete}
+                        onDelete={id => {
+                          if (selectedTaskId === id) setSelectedTask(null)
+                          deleteTask(id)
+                        }}
+                      />
+                      {/* Completed section hidden by default */}
+                      {groups.completed.length > 0 && (
+                        <TaskSection
+                          label="Completed"
+                          tasks={groups.completed}
+                          sectionKey="completed_all"
+                          selectedId={selectedTaskId}
+                          onSelect={setSelectedTask}
+                          onToggle={toggleComplete}
+                          onDelete={id => {
+                            if (selectedTaskId === id) setSelectedTask(null)
+                            deleteTask(id)
+                          }}
+                        />
+                      )}
+                    </>
+                  )}
+                  {activeTab === 'today' &&
+                    tabFiltered.map(task => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        isSelected={task.id === selectedTaskId}
+                        onToggle={() => toggleComplete(task.id)}
+                        onSelect={() => setSelectedTask(task.id)}
+                        onDelete={() => {
+                          if (selectedTaskId === task.id) setSelectedTask(null)
+                          deleteTask(task.id)
+                        }}
+                      />
+                    ))}
+                  {activeTab === 'upcoming' &&
+                    tabFiltered.map(task => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        isSelected={task.id === selectedTaskId}
+                        onToggle={() => toggleComplete(task.id)}
+                        onSelect={() => setSelectedTask(task.id)}
+                        onDelete={() => {
+                          if (selectedTaskId === task.id) setSelectedTask(null)
+                          deleteTask(task.id)
+                        }}
+                      />
+                    ))}
+                </>
+              ) : (
+                // Completed tab
+                tabFiltered.map(task => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    isSelected={task.id === selectedTaskId}
+                    onToggle={() => toggleComplete(task.id)}
+                    onSelect={() => setSelectedTask(task.id)}
+                    onDelete={() => {
+                      if (selectedTaskId === task.id) setSelectedTask(null)
+                      deleteTask(task.id)
+                    }}
+                  />
+                ))
+              )}
+            </div>
+
+            {/* Detail panel (slide-over style) */}
+            {selectedTask && (
+              <TaskDetailPanel
+                key={selectedTask.id}
+                task={selectedTask}
+                onClose={() => setSelectedTask(null)}
+                onUpdate={(id, updates) => updateTask(id, updates)}
+                onDelete={id => deleteTask(id)}
+              />
+            )}
+          </div>
+        </>
+      )}
 
       {/* ── New Task Modal ────────────────────────────────────────────────── */}
       {newTaskOpen && (
