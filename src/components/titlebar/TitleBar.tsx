@@ -49,6 +49,7 @@ export function TitleBar({ className, title, forcePlatform }: TitleBarProps) {
     return (
       <div
         data-tauri-drag-region
+        data-testid="titlebar-windows"
         className={cn(
           'relative flex h-8 w-full shrink-0 items-center justify-between border-b bg-background',
           className
@@ -75,6 +76,7 @@ export function TitleBar({ className, title, forcePlatform }: TitleBarProps) {
   return (
     <div
       data-tauri-drag-region
+      data-testid="titlebar-macos"
       className={cn(
         'relative flex h-8 w-full shrink-0 items-center justify-between border-b bg-background',
         className

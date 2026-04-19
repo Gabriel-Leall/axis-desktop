@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils'
  * Sidebar defaults + main default must equal 100.
  */
 const LAYOUT = {
-  leftSidebar: { default: 20, min: 15, max: 40 },
+  leftSidebar: { default: 4, min: 4, max: 4 },
   rightSidebar: { default: 20, min: 15, max: 40 },
   main: { min: 30 },
 } as const
@@ -39,7 +39,7 @@ export function MainWindow() {
   useMainWindowEventListeners()
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden rounded-(--app-corner-radius) bg-background">
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
       <TitleBar />
 
       <div className="flex flex-1 overflow-hidden">
