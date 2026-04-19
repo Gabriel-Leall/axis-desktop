@@ -7,7 +7,6 @@ import { TasksPage } from '@/pages/TasksPage'
 import { PomodoroPage } from '@/pages/PomodoroPage'
 import { HabitPage } from '@/pages/HabitPage'
 import { NotesPage } from '@/pages/NotesPage'
-import { KanbanPage } from '@/pages/KanbanPage'
 import { CalendarPage } from '@/pages/CalendarPage'
 import { GitHubPage } from '@/pages/GitHubPage'
 import { SlackPage } from '@/pages/SlackPage'
@@ -70,7 +69,7 @@ export function MainWindowContent({
             </PageWrapper>
           ) : activePage === 'kanban' ? (
             <PageWrapper key="kanban">
-              <KanbanPage />
+              <TasksPage initialViewMode="kanban" />
             </PageWrapper>
           ) : activePage === 'calendar' ? (
             <PageWrapper key="calendar">

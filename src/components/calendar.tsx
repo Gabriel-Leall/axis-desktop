@@ -4,7 +4,7 @@ import {
   endOfMonth,
   endOfWeek, format, isEqual,
   isSameDay,
-  isSameMonth, isToday,
+  isSameMonth,
   isValid,
   isWithinInterval, parse, startOfDay,
   startOfMonth,
@@ -642,6 +642,17 @@ export const Calendar = ({
     }
   };
 
+  useEffect(() => {
+    // Keep internal selection state aligned with external controlled value.
+    if (!value?.start || value.end) {
+      setIsSelecting(false);
+      setHoverDate(null);
+      return;
+    }
+
+    setIsSelecting(true);
+  }, [value?.start, value?.end]);
+
   const onApply = () => {
     const parsedStartDate = parse(startDate, "MMM dd, yyyy", new Date());
     const parsedStartTime = parse(startTime || "", "HH:mm", new Date());
@@ -771,10 +782,50 @@ export const Calendar = ({
                   const isStart = value?.start && isSameDay(day, value.start);
                   const isEnd = value?.end && isSameDay(day, value.end);
                   const currentHover = hoverDate && isSelecting && isSameDay(day, hoverDate);
-                  const isInRange =
-                    value?.start &&
-                    ((value.end && isWithinInterval(day, { start: value.start, end: value.end })) ||
-                      (hoverDate && isWithinInterval(day, { start: value.start, end: hoverDate })));
+
+                  const committedRangeStart =
+                    value?.start && value?.end
+                      ? value.start <= value.end
+                        ? value.start
+                        : value.end
+                      : null;
+                  const committedRangeEnd =
+                    value?.start && value?.end
+                      ? value.start <= value.end
+                        ? value.end
+                        : value.start
+                      : null;
+
+                  const hoverRangeStart =
+                    value?.start && hoverDate
+                      ? value.start <= hoverDate
+                        ? value.start
+                        : hoverDate
+                      : null;
+                  const hoverRangeEnd =
+                    value?.start && hoverDate
+                      ? value.start <= hoverDate
+                        ? hoverDate
+                        : value.start
+                      : null;
+
+                  const isInCommittedRange =
+                    committedRangeStart && committedRangeEnd
+                      ? isWithinInterval(day, {
+                          start: committedRangeStart,
+                          end: committedRangeEnd,
+                        })
+                      : false;
+
+                  const isInHoverRange =
+                    isSelecting && hoverRangeStart && hoverRangeEnd
+                      ? isWithinInterval(day, {
+                          start: hoverRangeStart,
+                          end: hoverRangeEnd,
+                        })
+                      : false;
+
+                  const isInRange = isInCommittedRange || isInHoverRange;
                   const isAllowedDate = (minValue ? day >= minValue : true) && (maxValue ? day <= maxValue : true);
 
                   return (
@@ -783,6 +834,7 @@ export const Calendar = ({
                       className={clsx(
                         "flex items-center justify-center text-sm text-center rounded transition",
                         isSameMonth(day, currentDate) && isAllowedDate ? "bg-background-100 text-gray-1000" : "bg-background-100 text-gray-700",
+                        !isAllowedDate && "opacity-35 saturate-50",
                         isInRange && !isStart && !isEnd && !currentHover && "bg-accents-2! rounded-none",
                         isAllowedDate ? "cursor-pointer" : "cursor-not-allowed"
                       )}
@@ -792,9 +844,8 @@ export const Calendar = ({
                       <div className={clsx(
                         "h-8 w-8 flex items-center justify-center rounded",
                         (isStart || isEnd || currentHover) && isAllowedDate && " bg-gray-1000! text-background-100!",
-                        !isStart && !isEnd && !currentHover && !isToday(day) && isAllowedDate && "hover:text-gray-1000 hover:border hover:border-gray-alpha-500",
-                        currentHover && isAllowedDate && " shadow-focus-calendar-date!",
-                        isToday(day) && " bg-blue-900! text-background-100!"
+                        !isStart && !isEnd && !currentHover && isAllowedDate && "hover:text-gray-1000 hover:border hover:border-gray-alpha-500",
+                        currentHover && isAllowedDate && " shadow-focus-calendar-date!"
                       )}>
                         {format(day, "d")}
                       </div>
