@@ -73,6 +73,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         notes::get_note,
         notes::create_note,
         notes::update_note,
+        notes::rename_note,
         notes::delete_note,
         notes::search_notes,
         // Analytics
