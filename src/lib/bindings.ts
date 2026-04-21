@@ -555,7 +555,7 @@ async createKanbanSubtask(id: string, cardId: string, title: string, sortOrder: 
     else return { status: "error", error: e  as any };
 }
 },
-async getNotes() : Promise<Result<Note[], string>> {
+async getNotes() : Promise<Result<NoteSummary[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_notes") };
 } catch (e) {
@@ -571,7 +571,7 @@ async getNote(id: string) : Promise<Result<Note, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async createNote(input: CreateNoteInput) : Promise<Result<Note, string>> {
+async createNote(input: CreateNoteInput) : Promise<Result<NoteSummary, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("create_note", { input }) };
 } catch (e) {
@@ -582,6 +582,14 @@ async createNote(input: CreateNoteInput) : Promise<Result<Note, string>> {
 async updateNote(input: UpdateNoteInput) : Promise<Result<Note, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("update_note", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async renameNote(input: RenameNoteInput) : Promise<Result<Note, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("rename_note", { input }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -671,7 +679,7 @@ export type CardOrderUpdate = { id: string; column_id: string; sort_order: numbe
 export type ColumnOrderUpdate = { id: string; sort_order: number; updated_at: string }
 export type CreateEventInput = { id: string; title: string; description: string | null; start_date: string; end_date: string; all_day: boolean; color: string | null; created_at: string; updated_at: string }
 export type CreateHabitInput = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; sort_order: number; created_at: string; updated_at: string }
-export type CreateNoteInput = { id: string; content: string; created_at: string; updated_at: string; word_count: number }
+export type CreateNoteInput = { title: string | null; content: string | null; folder: string | null }
 export type CreateSubtaskInput = { id: string; task_id: string; title: string; sort_order: number; created_at: string }
 export type CreateTaskInput = { id: string; title: string; description: string | null; priority: string; due_date: string | null; created_at: string; updated_at: string; sort_order: number }
 export type FocusTimeByDay = { day: string; total_seconds: number }
@@ -684,7 +692,8 @@ export type KanbanCard = { id: string; column_id: string; title: string; descrip
 export type KanbanColumn = { id: string; board_id: string; name: string; sort_order: number; created_at: string; updated_at: string }
 export type KanbanColumnWithCards = { column: KanbanColumn; cards: KanbanCard[] }
 export type KanbanSubtask = { id: string; card_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
-export type Note = { id: string; content: string; created_at: string; updated_at: string; word_count: number }
+export type Note = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
+export type NoteSummary = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
 export type PomodoroSession = { id: string; session_type: string; duration_seconds: number; completed: boolean; task_id: string | null; started_at: string; ended_at: string | null; created_at: string }
 export type PomodoroSettings = { focus_duration: number; short_break_duration: number; long_break_duration: number; pomos_until_long_break: number; auto_start_breaks: boolean; auto_start_focus: boolean; sound_notifications: boolean }
 export type PomodoroSummary = { session_type: string; sessions: number; total_seconds: number }
@@ -712,12 +721,13 @@ export type RecoveryError =
  * JSON serialization/deserialization error
  */
 { type: "ParseError"; message: string }
+export type RenameNoteInput = { id: string; title: string }
 export type Subtask = { id: string; task_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
 export type Task = { id: string; title: string; description: string | null; priority: string; status: string; due_date: string | null; completed_at: string | null; created_at: string; updated_at: string; sort_order: number }
 export type TaskCountByDay = { day: string; created: number; completed: number }
 export type UpdateEventInput = { id: string; title: string | null; description: string | null; start_date: string | null; end_date: string | null; all_day: boolean | null; color: string | null; updated_at: string }
 export type UpdateHabitInput = { id: string; name: string | null; color: string | null; icon: string | null; frequency: string | null; frequency_days: string | null; sort_order: number | null; updated_at: string }
-export type UpdateNoteInput = { id: string; content: string; updated_at: string; word_count: number }
+export type UpdateNoteInput = { id: string; content: string }
 export type UpdateTaskInput = { id: string; title: string | null; description: string | null; priority: string | null; status: string | null; due_date: string | null; completed_at: string | null; updated_at: string; sort_order: number | null }
 
 /** tauri-specta globals **/

@@ -5,12 +5,23 @@ export interface GroupedNotes {
   notes: Note[]
 }
 
+export interface NoteTagCount {
+  tag: string
+  count: number
+}
+
 export interface Note {
   id: string
   content: string
   created_at: string
   updated_at: string
   word_count: number
+}
+
+const TAG_PATTERN = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]{0,31})/gu
+
+function normalizeTag(tag: string): string {
+  return tag.trim().toLowerCase()
 }
 
 export function getNoteTitle(content: string): string {
@@ -31,6 +42,37 @@ export function estimateReadTime(content: string): string {
 
 export function countWords(content: string): number {
   return content.split(/\s+/).filter(Boolean).length
+}
+
+export function extractNoteTags(content: string): string[] {
+  const tagSet = new Set<string>()
+  for (const match of content.matchAll(TAG_PATTERN)) {
+    const normalized = normalizeTag(match[1] ?? '')
+    if (normalized.length >= 2) {
+      tagSet.add(normalized)
+    }
+  }
+  return Array.from(tagSet)
+}
+
+export function noteHasTag(note: Note, tag: string): boolean {
+  const normalizedTag = normalizeTag(tag)
+  if (!normalizedTag) return false
+  return extractNoteTags(note.content).includes(normalizedTag)
+}
+
+export function countTags(notes: Note[]): NoteTagCount[] {
+  const tagCounter = new Map<string, number>()
+
+  for (const note of notes) {
+    for (const tag of extractNoteTags(note.content)) {
+      tagCounter.set(tag, (tagCounter.get(tag) ?? 0) + 1)
+    }
+  }
+
+  return Array.from(tagCounter.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
 }
 
 function isToday(dateStr: string): boolean {
