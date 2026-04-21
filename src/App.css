@@ -116,7 +116,6 @@
   /* Required for drag regions to work with touch/pen on Windows */
   *[data-tauri-drag-region] {
     -webkit-app-region: drag;
-    app-region: drag;
   }
 }
 
@@ -179,14 +178,26 @@
   --ds-shadow-border: 0 0 0 1px rgba(0, 0, 0, 0.08);
   --ds-shadow-small: 0px 2px 2px rgba(0, 0, 0, 0.04);
   --ds-shadow-border-small: var(--ds-shadow-border), var(--ds-shadow-small);
-  --ds-shadow-medium: 0px 2px 2px rgba(0, 0, 0, 0.04), 0px 8px 8px -8px rgba(0, 0, 0, 0.04);
+  --ds-shadow-medium:
+    0px 2px 2px rgba(0, 0, 0, 0.04), 0px 8px 8px -8px rgba(0, 0, 0, 0.04);
   --ds-shadow-border-medium: var(--ds-shadow-border), var(--ds-shadow-medium);
-  --ds-shadow-large: 0px 2px 2px rgba(0, 0, 0, 0.04), 0px 8px 16px -4px rgba(0, 0, 0, 0.04);
+  --ds-shadow-large:
+    0px 2px 2px rgba(0, 0, 0, 0.04), 0px 8px 16px -4px rgba(0, 0, 0, 0.04);
   --ds-shadow-border-large: var(--ds-shadow-border), var(--ds-shadow-large);
-  --ds-shadow-tooltip: var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02), 0px 4px 8px rgba(0, 0, 0, 0.04);
-  --ds-shadow-menu: var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02), 0px 4px 8px -4px rgba(0, 0, 0, 0.04), 0px 16px 24px -8px rgba(0, 0, 0, 0.06);
-  --ds-shadow-modal: var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02), 0px 8px 16px -4px rgba(0, 0, 0, 0.04), 0px 24px 32px -8px rgba(0, 0, 0, 0.06);
-  --ds-shadow-fullscreen: var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02), 0px 8px 16px -4px rgba(0, 0, 0, 0.04), 0px 24px 32px -8px rgba(0, 0, 0, 0.06);
+  --ds-shadow-tooltip:
+    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
+    0px 4px 8px rgba(0, 0, 0, 0.04);
+  --ds-shadow-menu:
+    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
+    0px 4px 8px -4px rgba(0, 0, 0, 0.04), 0px 16px 24px -8px rgba(0, 0, 0, 0.06);
+  --ds-shadow-modal:
+    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
+    0px 8px 16px -4px rgba(0, 0, 0, 0.04),
+    0px 24px 32px -8px rgba(0, 0, 0, 0.06);
+  --ds-shadow-fullscreen:
+    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
+    0px 8px 16px -4px rgba(0, 0, 0, 0.04),
+    0px 24px 32px -8px rgba(0, 0, 0, 0.06);
   --ds-red-800: oklch(58.19% 0.2482 25.15);
   --ds-blue-700: oklch(57.61% 0.2508 258.23);
   --ds-amber-800: oklch(77.21% 0.1991 64.28);
@@ -196,7 +207,8 @@
   --ds-gray-1000-h: hsl(0, 0%, 22%);
   --ds-gray-alpha-200: hsla(0, 0%, 0%, 0.08);
   --ds-focus-color: var(--ds-blue-700);
-  --ds-focus-ring: 0 0 0 2px var(--ds-background-100), 0 0 0 4px var(--ds-focus-color);
+  --ds-focus-ring:
+    0 0 0 2px var(--ds-background-100), 0 0 0 4px var(--ds-focus-color);
   --ds-red-300: oklch(94.33% 0.0369 15.011509923860523);
   --ds-red-500: oklch(84.47% 0.1018 17.71);
   --ds-gray-900: hsla(0, 0%, 40%, 1);
@@ -204,16 +216,20 @@
   --ds-gray-alpha-600: hsla(0, 0%, 0%, 0.34);
   --ds-background-200: hsla(0, 0%, 98%, 1);
   --geist-foreground: #000;
-  --ds-input-ring: 0 0 0 1px var(--ds-gray-alpha-600), 0 0 0 4px rgba(0, 0, 0, .16);
-  --ds-input-error-ring: 0 0 0 1px var(--ds-red-900), 0 0 0 4px var(--ds-red-300);
-  --ds-input-error-hover-ring: 0 0 0 1px var(--ds-red-900), 0 0 0 4px var(--ds-red-500);
-  --ds-red-900-alpha-160: hsla(358,66%,48%,.16);
+  --ds-input-ring:
+    0 0 0 1px var(--ds-gray-alpha-600), 0 0 0 4px rgba(0, 0, 0, 0.16);
+  --ds-input-error-ring:
+    0 0 0 1px var(--ds-red-900), 0 0 0 4px var(--ds-red-300);
+  --ds-input-error-hover-ring:
+    0 0 0 1px var(--ds-red-900), 0 0 0 4px var(--ds-red-500);
+  --ds-red-900-alpha-160: hsla(358, 66%, 48%, 0.16);
   --geist-error: #ee0000;
   --ds-gray-200: hsla(0, 0%, 92%, 1);
   --ds-gray-alpha-100: rgba(0, 0, 0, 0.05);
   --ds-gray-alpha-300: hsla(0, 0%, 0%, 0.1);
   --accents-2: #eaeaea;
-  --ds-focus-calendar-date-ring: 0 0 0 1px var(--ds-background-100), 0 0 0 2.5px var(--ds-gray-1000);
+  --ds-focus-calendar-date-ring:
+    0 0 0 1px var(--ds-background-100), 0 0 0 2.5px var(--ds-gray-1000);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -242,19 +258,36 @@
   --ds-gray-100: hsla(0, 0%, 10%, 1);
   --ds-gray-1000: hsla(0, 0%, 93%, 1);
   --ds-gray-alpha-400: hsla(0, 0%, 100%, 0.14);
-  --ds-background-100: hsla(0,0%,4%, 1);
+  --ds-background-100: hsla(0, 0%, 4%, 1);
   --color-red-900: oklch(69.96% 0.2136 22.03);
   --ds-shadow-border: 0 0 0 1px rgba(255, 255, 255, 0.145);
   --ds-shadow-small: 0px 1px 2px rgba(0, 0, 0, 0.16);
-  --ds-shadow-border-small: var(--ds-shadow-border), 0px 1px 2px rgba(0, 0, 0, 0.16);
-  --ds-shadow-medium: 0px 2px 2px rgba(0, 0, 0, 0.32), 0px 8px 8px -8px rgba(0, 0, 0, 0.16);
-  --ds-shadow-border-medium: var(--ds-shadow-border), 0px 2px 2px rgba(0, 0, 0, 0.32), 0px 8px 8px -8px rgba(0, 0, 0, 0.16);
-  --ds-shadow-large: 0px 2px 2px rgba(0, 0, 0, 0.04), 0px 8px 16px -4px rgba(0, 0, 0, 0.04);
-  --ds-shadow-border-large: var(--ds-shadow-border), 0px 2px 2px rgba(0, 0, 0, 0.04), 0px 8px 16px -4px rgba(0, 0, 0, 0.04);
-  --ds-shadow-tooltip: var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02), 0px 4px 8px rgba(0, 0, 0, 0.04);
-  --ds-shadow-menu: var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02), 0px 4px 8px -4px rgba(0, 0, 0, 0.04), 0px 16px 24px -8px rgba(0, 0, 0, 0.06);
-  --ds-shadow-modal: var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02), 0px 8px 16px -4px rgba(0, 0, 0, 0.04), 0px 24px 32px -8px rgba(0, 0, 0, 0.06);
-  --ds-shadow-fullscreen: var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02), 0px 8px 16px -4px rgba(0, 0, 0, 0.04), 0px 24px 32px -8px rgba(0, 0, 0, 0.06);
+  --ds-shadow-border-small:
+    var(--ds-shadow-border), 0px 1px 2px rgba(0, 0, 0, 0.16);
+  --ds-shadow-medium:
+    0px 2px 2px rgba(0, 0, 0, 0.32), 0px 8px 8px -8px rgba(0, 0, 0, 0.16);
+  --ds-shadow-border-medium:
+    var(--ds-shadow-border), 0px 2px 2px rgba(0, 0, 0, 0.32),
+    0px 8px 8px -8px rgba(0, 0, 0, 0.16);
+  --ds-shadow-large:
+    0px 2px 2px rgba(0, 0, 0, 0.04), 0px 8px 16px -4px rgba(0, 0, 0, 0.04);
+  --ds-shadow-border-large:
+    var(--ds-shadow-border), 0px 2px 2px rgba(0, 0, 0, 0.04),
+    0px 8px 16px -4px rgba(0, 0, 0, 0.04);
+  --ds-shadow-tooltip:
+    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
+    0px 4px 8px rgba(0, 0, 0, 0.04);
+  --ds-shadow-menu:
+    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
+    0px 4px 8px -4px rgba(0, 0, 0, 0.04), 0px 16px 24px -8px rgba(0, 0, 0, 0.06);
+  --ds-shadow-modal:
+    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
+    0px 8px 16px -4px rgba(0, 0, 0, 0.04),
+    0px 24px 32px -8px rgba(0, 0, 0, 0.06);
+  --ds-shadow-fullscreen:
+    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
+    0px 8px 16px -4px rgba(0, 0, 0, 0.04),
+    0px 24px 32px -8px rgba(0, 0, 0, 0.06);
   --ds-red-800: oklch(58.01% 0.227 25.12);
   --ds-blue-700: oklch(57.61% 0.2321 258.23);
   --ds-amber-800: oklch(77.21% 0.1991 64.28);
@@ -269,8 +302,9 @@
   --ds-gray-alpha-600: hsla(0, 0%, 100%, 0.51);
   --ds-background-200: hsla(0, 0%, 0%, 1);
   --geist-foreground: #fff;
-  --ds-input-ring: 0 0 0 1px var(--ds-gray-alpha-600), 0 0 0 4px rgba(255, 255, 255, .24);
-  --ds-red-900-alpha-160: hsla(358,100%,69%,.16);
+  --ds-input-ring:
+    0 0 0 1px var(--ds-gray-alpha-600), 0 0 0 4px rgba(255, 255, 255, 0.24);
+  --ds-red-900-alpha-160: hsla(358, 100%, 69%, 0.16);
   --geist-error: #ff0000;
   --ds-gray-200: hsla(0, 0%, 12%, 1);
   --ds-gray-alpha-100: rgba(255, 255, 255, 0.06);
@@ -284,65 +318,158 @@
 .notes-inline-editor .toastui-editor-defaultUI {
   height: 100%;
   border: 0;
-  background: transparent;
+  background: transparent !important;
+  font-family: Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.notes-inline-editor .toastui-editor-defaultUI-toolbar {
+  display: none !important;
+  align-items: center;
+  height: auto;
+  min-height: 48px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent !important;
 }
 
 .notes-inline-editor .toastui-editor-toolbar {
-  border-color: color-mix(in oklab, var(--border) 85%, transparent);
-  background: color-mix(in oklab, var(--card) 78%, transparent);
+  height: auto;
+  box-sizing: border-box;
+  border: 0;
+  background: transparent !important;
   backdrop-filter: blur(8px);
-  padding: 4px 6px;
+  padding: 0;
 }
 
-.notes-inline-editor .toastui-editor-toolbar button {
-  border-radius: 6px;
+.notes-inline-editor .toastui-editor-defaultUI-toolbar button {
+  width: 30px;
+  height: 30px;
+  margin: 3px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted-foreground) !important;
 }
 
-.notes-inline-editor .toastui-editor-toolbar button:hover,
-.notes-inline-editor .toastui-editor-toolbar button.active {
-  background: color-mix(in oklab, var(--accent) 78%, transparent);
+.notes-inline-editor
+  .toastui-editor-defaultUI-toolbar
+  button:not(:disabled):hover,
+.notes-inline-editor
+  .toastui-editor-defaultUI-toolbar
+  button:not(:disabled).active {
+  border-color: var(--border);
+  background: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
+.notes-inline-editor .toastui-editor-toolbar-divider {
+  margin: 8px 10px;
+  background: var(--border);
+}
+
+.notes-inline-editor .toastui-editor-toolbar-icons {
+  /* Using current color works best if the icons inherit it, but in Toast UI they might be background SVG or fonts */
+  /* Remove the forced white filter */
+  filter: none;
+}
+
+.dark .notes-inline-editor .toastui-editor-toolbar-icons {
+  filter: brightness(0) saturate(100%) invert(87%) sepia(10%) saturate(278%)
+    hue-rotate(184deg) brightness(96%) contrast(93%);
 }
 
 .notes-inline-editor .toastui-editor-main {
-  background: transparent;
+  background: transparent !important;
+  overflow-y: auto !important;
+}
+
+.notes-inline-editor .toastui-editor-main-container,
+.notes-inline-editor .toastui-editor-ww-container,
+.notes-inline-editor .toastui-editor-ww-container > .toastui-editor,
+.notes-inline-editor .toastui-editor-defaultUI .ProseMirror {
+  background: transparent !important;
+  color: var(--foreground) !important;
+  text-align: left !important;
 }
 
 .notes-inline-editor .toastui-editor-ww-container {
-  background: transparent;
+  background: transparent !important;
+  padding: 0;
 }
 
-.notes-inline-editor .toastui-editor-contents {
-  font-family: 'Charter', 'Iowan Old Style', 'Palatino Linotype', serif;
-  font-size: 15px;
-  line-height: 1.75;
-  color: var(--foreground);
+.notes-inline-editor .ProseMirror.toastui-editor-contents {
+  font-family: Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.625;
+  color: var(--foreground) !important;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  margin: 0 !important;
+  padding: 0;
+  caret-color: var(--foreground);
+  text-align: left !important;
 }
 
-.notes-inline-editor .toastui-editor-contents p,
-.notes-inline-editor .toastui-editor-contents li {
-  margin: 0 0 0.75rem;
+.notes-inline-editor .ProseMirror.toastui-editor-contents p,
+.notes-inline-editor .ProseMirror.toastui-editor-contents li {
+  margin: 0 0 1rem;
+  color: var(--foreground) !important;
 }
 
-.notes-inline-editor .toastui-editor-contents h1,
-.notes-inline-editor .toastui-editor-contents h2,
-.notes-inline-editor .toastui-editor-contents h3 {
+.notes-inline-editor .ProseMirror.toastui-editor-contents h1,
+.notes-inline-editor .ProseMirror.toastui-editor-contents h2,
+.notes-inline-editor .ProseMirror.toastui-editor-contents h3 {
   border-bottom: 0;
-  font-family: 'Fraunces', Georgia, serif;
-  letter-spacing: 0.01em;
+  font-family: Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: 0;
+  color: var(--foreground) !important;
+  text-align: left !important;
 }
 
-.notes-inline-editor .toastui-editor-contents blockquote {
-  border-inline-start: 3px solid var(--border);
-  color: var(--muted-foreground);
+.notes-inline-editor .ProseMirror.toastui-editor-contents h1 {
+  margin: 0 0 2rem;
+  font-size: clamp(2.25rem, 6vw, 3rem);
+  font-weight: 700;
+  line-height: 1.1;
+  outline: none;
 }
 
-.notes-inline-editor .toastui-editor-contents code {
+.notes-inline-editor .ProseMirror.toastui-editor-contents h2 {
+  margin: 2.25rem 0 1rem;
+  font-size: clamp(1.4rem, 2.1vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.notes-inline-editor .ProseMirror.toastui-editor-contents h3 {
+  margin: 1.75rem 0 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.notes-inline-editor .ProseMirror.toastui-editor-contents blockquote {
+  margin: 1.25rem 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--muted);
+  color: var(--muted-foreground) !important;
+}
+
+.notes-inline-editor .ProseMirror.toastui-editor-contents code {
   font-family:
     var(--font-geist-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
     Consolas, monospace;
-  background: color-mix(in oklab, var(--muted) 40%, transparent);
+  background: var(--muted);
+  color: var(--foreground);
   border-radius: 4px;
   padding: 0.1em 0.35em;
+}
+
+.notes-inline-editor .ProseMirror .placeholder {
+  color: var(--muted-foreground) !important;
 }
 
 .notes-inline-editor .toastui-editor-mode-switch {
@@ -437,11 +564,11 @@
   --color-ds-blue-100: var(----ds-blue-100);
   --color-color-color-red-900: var(----color-color-red-900);
   @keyframes fade-spin {
-  0% {
-    opacity: 0.15;
+    0% {
+      opacity: 0.15;
     }
-  100% {
-    opacity: 1;
+    100% {
+      opacity: 1;
     }
   }
 }
