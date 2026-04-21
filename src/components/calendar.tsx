@@ -1,28 +1,37 @@
 import {
   addDays,
-  addMonths, endOfDay,
+  addMonths,
+  endOfDay,
   endOfMonth,
-  endOfWeek, format, isEqual,
+  endOfWeek,
+  format,
+  isEqual,
   isSameDay,
   isSameMonth,
   isValid,
-  isWithinInterval, parse, startOfDay,
+  isWithinInterval,
+  parse,
+  startOfDay,
   startOfMonth,
-  startOfWeek, sub,
-  subDays, subHours, subMinutes,
+  startOfWeek,
+  sub,
+  subDays,
+  subHours,
+  subMinutes,
   subMonths,
-  subWeeks, subYears
-} from "date-fns";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/button-1";
-import { Material } from "@/components/material-1";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/select-1";
-import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
-import { useClickOutside } from "@/components/use-click-outside";
-import clsx from "clsx";
-import { enUS } from "date-fns/locale";
-import { twMerge } from "tailwind-merge";
+  subWeeks,
+  subYears,
+} from 'date-fns'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Button } from '@/components/button-1'
+import { Material } from '@/components/material-1'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/select-1'
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
+import { useClickOutside } from '@/components/use-click-outside'
+import clsx from 'clsx'
+import { enUS } from 'date-fns/locale'
+import { twMerge } from 'tailwind-merge'
 
 const ClockIcon = () => (
   <svg height="16" strokeLinejoin="round" viewBox="0 0 16 16" width="16">
@@ -33,7 +42,7 @@ const ClockIcon = () => (
       className="fill-gray-1000"
     />
   </svg>
-);
+)
 
 const ArrowBottomIcon = ({ className }: { className?: string }) => (
   <svg
@@ -41,7 +50,7 @@ const ArrowBottomIcon = ({ className }: { className?: string }) => (
     strokeLinejoin="round"
     viewBox="0 0 16 16"
     width="16"
-    className={clsx("fill-gray-1000", className)}
+    className={clsx('fill-gray-1000', className)}
   >
     <path
       fillRule="evenodd"
@@ -49,15 +58,10 @@ const ArrowBottomIcon = ({ className }: { className?: string }) => (
       d="M14.0607 5.49999L13.5303 6.03032L8.7071 10.8535C8.31658 11.2441 7.68341 11.2441 7.29289 10.8535L2.46966 6.03032L1.93933 5.49999L2.99999 4.43933L3.53032 4.96966L7.99999 9.43933L12.4697 4.96966L13 4.43933L14.0607 5.49999Z"
     />
   </svg>
-);
+)
 
 const ArrowLeftIcon = () => (
-  <svg
-    height="16"
-    strokeLinejoin="round"
-    viewBox="0 0 16 16"
-    width="16"
-  >
+  <svg height="16" strokeLinejoin="round" viewBox="0 0 16 16" width="16">
     <path
       fillRule="evenodd"
       clipRule="evenodd"
@@ -65,15 +69,10 @@ const ArrowLeftIcon = () => (
       className="fill-gray-700"
     />
   </svg>
-);
+)
 
 const ArrowRightIcon = () => (
-  <svg
-    height="16"
-    strokeLinejoin="round"
-    viewBox="0 0 16 16"
-    width="16"
-  >
+  <svg height="16" strokeLinejoin="round" viewBox="0 0 16 16" width="16">
     <path
       fillRule="evenodd"
       clipRule="evenodd"
@@ -81,311 +80,303 @@ const ArrowRightIcon = () => (
       className="fill-gray-700"
     />
   </svg>
-);
+)
 
 const CalendarIcon = () => (
-  <svg
-    height="16"
-    strokeLinejoin="round"
-    viewBox="0 0 16 16"
-    width="16"
-  >
+  <svg height="16" strokeLinejoin="round" viewBox="0 0 16 16" width="16">
     <path
       fillRule="evenodd"
       clipRule="evenodd"
       d="M5.5 0.5V1.25V2H10.5V1.25V0.5H12V1.25V2H14H15.5V3.5V13.5C15.5 14.8807 14.3807 16 13 16H3C1.61929 16 0.5 14.8807 0.5 13.5V3.5V2H2H4V1.25V0.5H5.5ZM2 3.5H14V6H2V3.5ZM2 7.5V13.5C2 14.0523 2.44772 14.5 3 14.5H13C13.5523 14.5 14 14.0523 14 13.5V7.5H2Z"
     />
   </svg>
-);
+)
 
 const ClearIcon = () => (
-  <svg
-    height="16"
-    strokeLinejoin="round"
-    viewBox="0 0 16 16"
-    width="16"
-  >
+  <svg height="16" strokeLinejoin="round" viewBox="0 0 16 16" width="16">
     <path
       fillRule="evenodd"
       clipRule="evenodd"
       d="M12.4697 13.5303L13 14.0607L14.0607 13L13.5303 12.4697L9.06065 7.99999L13.5303 3.53032L14.0607 2.99999L13 1.93933L12.4697 2.46966L7.99999 6.93933L3.53032 2.46966L2.99999 1.93933L1.93933 2.99999L2.46966 3.53032L6.93933 7.99999L2.46966 12.4697L1.93933 13L2.99999 14.0607L3.53032 13.5303L7.99999 9.06065L12.4697 13.5303Z"
     />
   </svg>
-);
+)
 
 const parseRelativeDate = (input: string) => {
-  const regex = /(\d+)\s*(day|week|month|year|hour)s?/i;
-  const match = input.match(regex);
+  const regex = /(\d+)\s*(day|week|month|year|hour)s?/i
+  const match = input.match(regex)
 
   if (!match) {
-    return null;
+    return null
   }
 
-  const value = parseInt(match[1]);
-  const unit = match[2].toLowerCase() + "s";
+  const value = parseInt(match[1])
+  const unit = match[2].toLowerCase() + 's'
 
-  const now = new Date();
-  const start = startOfDay(sub(now, { [unit]: value }));
-  const end = endOfDay(now);
+  const now = new Date()
+  const start = startOfDay(sub(now, { [unit]: value }))
+  const end = endOfDay(now)
 
   return {
-    [input]: { text: input, start, end }
-  };
-};
+    [input]: { text: input, start, end },
+  }
+}
 
 const parseFixedRange = (input: string) => {
-  const rangePattern = /(.+)\s*[-–]\s*(.+)/;
+  const rangePattern = /(.+)\s*[-–]\s*(.+)/
 
-  const match = input.match(rangePattern);
+  const match = input.match(rangePattern)
   if (!match) {
-    return parseExactDate(input);
+    return parseExactDate(input)
   }
 
-  const [, startStr, endStr] = match;
+  const [, startStr, endStr] = match
   if (!startStr || !endStr) {
-    return null;
+    return null
   }
 
-  const possibleFormats = ["d MMM yyyy", "d MMM", "yyyy-MM-dd"];
+  const possibleFormats = ['d MMM yyyy', 'd MMM', 'yyyy-MM-dd']
 
   for (const format of possibleFormats) {
-    const now = new Date();
-    const year = now.getFullYear();
+    const now = new Date()
+    const year = now.getFullYear()
 
-    const start = parse(startStr, format, now, { locale: enUS });
-    const end = parse(endStr, format, now, { locale: enUS });
+    const start = parse(startStr, format, now, { locale: enUS })
+    const end = parse(endStr, format, now, { locale: enUS })
 
-    const finalStart = isValid(start) ? startOfDay(start) : null;
-    const finalEnd = isValid(end) ? endOfDay(end) : null;
+    const finalStart = isValid(start) ? startOfDay(start) : null
+    const finalEnd = isValid(end) ? endOfDay(end) : null
 
     if (finalStart && finalEnd) {
-      if (format === "d MMM") {
-        finalStart.setFullYear(year);
-        finalEnd.setFullYear(year);
+      if (format === 'd MMM') {
+        finalStart.setFullYear(year)
+        finalEnd.setFullYear(year)
       }
       return {
-        [input]: { text: input, start: finalStart, end: finalEnd }
-      };
+        [input]: { text: input, start: finalStart, end: finalEnd },
+      }
     }
   }
 
-  return null;
-};
+  return null
+}
 
 const parseExactDate = (input: string) => {
-  const now = new Date();
-  const currentYear = now.getFullYear();
+  const now = new Date()
+  const currentYear = now.getFullYear()
 
-  const dateFormats = ["d MMM yyyy", "d MMM", "yyyy-MM-dd"];
+  const dateFormats = ['d MMM yyyy', 'd MMM', 'yyyy-MM-dd']
 
   for (const format of dateFormats) {
-    let date = parse(input.trim(), format, now, { locale: enUS });
+    let date = parse(input.trim(), format, now, { locale: enUS })
 
     if (isValid(date)) {
-      if (format === "d MMM") {
-        date.setFullYear(currentYear);
+      if (format === 'd MMM') {
+        date.setFullYear(currentYear)
       }
 
       return {
         [input]: {
           text: input,
           start: startOfDay(date),
-          end: endOfDay(date)
-        }
-      };
+          end: endOfDay(date),
+        },
+      }
     }
   }
 
-  return null;
-};
+  return null
+}
 
 const parseDateInput = (input: string) => {
-  const relative = parseRelativeDate(input);
-  if (relative) return relative;
+  const relative = parseRelativeDate(input)
+  if (relative) return relative
 
-  const fixedRange = parseFixedRange(input);
-  if (fixedRange) return fixedRange;
+  const fixedRange = parseFixedRange(input)
+  if (fixedRange) return fixedRange
 
-  const exact = parseExactDate(input);
-  if (exact) return exact;
+  const exact = parseExactDate(input)
+  if (exact) return exact
 
-  return null;
-};
+  return null
+}
 
 const filterPresets = (obj: Record<string, any>, search: string) => {
   if (!search) {
-    return obj;
+    return obj
   }
 
-  const searchWords = search.toLowerCase().split("-").filter(Boolean);
+  const searchWords = search.toLowerCase().split('-').filter(Boolean)
 
   const filtered = Object.fromEntries(
     Object.entries(obj).filter(([_, value]) => {
-      const keyLower = value.text.toLowerCase();
-      return searchWords.every(word => keyLower.includes(word));
+      const keyLower = value.text.toLowerCase()
+      return searchWords.every(word => keyLower.includes(word))
     })
-  );
+  )
 
   if (Object.entries(filtered).length > 0) {
-    return filtered;
+    return filtered
   }
 
-  const parsed = parseDateInput(search);
+  const parsed = parseDateInput(search)
   if (parsed) {
-    return parsed;
+    return parsed
   }
 
-  const numberMatch = search.match(/\d+/);
+  const numberMatch = search.match(/\d+/)
   if (!numberMatch) {
-    return {};
+    return {}
   }
 
-  const n = parseInt(numberMatch[0], 10);
-  const now = new Date();
+  const n = parseInt(numberMatch[0], 10)
+  const now = new Date()
 
   return {
     [`last-${n}-days`]: {
       text: `Last ${n} Days`,
       start: startOfDay(subDays(now, n)),
-      end: endOfDay(now)
+      end: endOfDay(now),
     },
     [`last-${n}-weeks`]: {
       text: `Last ${n} Weeks`,
       start: startOfDay(subWeeks(now, n)),
-      end: endOfDay(now)
+      end: endOfDay(now),
     },
     [`last-${n}-months`]: {
       text: `Last ${n} Months`,
       start: startOfDay(subMonths(now, n)),
-      end: endOfDay(now)
+      end: endOfDay(now),
     },
     [`last-${n}-years`]: {
       text: `Last ${n} Years`,
       start: startOfDay(subYears(now, n)),
-      end: endOfDay(now)
-    }
-  };
-};
+      end: endOfDay(now),
+    },
+  }
+}
 
 const formatDateRange = (start: Date, end: Date, timezone: string) => {
-  const isStartMidnight = isEqual(start, startOfDay(start));
-  const isEndEOD = isEqual(end, endOfDay(end));
-  const sameDay = isSameDay(start, end);
+  const isStartMidnight = isEqual(start, startOfDay(start))
+  const isEndEOD = isEqual(end, endOfDay(end))
+  const sameDay = isSameDay(start, end)
 
   const formatSingle = (date: Date) =>
     formatInTimeZone(
       date,
       timezone,
-      isStartMidnight ? "EEE, MMM d" : "EEE, MMM d, HH:mm"
-    );
+      isStartMidnight ? 'EEE, MMM d' : 'EEE, MMM d, HH:mm'
+    )
 
-  const formatMonth = (date: Date) => formatInTimeZone(date, timezone, "MMM");
-  const formatDay = (date: Date) => formatInTimeZone(date, timezone, "d");
-  const formatYear = (date: Date) => formatInTimeZone(date, timezone, "yy");
+  const formatMonth = (date: Date) => formatInTimeZone(date, timezone, 'MMM')
+  const formatDay = (date: Date) => formatInTimeZone(date, timezone, 'd')
+  const formatYear = (date: Date) => formatInTimeZone(date, timezone, 'yy')
 
   const formatDateWithTimeIfNeeded = (date: Date, showTime: boolean) =>
-    formatInTimeZone(date, timezone, showTime ? "MMM d, HH:mm" : "MMM d");
+    formatInTimeZone(date, timezone, showTime ? 'MMM d, HH:mm' : 'MMM d')
 
   if (sameDay) {
-    return formatSingle(start);
+    return formatSingle(start)
   }
 
-  const sameMonth = formatMonth(start) === formatMonth(end) && formatYear(start) === formatYear(end);
-  const sameYear = formatYear(start) === formatYear(end);
+  const sameMonth =
+    formatMonth(start) === formatMonth(end) &&
+    formatYear(start) === formatYear(end)
+  const sameYear = formatYear(start) === formatYear(end)
 
-  const startHasTime = !isStartMidnight;
-  const endHasTime = !isEndEOD;
+  const startHasTime = !isStartMidnight
+  const endHasTime = !isEndEOD
 
   if (startHasTime || endHasTime) {
-    const startFormatted = formatDateWithTimeIfNeeded(start, startHasTime);
-    const endFormatted = formatDateWithTimeIfNeeded(end, endHasTime);
-    return `${startFormatted} - ${endFormatted}`;
+    const startFormatted = formatDateWithTimeIfNeeded(start, startHasTime)
+    const endFormatted = formatDateWithTimeIfNeeded(end, endHasTime)
+    return `${startFormatted} - ${endFormatted}`
   }
 
   if (sameMonth) {
-    return `${formatMonth(start)} ${formatDay(start)} - ${formatDay(end)}`;
+    return `${formatMonth(start)} ${formatDay(start)} - ${formatDay(end)}`
   }
 
   if (sameYear) {
-    return `${formatMonth(start)} ${formatDay(start)} - ${formatMonth(end)} ${formatDay(end)}`;
+    return `${formatMonth(start)} ${formatDay(start)} - ${formatMonth(end)} ${formatDay(end)}`
   }
 
-  return `${formatMonth(start)} ${formatDay(start)} '${formatYear(start)} - ${formatMonth(end)} ${formatDay(end)} '${formatYear(end)}`;
-};
+  return `${formatMonth(start)} ${formatDay(start)} '${formatYear(start)} - ${formatMonth(end)} ${formatDay(end)} '${formatYear(end)}`
+}
 
 const typeRelativeTimes = [
   {
-    text: "45m",
+    text: '45m',
     start: subMinutes(new Date(), 45),
-    end: new Date()
+    end: new Date(),
   },
   {
-    text: "12 hours",
+    text: '12 hours',
     start: subHours(new Date(), 12),
-    end: new Date()
+    end: new Date(),
   },
   {
-    text: "10d",
+    text: '10d',
     start: startOfDay(subDays(new Date(), 10)),
-    end: endOfDay(new Date())
+    end: endOfDay(new Date()),
   },
   {
-    text: "2 weeks",
+    text: '2 weeks',
     start: startOfDay(subWeeks(new Date(), 2)),
-    end: endOfDay(new Date())
+    end: endOfDay(new Date()),
   },
   {
-    text: "last month",
+    text: 'last month',
     start: startOfDay(subMonths(new Date(), 1)),
-    end: endOfDay(new Date())
+    end: endOfDay(new Date()),
   },
   {
-    text: "yesterday",
+    text: 'yesterday',
     start: startOfDay(subDays(new Date(), 1)),
-    end: endOfDay(subDays(new Date(), 1))
+    end: endOfDay(subDays(new Date(), 1)),
   },
   {
-    text: "today",
+    text: 'today',
     start: startOfDay(new Date()),
-    end: endOfDay(new Date())
-  }
-];
+    end: endOfDay(new Date()),
+  },
+]
 const typeFixedTimes = [
   {
-    text: "Jan 1",
+    text: 'Jan 1',
     start: startOfDay(new Date(new Date().getFullYear(), 0, 1)),
-    end: endOfDay(new Date(new Date().getFullYear(), 0, 1))
+    end: endOfDay(new Date(new Date().getFullYear(), 0, 1)),
   },
   {
-    text: "Jan 1 - Jan 2",
+    text: 'Jan 1 - Jan 2',
     start: startOfDay(new Date(new Date().getFullYear(), 0, 1)),
-    end: endOfDay(new Date(new Date().getFullYear(), 0, 2))
+    end: endOfDay(new Date(new Date().getFullYear(), 0, 2)),
   },
   {
-    text: "1/1",
+    text: '1/1',
     start: startOfDay(new Date(new Date().getFullYear(), 0, 1)),
-    end: endOfDay(new Date(new Date().getFullYear(), 0, 1))
+    end: endOfDay(new Date(new Date().getFullYear(), 0, 1)),
   },
   {
-    text: "1/1 - 1/2",
+    text: '1/1 - 1/2',
     start: startOfDay(new Date(new Date().getFullYear(), 0, 1)),
-    end: endOfDay(new Date(new Date().getFullYear(), 0, 2))
-  }
-];
+    end: endOfDay(new Date(new Date().getFullYear(), 0, 2)),
+  },
+]
 
 interface CalendarComboboxProps {
-  stacked: boolean;
-  compact: boolean;
-  value: RangeValue | null;
-  onChange: (date: RangeValue | null) => void;
+  stacked: boolean
+  compact: boolean
+  value: RangeValue | null
+  onChange: (date: RangeValue | null) => void
   presets: {
     [key: string]: {
-      text: string;
-      start: Date;
-      end: Date;
-    };
-  };
-  presetIndex?: number;
+      text: string
+      start: Date
+      end: Date
+    }
+  }
+  presetIndex?: number
 }
 
 const CalendarCombobox = ({
@@ -394,114 +385,153 @@ const CalendarCombobox = ({
   value,
   onChange,
   presets,
-  presetIndex
+  presetIndex,
 }: CalendarComboboxProps) => {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [inputValue, setInputValue] = useState<string>("");
-  const [currentPreset, setCurrentPreset] = useState<any | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState<boolean>(false)
+  const [inputValue, setInputValue] = useState<string>('')
+  const [currentPreset, setCurrentPreset] = useState<any | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
 
   const onFocus = () => {
-    setIsOpen(true);
-  };
+    setIsOpen(true)
+  }
 
   const onChangeInputValue = (value: string) => {
-    setInputValue(value);
-  };
+    setInputValue(value)
+  }
 
   const onClick = (value: any) => {
-    setInputValue(value.text);
-    setCurrentPreset(value);
-    onChange({ start: value.start, end: value.end });
-    setIsOpen(false);
-  };
+    setInputValue(value.text)
+    setCurrentPreset(value)
+    onChange({ start: value.start, end: value.end })
+    setIsOpen(false)
+  }
 
-  const filteredPresets = filterPresets(presets, inputValue);
+  const filteredPresets = filterPresets(presets, inputValue)
 
-  useClickOutside(ref, () => setIsOpen(false));
+  useClickOutside(ref, () => setIsOpen(false))
 
   useEffect(() => {
-    const array = Object.entries(presets);
-    if (presetIndex !== undefined && presetIndex >= 0 && presetIndex < array.length) {
-      setInputValue(array[presetIndex][1].text);
-      setCurrentPreset(array[presetIndex][1]);
-      onChange({ start: array[presetIndex][1].start, end: array[presetIndex][1].end });
+    const array = Object.entries(presets)
+    if (
+      presetIndex !== undefined &&
+      presetIndex >= 0 &&
+      presetIndex < array.length
+    ) {
+      setInputValue(array[presetIndex][1].text)
+      setCurrentPreset(array[presetIndex][1])
+      onChange({
+        start: array[presetIndex][1].start,
+        end: array[presetIndex][1].end,
+      })
     }
-  }, [presetIndex]);
+  }, [presetIndex])
 
   useEffect(() => {
     if (currentPreset) {
-      if (currentPreset.start !== value?.start || currentPreset.end !== value?.end) {
-        setCurrentPreset(null);
-        setInputValue("");
+      if (
+        currentPreset.start !== value?.start ||
+        currentPreset.end !== value?.end
+      ) {
+        setCurrentPreset(null)
+        setInputValue('')
       }
     }
-  }, [value]);
+  }, [value])
 
   return (
     <div
       ref={ref}
-      className={twMerge(clsx(
-        "inline-block text-sm font-sans",
-        compact ? "w-45 absolute left-9.5" : "w-62.5 relative",
-        compact && !isOpen && "pl-35",
-        compact && (isOpen || (currentPreset && currentPreset?.start === value?.start && currentPreset?.end === value?.end)) && "pl-0"
-      ))}
+      className={twMerge(
+        clsx(
+          'inline-block text-sm font-sans',
+          compact ? 'w-45 absolute left-9.5' : 'w-62.5 relative',
+          compact && !isOpen && 'pl-35',
+          compact &&
+            (isOpen ||
+              (currentPreset &&
+                currentPreset?.start === value?.start &&
+                currentPreset?.end === value?.end)) &&
+            'pl-0'
+        )
+      )}
     >
       <Input
         prefix={compact ? undefined : <ClockIcon />}
-        prefixStyling={"pl-2.5"}
-        suffix={<ArrowBottomIcon className={clsx("duration-200", isOpen && "rotate-180")} />}
+        prefixStyling={'pl-2.5'}
+        suffix={
+          <ArrowBottomIcon
+            className={clsx('duration-200', isOpen && 'rotate-180')}
+          />
+        }
         suffixStyling={clsx(
-          "cursor-pointer",
-          compact && !isOpen && (!currentPreset || (currentPreset?.start !== value?.start && currentPreset?.end !== value?.end)) && "w-10 !px-0"
+          'cursor-pointer',
+          compact &&
+            !isOpen &&
+            (!currentPreset ||
+              (currentPreset?.start !== value?.start &&
+                currentPreset?.end !== value?.end)) &&
+            'w-10 !px-0'
         )}
         placeholder="Select Period"
         onFocus={onFocus}
         value={inputValue}
         onChange={onChangeInputValue}
         wrapperClassName={clsx(
-          "hover:z-10",
-          stacked && !compact && "rounded-b-none",
-          !stacked && !compact && "rounded-r-none",
-          compact && "rounded-l-none",
-          (isOpen || (compact && currentPreset && currentPreset?.start === value?.start && currentPreset?.end === value?.end)) && "z-10"
+          'hover:z-10',
+          stacked && !compact && 'rounded-b-none',
+          !stacked && !compact && 'rounded-r-none',
+          compact && 'rounded-l-none',
+          (isOpen ||
+            (compact &&
+              currentPreset &&
+              currentPreset?.start === value?.start &&
+              currentPreset?.end === value?.end)) &&
+            'z-10'
         )}
         className={clsx(
-          "pl-2 placeholder:text-gray-1000! placeholder:opacity-100!",
-          compact && !isOpen && (!currentPreset || (currentPreset?.start !== value?.start && currentPreset?.end !== value?.end)) && "w-0! px-0!"
+          'pl-2 placeholder:text-gray-1000! placeholder:opacity-100!',
+          compact &&
+            !isOpen &&
+            (!currentPreset ||
+              (currentPreset?.start !== value?.start &&
+                currentPreset?.end !== value?.end)) &&
+            'w-0! px-0!'
         )}
       />
       <Material
         type="menu"
         className={clsx(
-          "absolute z-50 top-12 left-0",
-          compact ? "w-full" : "grid grid-cols-2 w-[200%]",
-          isOpen && "opacity-100",
-          !isOpen && "opacity-0 pointer-events-none duration-200"
+          'absolute z-50 top-12 left-0',
+          compact ? 'w-full' : 'grid grid-cols-2 w-[200%]',
+          isOpen && 'opacity-100',
+          !isOpen && 'opacity-0 pointer-events-none duration-200'
         )}
       >
         <ul className="p-2 border-r border-r-gray-200">
-          {Object.entries(filteredPresets).length > 0 ? Object.entries(filteredPresets).map(([key, value]) => (
-            <li
-              key={key}
-              className="flex items-center cursor-pointer px-2 w-full h-9 rounded-md hover:bg-gray-alpha-300 active:bg-gray-alpha-300 font-sans text-sm text-gray-1000"
-              onClick={() => onClick(value)}
-            >
-              {value.text}
-            </li>
-          )) : (
-            <li
-              className="flex items-center cursor-pointer px-2 w-full h-9 rounded-md hover:bg-gray-alpha-300 active:bg-gray-alpha-300 font-sans text-sm text-gray-1000">
+          {Object.entries(filteredPresets).length > 0 ? (
+            Object.entries(filteredPresets).map(([key, value]) => (
+              <li
+                key={key}
+                className="flex items-center cursor-pointer px-2 w-full h-9 rounded-md hover:bg-gray-alpha-300 active:bg-gray-alpha-300 font-sans text-sm text-gray-1000"
+                onClick={() => onClick(value)}
+              >
+                {value.text}
+              </li>
+            ))
+          ) : (
+            <li className="flex items-center cursor-pointer px-2 w-full h-9 rounded-md hover:bg-gray-alpha-300 active:bg-gray-alpha-300 font-sans text-sm text-gray-1000">
               {inputValue}
             </li>
           )}
         </ul>
         {!compact && (
           <div className="p-4 pr-7.5">
-            <div className="font-sans text-gray-900 text-sm">Type relative times</div>
+            <div className="font-sans text-gray-900 text-sm">
+              Type relative times
+            </div>
             <div className="mt-2 flex flex-wrap gap-1">
-              {typeRelativeTimes.map((value) => (
+              {typeRelativeTimes.map(value => (
                 <button
                   key={value.text}
                   className="font-mono text-[13px] text-gray-1000 px-1.5 h-5 inline-flex items-center bg-accents-2 border-none rounded cursor-pointer"
@@ -511,9 +541,11 @@ const CalendarCombobox = ({
                 </button>
               ))}
             </div>
-            <div className="font-sans text-gray-900 text-sm mt-4">Type fixed times</div>
+            <div className="font-sans text-gray-900 text-sm mt-4">
+              Type fixed times
+            </div>
             <div className="mt-2 flex flex-wrap gap-1">
-              {typeFixedTimes.map((value) => (
+              {typeFixedTimes.map(value => (
                 <button
                   key={value.text}
                   className="font-mono text-[13px] text-gray-1000 px-1.5 h-5 inline-flex items-center bg-accents-2 border-none rounded cursor-pointer"
@@ -526,34 +558,34 @@ const CalendarCombobox = ({
         )}
       </Material>
     </div>
-  );
-};
+  )
+}
 
 export interface RangeValue {
-  start: Date | null;
-  end: Date | null;
+  start: Date | null
+  end: Date | null
 }
 
 interface CalendarProps {
-  allowClear?: boolean;
-  compact?: boolean;
-  isDocsPage?: boolean;
-  stacked?: boolean;
-  horizontalLayout?: boolean;
-  showTimeInput?: boolean;
-  popoverAlignment?: "start" | "center" | "end";
-  value: RangeValue | null;
-  onChange: (date: RangeValue | null) => void;
+  allowClear?: boolean
+  compact?: boolean
+  isDocsPage?: boolean
+  stacked?: boolean
+  horizontalLayout?: boolean
+  showTimeInput?: boolean
+  popoverAlignment?: 'start' | 'center' | 'end'
+  value: RangeValue | null
+  onChange: (date: RangeValue | null) => void
   presets?: {
     [key: string]: {
-      text: string;
-      start: Date;
-      end: Date;
-    };
-  };
-  presetIndex?: number;
-  minValue?: Date;
-  maxValue?: Date;
+      text: string
+      start: Date
+      end: Date
+    }
+  }
+  presetIndex?: number
+  minValue?: Date
+  maxValue?: Date
 }
 
 export const Calendar = ({
@@ -563,140 +595,196 @@ export const Calendar = ({
   stacked = false,
   horizontalLayout = false,
   showTimeInput = true,
-  popoverAlignment = "start",
+  popoverAlignment = 'start',
   value,
   onChange,
   presets,
   presetIndex,
   minValue,
-  maxValue
+  maxValue,
 }: CalendarProps) => {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [hoverDate, setHoverDate] = useState<Date | null>(null);
-  const [isSelecting, setIsSelecting] = useState<boolean>(false);
-  const timezones = useMemo(() => ([
-    {
-      value: "UTC",
-      label: "UTC"
-    },
-    {
-      value: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      label: `Local (${Intl.DateTimeFormat().resolvedOptions().timeZone})`
-    }
+  const [isOpen, setIsOpen] = useState<boolean>(false)
+  const [currentDate, setCurrentDate] = useState<Date>(new Date())
+  const [hoverDate, setHoverDate] = useState<Date | null>(null)
+  const [isSelecting, setIsSelecting] = useState<boolean>(false)
+  const timezones = useMemo(
+    () => [
+      {
+        value: 'UTC',
+        label: 'UTC',
+      },
+      {
+        value: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        label: `Local (${Intl.DateTimeFormat().resolvedOptions().timeZone})`,
+      },
+    ],
+    []
+  )
+  const [selectedTimezone, setSelectedTimezone] = useState(timezones[1].value)
+  const [startDate, setStartDate] = useState<string>(
+    formatInTimeZone(
+      value?.start || new Date(),
+      selectedTimezone,
+      'MMM dd, yyyy'
+    )
+  )
+  const [startTime, setStartTime] = useState<string>(
+    formatInTimeZone(
+      startOfDay(value?.start || new Date()),
+      selectedTimezone,
+      'HH:mm'
+    )
+  )
+  const [endDate, setEndDate] = useState<string>(
+    formatInTimeZone(value?.end || new Date(), selectedTimezone, 'MMM dd, yyyy')
+  )
+  const [endTime, setEndTime] = useState<string>(
+    formatInTimeZone(
+      endOfDay(value?.end || new Date()),
+      selectedTimezone,
+      'HH:mm'
+    )
+  )
+  const [startDateError, setStartDateError] = useState<boolean>(false)
+  const [startTimeError, setStartTimeError] = useState<boolean>(false)
+  const [endDateError, setEndDateError] = useState<boolean>(false)
+  const [endTimeError, setEndTimeError] = useState<boolean>(false)
+  const calendarRef = useRef<HTMLDivElement | null>(null)
+  const normalizedMinValue = minValue ? startOfDay(minValue) : null
+  const normalizedMaxValue = maxValue ? endOfDay(maxValue) : null
 
-  ]), []);
-  const [selectedTimezone, setSelectedTimezone] = useState(timezones[1].value);
-  const [startDate, setStartDate] = useState<string>(formatInTimeZone(value?.start || new Date(), selectedTimezone, "MMM dd, yyyy"));
-  const [startTime, setStartTime] = useState<string>(formatInTimeZone(startOfDay(value?.start || new Date()), selectedTimezone, "HH:mm"));
-  const [endDate, setEndDate] = useState<string>(formatInTimeZone(value?.end || new Date(), selectedTimezone, "MMM dd, yyyy"));
-  const [endTime, setEndTime] = useState<string>(formatInTimeZone(endOfDay(value?.end || new Date()), selectedTimezone, "HH:mm"));
-  const [startDateError, setStartDateError] = useState<boolean>(false);
-  const [startTimeError, setStartTimeError] = useState<boolean>(false);
-  const [endDateError, setEndDateError] = useState<boolean>(false);
-  const [endTimeError, setEndTimeError] = useState<boolean>(false);
-  const calendarRef = useRef<HTMLDivElement | null>(null);
-  const normalizedMinValue = minValue ? startOfDay(minValue) : null;
-  const normalizedMaxValue = maxValue ? endOfDay(maxValue) : null;
-
-  useClickOutside(calendarRef, () => setIsOpen(false));
+  useClickOutside(calendarRef, () => setIsOpen(false))
 
   useEffect(() => {
-    const closeCalendar = () => setIsOpen(false);
-    window.addEventListener("resize", closeCalendar);
-    window.addEventListener("scroll", closeCalendar);
+    const closeCalendar = () => setIsOpen(false)
+    window.addEventListener('resize', closeCalendar)
+    window.addEventListener('scroll', closeCalendar)
 
     return () => {
-      window.removeEventListener("resize", closeCalendar);
-      window.removeEventListener("scroll", closeCalendar);
-    };
-  }, []);
+      window.removeEventListener('resize', closeCalendar)
+      window.removeEventListener('scroll', closeCalendar)
+    }
+  }, [])
 
-  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
-  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1))
+  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1))
 
-  const daysArray = [];
-  let day = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 });
+  const daysArray = []
+  let day = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 })
   while (day <= endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 })) {
-    daysArray.push(day);
-    day = addDays(day, 1);
+    daysArray.push(day)
+    day = addDays(day, 1)
   }
 
   const handleDateClick = (day: Date) => {
     if (!isSelecting) {
-      onChange({ start: startOfDay(day), end: null });
-      setHoverDate(day);
-      setIsSelecting(true);
+      onChange({ start: startOfDay(day), end: null })
+      setHoverDate(day)
+      setIsSelecting(true)
     } else if (value?.start) {
       if (day > value.start) {
-        onChange({ ...value, end: endOfDay(day) });
+        onChange({ ...value, end: endOfDay(day) })
       } else {
-        onChange({ start: startOfDay(day), end: endOfDay(value.start) });
+        onChange({ start: startOfDay(day), end: endOfDay(value.start) })
       }
-      setIsSelecting(false);
-      setHoverDate(null);
-      setIsOpen(false);
+      setIsSelecting(false)
+      setHoverDate(null)
+      setIsOpen(false)
     }
-  };
+  }
 
   const handleMouseEnter = (day: Date) => {
     if (isSelecting && value?.start && !value.end) {
-      setHoverDate(day);
+      setHoverDate(day)
     }
-  };
+  }
 
   useEffect(() => {
     // Stop selection mode after a committed range or when cleared externally.
     if (!value?.start || value.end) {
-      setIsSelecting(false);
-      setHoverDate(null);
+      setIsSelecting(false)
+      setHoverDate(null)
     }
-  }, [value?.start, value?.end]);
+  }, [value?.start, value?.end])
 
   const onApply = () => {
-    const parsedStartDate = parse(startDate, "MMM dd, yyyy", new Date());
-    const parsedStartTime = parse(startTime || "", "HH:mm", new Date());
-    const parsedEndDate = parse(endDate, "MMM dd, yyyy", new Date());
-    const parsedEndTime = parse(endTime || "", "HH:mm", new Date());
+    const parsedStartDate = parse(startDate, 'MMM dd, yyyy', new Date())
+    const parsedStartTime = parse(startTime || '', 'HH:mm', new Date())
+    const parsedEndDate = parse(endDate, 'MMM dd, yyyy', new Date())
+    const parsedEndTime = parse(endTime || '', 'HH:mm', new Date())
 
     if (
-      parsedStartDate.toString() === "Invalid Date" ||
-      parsedStartTime.toString() === "Invalid Date" ||
-      parsedEndDate.toString() === "Invalid Date" ||
-      parsedEndTime.toString() === "Invalid Date"
+      parsedStartDate.toString() === 'Invalid Date' ||
+      parsedStartTime.toString() === 'Invalid Date' ||
+      parsedEndDate.toString() === 'Invalid Date' ||
+      parsedEndTime.toString() === 'Invalid Date'
     ) {
-      setStartDateError(parsedStartDate.toString() === "Invalid Date");
-      setStartTimeError(parsedStartTime.toString() === "Invalid Date");
-      setEndDateError(parsedEndDate.toString() === "Invalid Date");
-      setEndTimeError(parsedEndTime.toString() === "Invalid Date");
+      setStartDateError(parsedStartDate.toString() === 'Invalid Date')
+      setStartTimeError(parsedStartTime.toString() === 'Invalid Date')
+      setEndDateError(parsedEndDate.toString() === 'Invalid Date')
+      setEndTimeError(parsedEndTime.toString() === 'Invalid Date')
     } else {
-      setStartDateError(false);
-      setStartTimeError(false);
-      setEndDateError(false);
-      setEndTimeError(false);
-      const parsedStart = parse(`${startDate} ${startTime}`, "MMM d, yyyy HH:mm", new Date());
-      const parsedEnd = parse(`${endDate} ${endTime}`, "MMM d, yyyy HH:mm", new Date());
+      setStartDateError(false)
+      setStartTimeError(false)
+      setEndDateError(false)
+      setEndTimeError(false)
+      const parsedStart = parse(
+        `${startDate} ${startTime}`,
+        'MMM d, yyyy HH:mm',
+        new Date()
+      )
+      const parsedEnd = parse(
+        `${endDate} ${endTime}`,
+        'MMM d, yyyy HH:mm',
+        new Date()
+      )
       onChange({
         start: fromZonedTime(parsedStart, selectedTimezone),
-        end: fromZonedTime(parsedEnd, selectedTimezone)
-      });
+        end: fromZonedTime(parsedEnd, selectedTimezone),
+      })
     }
-  };
+  }
 
   useEffect(() => {
-    setStartDate(formatInTimeZone(value?.start || new Date(), selectedTimezone, "MMM dd, yyyy"));
-    setStartTime(formatInTimeZone(value?.start || startOfDay(new Date()), selectedTimezone, "HH:mm"));
-    setEndDate(formatInTimeZone(value?.end || new Date(), selectedTimezone, "MMM dd, yyyy"));
-    setEndTime(formatInTimeZone(value?.end || endOfDay(new Date()), selectedTimezone, "HH:mm"));
-  }, [isOpen, selectedTimezone, value]);
+    setStartDate(
+      formatInTimeZone(
+        value?.start || new Date(),
+        selectedTimezone,
+        'MMM dd, yyyy'
+      )
+    )
+    setStartTime(
+      formatInTimeZone(
+        value?.start || startOfDay(new Date()),
+        selectedTimezone,
+        'HH:mm'
+      )
+    )
+    setEndDate(
+      formatInTimeZone(
+        value?.end || new Date(),
+        selectedTimezone,
+        'MMM dd, yyyy'
+      )
+    )
+    setEndTime(
+      formatInTimeZone(
+        value?.end || endOfDay(new Date()),
+        selectedTimezone,
+        'HH:mm'
+      )
+    )
+  }, [isOpen, selectedTimezone, value])
 
   return (
     <div className="relative">
-      <div className={clsx(
-        presets && "flex",
-        presets && stacked && "flex-col",
-        compact && "w-55"
-      )}>
+      <div
+        className={clsx(
+          presets && 'flex',
+          presets && stacked && 'flex-col',
+          compact && 'w-55'
+        )}
+      >
         {presets && (
           <div>
             <CalendarCombobox
@@ -713,20 +801,24 @@ export const Calendar = ({
           <div className="relative">
             <Button
               className={clsx(
-                "justify-start! focus:border-transparent! focus:shadow-focus-input!",
-                presets && !stacked && !compact && "rounded-l-none -ml-px",
-                presets && stacked && !compact && "rounded-t-none -mt-px",
-                presets && compact && "rounded-r-none -mr-px",
-                compact ? "w-45 gap-1.5" : "w-62.5"
+                'justify-start! focus:border-transparent! focus:shadow-focus-input!',
+                presets && !stacked && !compact && 'rounded-l-none -ml-px',
+                presets && stacked && !compact && 'rounded-t-none -mt-px',
+                presets && compact && 'rounded-r-none -mr-px',
+                compact ? 'w-45 gap-1.5' : 'w-62.5'
               )}
               prefix={<CalendarIcon />}
               type="secondary"
-              onClick={() => setIsOpen((prevState) => !prevState)}
+              onClick={() => setIsOpen(prevState => !prevState)}
             >
               <div className="truncate pr-4">
                 {value?.start
-                  ? formatDateRange(value.start, value.end ?? value.start, selectedTimezone)
-                  : "Select Date Range"}
+                  ? formatDateRange(
+                      value.start,
+                      value.end ?? value.start,
+                      selectedTimezone
+                    )
+                  : 'Select Date Range'}
               </div>
             </Button>
             {allowClear && value?.start && (
@@ -747,24 +839,30 @@ export const Calendar = ({
         <Material
           ref={calendarRef}
           type="menu"
-          className={twMerge(clsx(
-            "p-3 font-sans absolute top-12 z-10",
-            horizontalLayout ? "w-115.5" : "w-70",
-            presets && !stacked && !compact && "left-62.5",
-            presets && stacked && "top-22",
-            popoverAlignment === "center" && "left-31.25 -translate-x-1/2",
-            popoverAlignment === "end" && "left-62.5 -translate-x-full"
-          ))}
+          className={twMerge(
+            clsx(
+              'p-3 font-sans absolute top-12 z-10',
+              horizontalLayout ? 'w-115.5' : 'w-70',
+              presets && !stacked && !compact && 'left-62.5',
+              presets && stacked && 'top-22',
+              popoverAlignment === 'center' && 'left-31.25 -translate-x-1/2',
+              popoverAlignment === 'end' && 'left-62.5 -translate-x-full'
+            )
+          )}
         >
-          <div className={clsx(horizontalLayout && "flex gap-5")}>
+          <div className={clsx(horizontalLayout && 'flex gap-5')}>
             <div>
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-sm text-gray-1000 font-medium">
-                  {formatInTimeZone(currentDate, selectedTimezone, "MMMM yyyy")}
+                  {formatInTimeZone(currentDate, selectedTimezone, 'MMMM yyyy')}
                 </h2>
                 <div className="flex gap-0.5">
-                  <Button variant="unstyled" onClick={prevMonth}><ArrowLeftIcon /></Button>
-                  <Button variant="unstyled" onClick={nextMonth}><ArrowRightIcon /></Button>
+                  <Button variant="unstyled" onClick={prevMonth}>
+                    <ArrowLeftIcon />
+                  </Button>
+                  <Button variant="unstyled" onClick={nextMonth}>
+                    <ArrowRightIcon />
+                  </Button>
                 </div>
               </div>
               <div className="grid grid-cols-7 text-center text-xs text-gray-900 uppercase mb-2">
@@ -777,36 +875,37 @@ export const Calendar = ({
                 <div>S</div>
               </div>
               <div className="grid grid-cols-7 items-center gap-y-2">
-                {daysArray.map((day) => {
-                  const isStart = value?.start && isSameDay(day, value.start);
-                  const isEnd = value?.end && isSameDay(day, value.end);
-                  const currentHover = hoverDate && isSelecting && isSameDay(day, hoverDate);
+                {daysArray.map(day => {
+                  const isStart = value?.start && isSameDay(day, value.start)
+                  const isEnd = value?.end && isSameDay(day, value.end)
+                  const currentHover =
+                    hoverDate && isSelecting && isSameDay(day, hoverDate)
 
                   const committedRangeStart =
                     value?.start && value?.end
                       ? value.start <= value.end
                         ? value.start
                         : value.end
-                      : null;
+                      : null
                   const committedRangeEnd =
                     value?.start && value?.end
                       ? value.start <= value.end
                         ? value.end
                         : value.start
-                      : null;
+                      : null
 
                   const hoverRangeStart =
                     value?.start && hoverDate
                       ? value.start <= hoverDate
                         ? value.start
                         : hoverDate
-                      : null;
+                      : null
                   const hoverRangeEnd =
                     value?.start && hoverDate
                       ? value.start <= hoverDate
                         ? hoverDate
                         : value.start
-                      : null;
+                      : null
 
                   const isInCommittedRange =
                     committedRangeStart && committedRangeEnd
@@ -814,7 +913,7 @@ export const Calendar = ({
                           start: committedRangeStart,
                           end: committedRangeEnd,
                         })
-                      : false;
+                      : false
 
                   const isInHoverRange =
                     isSelecting && hoverRangeStart && hoverRangeEnd
@@ -822,52 +921,78 @@ export const Calendar = ({
                           start: hoverRangeStart,
                           end: hoverRangeEnd,
                         })
-                      : false;
+                      : false
 
-                  const isInRange = isInCommittedRange || isInHoverRange;
+                  const isInRange = isInCommittedRange || isInHoverRange
                   const isAllowedDate =
                     (normalizedMinValue ? day >= normalizedMinValue : true) &&
-                    (normalizedMaxValue ? day <= normalizedMaxValue : true);
+                    (normalizedMaxValue ? day <= normalizedMaxValue : true)
 
                   return (
                     <div
                       key={day.toString()}
                       className={clsx(
-                        "flex items-center justify-center text-sm text-center rounded transition",
-                        isSameMonth(day, currentDate) && isAllowedDate ? "bg-background-100 text-gray-1000" : "bg-background-100 text-gray-700",
-                        !isAllowedDate && "opacity-30 grayscale",
-                        isInRange && !isStart && !isEnd && !currentHover && "bg-accents-2! rounded-none",
-                        isAllowedDate ? "cursor-pointer" : "cursor-not-allowed"
+                        'flex items-center justify-center text-sm text-center rounded transition',
+                        isSameMonth(day, currentDate) && isAllowedDate
+                          ? 'bg-background-100 text-gray-1000'
+                          : 'bg-background-100 text-gray-700',
+                        !isAllowedDate && 'opacity-30 grayscale',
+                        isInRange &&
+                          !isStart &&
+                          !isEnd &&
+                          !currentHover &&
+                          'bg-accents-2! rounded-none',
+                        isAllowedDate ? 'cursor-pointer' : 'cursor-not-allowed'
                       )}
-                      onMouseEnter={() => isAllowedDate && handleMouseEnter(day)}
+                      onMouseEnter={() =>
+                        isAllowedDate && handleMouseEnter(day)
+                      }
                       onClick={() => isAllowedDate && handleDateClick(day)}
                     >
-                      <div className={clsx(
-                        "h-8 w-8 flex items-center justify-center rounded",
-                        (isStart || isEnd || currentHover) && isAllowedDate && " bg-gray-1000! text-background-100!",
-                        !isStart && !isEnd && !currentHover && isAllowedDate && "hover:text-gray-1000 hover:border hover:border-gray-alpha-500",
-                        currentHover && isAllowedDate && " shadow-focus-calendar-date!"
-                      )}>
-                        {format(day, "d")}
+                      <div
+                        className={clsx(
+                          'h-8 w-8 flex items-center justify-center rounded',
+                          (isStart || isEnd || currentHover) &&
+                            isAllowedDate &&
+                            ' bg-gray-1000! text-background-100!',
+                          !isStart &&
+                            !isEnd &&
+                            !currentHover &&
+                            isAllowedDate &&
+                            'hover:text-gray-1000 hover:border hover:border-gray-alpha-500',
+                          currentHover &&
+                            isAllowedDate &&
+                            ' shadow-focus-calendar-date!'
+                        )}
+                      >
+                        {format(day, 'd')}
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             </div>
-            <div className={clsx(
-              "flex flex-col gap-2",
-              horizontalLayout ? "justify-between" : "mt-3 -mx-3 px-3 pt-2.5 border-t border-gray-alpha-100"
-            )}>
+            <div
+              className={clsx(
+                'flex flex-col gap-2',
+                horizontalLayout
+                  ? 'justify-between'
+                  : 'mt-3 -mx-3 px-3 pt-2.5 border-t border-gray-alpha-100'
+              )}
+            >
               <div className="flex flex-col gap-2">
                 <div>
-                  <div className="text-[13px] text-gray-900 capitalize">Start</div>
+                  <div className="text-[13px] text-gray-900 capitalize">
+                    Start
+                  </div>
                   <div className="grid grid-cols-3 gap-2 mt-1">
-                    <div className={showTimeInput ? "col-span-2" : "col-span-3"}>
+                    <div
+                      className={showTimeInput ? 'col-span-2' : 'col-span-3'}
+                    >
                       <Input
                         size="small"
                         value={startDate}
-                        onChange={(value) => setStartDate(value)}
+                        onChange={value => setStartDate(value)}
                         error={startDateError}
                       />
                     </div>
@@ -875,20 +1000,24 @@ export const Calendar = ({
                       <Input
                         size="small"
                         value={startTime}
-                        onChange={(value) => setStartTime(value)}
+                        onChange={value => setStartTime(value)}
                         error={startTimeError}
                       />
                     )}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[13px] text-gray-900 capitalize">End</div>
+                  <div className="text-[13px] text-gray-900 capitalize">
+                    End
+                  </div>
                   <div className="grid grid-cols-3 gap-2 mt-1">
-                    <div className={showTimeInput ? "col-span-2" : "col-span-3"}>
+                    <div
+                      className={showTimeInput ? 'col-span-2' : 'col-span-3'}
+                    >
                       <Input
                         size="small"
                         value={endDate}
-                        onChange={(value) => setEndDate(value)}
+                        onChange={value => setEndDate(value)}
                         error={endDateError}
                       />
                     </div>
@@ -896,7 +1025,7 @@ export const Calendar = ({
                       <Input
                         size="small"
                         value={endTime}
-                        onChange={(value) => setEndTime(value)}
+                        onChange={value => setEndTime(value)}
                         error={endTimeError}
                       />
                     )}
@@ -920,7 +1049,7 @@ export const Calendar = ({
                     variant="ghost"
                     options={timezones}
                     value={selectedTimezone}
-                    onChange={(event) => setSelectedTimezone(event.target.value)}
+                    onChange={event => setSelectedTimezone(event.target.value)}
                   />
                 </div>
               </div>
@@ -929,5 +1058,5 @@ export const Calendar = ({
         </Material>
       )}
     </div>
-  );
-};
+  )
+}
