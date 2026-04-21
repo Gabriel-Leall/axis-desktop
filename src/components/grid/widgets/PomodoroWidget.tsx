@@ -15,17 +15,6 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-function typeLabel(type: 'focus' | 'short_break' | 'long_break'): string {
-  switch (type) {
-    case 'focus':
-      return 'Focus'
-    case 'short_break':
-      return 'Short Break'
-    case 'long_break':
-      return 'Long Break'
-  }
-}
-
 // ─── Cycle Dots ────────────────────────────────────────────────────────────────
 
 function CycleDots({
@@ -56,33 +45,11 @@ function CycleDots({
             'rounded-full transition-all',
             compact ? 'size-1.5' : 'size-2',
             filled
-              ? 'bg-foreground opacity-80'
-              : 'border border-muted-foreground/30'
+              ? 'bg-neutral-500 dark:bg-neutral-400'
+              : 'bg-neutral-200 dark:bg-neutral-700'
           )}
         />
       ))}
-    </div>
-  )
-}
-
-// ─── Progress Bar ─────────────────────────────────────────────────────────────
-
-function ProgressBar({
-  progress,
-  type,
-}: {
-  progress: number
-  type: 'focus' | 'short_break' | 'long_break'
-}) {
-  return (
-    <div className="h-0.75 w-full overflow-hidden rounded-full bg-muted">
-      <div
-        className={cn(
-          'h-full rounded-full transition-all duration-1000 ease-linear',
-          type === 'focus' ? 'bg-foreground' : 'bg-muted-foreground/50'
-        )}
-        style={{ width: `${Math.max(0, Math.min(100, progress * 100))}%` }}
-      />
     </div>
   )
 }
@@ -97,7 +64,6 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
   const timerState = usePomodoroStore(state => state.timerState)
   const currentType = usePomodoroStore(state => state.currentType)
   const timeRemaining = usePomodoroStore(state => state.timeRemaining)
-  const totalDuration = usePomodoroStore(state => state.totalDuration)
   const cyclesCompleted = usePomodoroStore(state => state.cyclesCompleted)
   const linkedTaskId = usePomodoroStore(state => state.linkedTaskId)
   const settings = usePomodoroStore(state => state.settings)
@@ -153,7 +119,6 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
   }, [timerState, currentType, settings.sound_notifications])
 
   const isRunning = timerState === 'running'
-  const progress = totalDuration > 0 ? 1 - timeRemaining / totalDuration : 0
 
   const handlePlayPause = useCallback(() => {
     if (isRunning) pause()
@@ -162,19 +127,9 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
 
   return (
     <WidgetCard title="Focus" icon={Timer} onClick={onNavigateToPomodoro}>
-      <div className="flex h-full flex-col gap-3">
-        {/* State label + cycle dots */}
-        <div className="flex items-center justify-between px-0.5">
-          <span
-            className={cn(
-              'text-[11px] font-medium uppercase tracking-widest transition-colors',
-              currentType === 'focus'
-                ? 'text-foreground/70'
-                : 'text-muted-foreground'
-            )}
-          >
-            {typeLabel(currentType)}
-          </span>
+      <div className="flex h-full flex-col items-center justify-center">
+        {/* Cycle dots */}
+        <div className="mb-2 flex items-center justify-center">
           <CycleDots
             completed={cyclesCompleted}
             total={settings.pomos_until_long_break}
@@ -182,32 +137,29 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
           />
         </div>
 
-        {/* Timer display */}
-        <div
-          className={cn(
-            'flex items-center justify-center transition-opacity',
-            timerState === 'idle' && 'opacity-60'
-          )}
+        {/* Linked task */}
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation()
+          }}
+          className="flex items-center gap-1.5 rounded-full bg-neutral-100 px-4 py-1.5 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
         >
-          <span
-            className={cn(
-              'font-mono tracking-tighter tabular-nums transition-colors',
-              currentType === 'focus'
-                ? 'text-foreground'
-                : 'text-muted-foreground'
-            )}
-            style={{ fontSize: '42px', fontWeight: 200, lineHeight: 1 }}
-            aria-label={`${formatTime(timeRemaining)} remaining`}
-          >
+          <Link2 className="size-3.5 shrink-0 text-neutral-500 dark:text-neutral-400" />
+          <span className="max-w-[140px] truncate text-sm text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200">
+            {linkedTask ? linkedTask.title : 'No task selected'}
+          </span>
+        </button>
+
+        {/* Timer display */}
+        <div className="my-6 flex items-center justify-center">
+          <span className="tabular-nums tracking-tight text-6xl font-bold text-neutral-900 dark:text-white">
             {formatTime(timeRemaining)}
           </span>
         </div>
 
-        {/* Progress bar */}
-        <ProgressBar progress={progress} type={currentType} />
-
         {/* Controls */}
-        <div className="flex items-center justify-center gap-1">
+        <div className="flex w-full items-center justify-center gap-6">
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
@@ -217,9 +169,9 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
               reset()
             }}
             aria-label="Reset timer"
-            className="rounded-md p-1.5 text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
+            className="p-2 text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white"
           >
-            <RotateCcw className="size-3.5" />
+            <RotateCcw className="size-5" />
           </motion.button>
 
           <motion.button
@@ -231,17 +183,12 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
               handlePlayPause()
             }}
             aria-label={isRunning ? 'Pause timer' : 'Start timer'}
-            className={cn(
-              'flex size-8 items-center justify-center rounded-full transition-all',
-              isRunning
-                ? 'bg-foreground text-background hover:bg-foreground/80'
-                : 'bg-foreground/10 text-foreground hover:bg-foreground/20'
-            )}
+            className="flex size-16 items-center justify-center rounded-full bg-orange-500 text-white shadow-lg transition-all hover:bg-orange-600"
           >
             {isRunning ? (
-              <Pause className="size-3.5" fill="currentColor" />
+              <Pause className="size-7" fill="currentColor" />
             ) : (
-              <Play className="size-3.5 translate-x-px" fill="currentColor" />
+              <Play className="size-7 translate-x-0.5" fill="currentColor" />
             )}
           </motion.button>
 
@@ -254,28 +201,10 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
               void skip().catch(console.error)
             }}
             aria-label="Skip to next interval"
-            className="rounded-md p-1.5 text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
+            className="p-2 text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white"
           >
-            <SkipForward className="size-3.5" />
+            <SkipForward className="size-5" />
           </motion.button>
-        </div>
-
-        {/* Linked task */}
-        <div
-          className={cn(
-            'flex items-center gap-1.5 rounded-md px-2 py-1.5 transition-colors',
-            linkedTask ? 'bg-muted/60' : 'border border-dashed border-border/50'
-          )}
-        >
-          <Link2 className="size-3 shrink-0 text-muted-foreground/50" />
-          <span
-            className={cn(
-              'flex-1 truncate text-[11px] leading-tight',
-              linkedTask ? 'text-foreground/80' : 'text-muted-foreground/50'
-            )}
-          >
-            {linkedTask ? linkedTask.title : 'No task selected'}
-          </span>
         </div>
       </div>
     </WidgetCard>

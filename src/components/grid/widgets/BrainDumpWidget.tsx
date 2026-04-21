@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Editor as ToastEditor } from '@toast-ui/react-editor'
 import { Brain, ArrowUpRight, Plus } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useNotesStore } from '@/store/notes-store'
 import { cn } from '@/lib/utils'
+
+import '@toast-ui/editor/dist/toastui-editor.css'
 
 interface BrainDumpWidgetProps {
   onNavigateToNotes?: (selectedNoteId?: string) => void
@@ -53,7 +56,8 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [draftTitle, setDraftTitle] = useState('')
   const [draftBody, setDraftBody] = useState('')
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<ToastEditor>(null)
+  const editorShellRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadNotes()
@@ -113,7 +117,11 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
       const id = await createNote('')
       selectNote(id)
       setCurrentIndex(0)
-      setTimeout(() => textareaRef.current?.focus(), 50)
+      setTimeout(() => {
+        editorShellRef.current
+          ?.querySelector<HTMLElement>('[contenteditable="true"]')
+          ?.focus()
+      }, 50)
     } catch {
       // Keep widget responsive if create fails.
     }
@@ -127,26 +135,38 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
     setCurrentIndex(prev => Math.min(notes.length - 1, prev + 1))
   }, [notes.length])
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'Enter') {
-        e.preventDefault()
-        handleCreateNote()
+  useEffect(() => {
+    const shell = editorShellRef.current
+    if (!shell) {
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!event.ctrlKey) {
         return
       }
-      if (e.ctrlKey && e.key === 'ArrowUp') {
-        e.preventDefault()
+
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        void handleCreateNote()
+        return
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
         navigateUp()
         return
       }
-      if (e.ctrlKey && e.key === 'ArrowDown') {
-        e.preventDefault()
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
         navigateDown()
-        return
       }
-    },
-    [handleCreateNote, navigateUp, navigateDown]
-  )
+    }
+
+    shell.addEventListener('keydown', handleKeyDown, true)
+    return () => shell.removeEventListener('keydown', handleKeyDown, true)
+  }, [handleCreateNote, navigateDown, navigateUp, currentNote?.id])
 
   const handleOpenPage = () => {
     if (currentNote) {
@@ -224,17 +244,24 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
           className="border-b border-border/60 bg-transparent px-3 py-2 text-sm font-medium text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
         />
         <div
-          className="relative flex-1 overflow-hidden p-0"
-          onClick={() => textareaRef.current?.focus()}
+          className="relative flex-1 overflow-hidden p-0 notes-inline-editor"
+          ref={editorShellRef}
         >
-          <textarea
-            ref={textareaRef}
+          <ToastEditor
             key={currentNote?.id ?? 'empty-body'}
-            value={draftBody}
-            onChange={e => handleBodyChange(e.target.value)}
-            onKeyDown={handleKeyDown}
+            ref={editorRef}
+            initialValue={draftBody}
+            initialEditType="wysiwyg"
+            hideModeSwitch
+            height="100%"
             placeholder="Dump it here..."
-            className="h-full w-full resize-none bg-transparent px-3 py-2 font-mono text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+            usageStatistics={false}
+            toolbarItems={[]}
+            onChange={() => {
+              const markdown =
+                editorRef.current?.getInstance().getMarkdown() ?? ''
+              handleBodyChange(markdown)
+            }}
           />
           <div
             className={cn(
