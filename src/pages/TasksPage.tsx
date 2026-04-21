@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Plus,
   Search,
@@ -49,14 +50,18 @@ function getLocalTodayDate(): Date {
   return today
 }
 
-function formatRelativeDate(isoDate: string): string {
+function formatRelativeDate(
+  isoDate: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  locale: string
+): string {
   const today = getTodayISO()
   const tomorrow = getLocalTodayDate()
   tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowISO = dateToIso(tomorrow)
 
-  if (isoDate === today) return 'Today'
-  if (isoDate === tomorrowISO) return 'Tomorrow'
+  if (isoDate === today) return t('tasks.date.today')
+  if (isoDate === tomorrowISO) return t('tasks.date.tomorrow')
 
   const date = isoToDate(isoDate)
   if (!date) return isoDate
@@ -65,10 +70,14 @@ function formatRelativeDate(isoDate: string): string {
     (date.getTime() - getLocalTodayDate().getTime()) / (1000 * 60 * 60 * 24)
   )
 
-  if (diffDays < 0) return `${Math.abs(diffDays)}d ago`
-  if (diffDays <= 7) return `In ${diffDays}d`
+  if (diffDays < 0) {
+    return t('tasks.date.daysAgo', { days: Math.abs(diffDays) })
+  }
+  if (diffDays <= 7) {
+    return t('tasks.date.inDays', { days: diffDays })
+  }
 
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
 }
 
 function groupTasks(tasks: Task[]): {
@@ -143,6 +152,23 @@ function PriorityIndicator({
   )
 }
 
+function PriorityBadge({ priority }: { priority: Priority }) {
+  const { t } = useTranslation()
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+        priority === 'high' && 'bg-red-500/15 text-red-400',
+        priority === 'medium' && 'bg-amber-400/15 text-amber-300',
+        priority === 'low' && 'bg-sky-400/15 text-sky-300'
+      )}
+    >
+      {t(`tasks.priority.${priority}`)}
+    </span>
+  )
+}
+
 // ─── Section Header ───────────────────────────────────────────────────────────
 
 function SectionHeader({
@@ -194,6 +220,7 @@ function TaskRow({
   onSelect: () => void
   onDelete: () => void
 }) {
+  const { t, i18n } = useTranslation()
   const isDone = task.status === 'done'
   const completedSubtasks = task.subtasks.filter(s => s.completed).length
   const totalSubtasks = task.subtasks.length
@@ -201,7 +228,7 @@ function TaskRow({
   return (
     <div
       className={cn(
-        'group relative flex items-center gap-3 rounded-lg px-3 py-2 transition-all',
+        'group relative flex items-center gap-2.5 rounded-lg px-3 py-2 transition-all',
         isSelected ? 'bg-accent' : 'hover:bg-accent/50',
         isDone && 'opacity-50'
       )}
@@ -229,18 +256,15 @@ function TaskRow({
         )}
       </button>
 
-      {/* Priority indicator */}
-      <PriorityIndicator priority={task.priority} />
-
       {/* Main content */}
       <button
         type="button"
         onClick={onSelect}
-        className="flex flex-1 items-center gap-3 text-start"
+        className="flex min-w-0 flex-1 items-center gap-2.5 text-start"
       >
         <span
           className={cn(
-            'flex-1 text-[13px] font-normal transition-all',
+            'flex-1 truncate text-[13px] font-normal transition-all',
             isDone && 'line-through text-muted-foreground'
           )}
         >
@@ -248,10 +272,12 @@ function TaskRow({
         </span>
 
         {/* Metadata */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
+          <PriorityBadge priority={task.priority} />
+
           {/* Subtask progress */}
           {totalSubtasks > 0 && (
-            <span className="font-mono text-[10px] text-muted-foreground/50">
+            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground/70">
               {completedSubtasks}/{totalSubtasks}
             </span>
           )}
@@ -260,11 +286,13 @@ function TaskRow({
           {task.due_date && !isDone && (
             <span
               className={cn(
-                'text-[11px] text-muted-foreground/50',
-                task.due_date < getTodayISO() && 'text-red-500/70'
+                'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                task.due_date < getTodayISO()
+                  ? 'bg-red-500/15 text-red-400'
+                  : 'bg-muted text-muted-foreground/75'
               )}
             >
-              {formatRelativeDate(task.due_date)}
+              {formatRelativeDate(task.due_date, t, i18n.language)}
             </span>
           )}
         </div>
@@ -713,9 +741,7 @@ function NewTaskModal({
       ? dateToIso(dateRange.end ?? dateRange.start)
       : undefined
 
-    const normalizedSubtasks = subtasks
-      .map(item => item.trim())
-      .filter(Boolean)
+    const normalizedSubtasks = subtasks.map(item => item.trim()).filter(Boolean)
 
     await onAdd(trimmed, {
       priority,
@@ -847,7 +873,9 @@ function NewTaskModal({
                     key={`${subtask}-${index}`}
                     type="button"
                     onClick={() => {
-                      setSubtasks(prev => prev.filter((_, itemIndex) => itemIndex !== index))
+                      setSubtasks(prev =>
+                        prev.filter((_, itemIndex) => itemIndex !== index)
+                      )
                     }}
                     className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent"
                     aria-label={`Remove subtask ${subtask}`}
@@ -980,11 +1008,13 @@ function TabBar({
   active: TabKey
   onChange: (t: TabKey) => void
 }) {
+  const { t } = useTranslation()
+
   const tabs: { key: TabKey; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'today', label: 'Today' },
-    { key: 'upcoming', label: 'Upcoming' },
-    { key: 'completed', label: 'Completed' },
+    { key: 'all', label: t('tasks.tabs.all') },
+    { key: 'today', label: t('tasks.tabs.today') },
+    { key: 'upcoming', label: t('tasks.tabs.upcoming') },
+    { key: 'completed', label: t('tasks.tabs.completed') },
   ]
 
   return (
@@ -1015,7 +1045,11 @@ interface TasksPageProps {
   initialViewMode?: 'stack' | 'kanban'
 }
 
-export function TasksPage({ initialSelectedTaskId, initialViewMode = 'stack' }: TasksPageProps) {
+export function TasksPage({
+  initialSelectedTaskId,
+  initialViewMode = 'stack',
+}: TasksPageProps) {
+  const { t } = useTranslation()
   const tasks = useTasksStore(state => state.tasks)
   const isLoading = useTasksStore(state => state.isLoading)
   const loadTasks = useTasksStore(state => state.loadTasks)
@@ -1278,106 +1312,61 @@ export function TasksPage({ initialSelectedTaskId, initialViewMode = 'stack' }: 
           <div className="flex flex-1 overflow-hidden">
             {/* Task List */}
             <div className="flex flex-1 flex-col overflow-y-auto px-4 py-3">
-              {isLoading ? (
-                // Skeleton loaders
-                <div className="flex flex-col gap-2 px-3 py-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3"
-                      style={{ opacity: 1 - i * 0.15 }}
-                    >
-                      <div className="size-4 animate-pulse rounded-full bg-muted" />
+              <div className="mx-auto w-full max-w-4xl">
+                {isLoading ? (
+                  // Skeleton loaders
+                  <div className="flex flex-col gap-2 px-3 py-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
                       <div
-                        className="h-3.5 animate-pulse rounded bg-muted"
-                        style={{ width: `${60 + (i % 3) * 15}%` }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : tabFiltered.length === 0 ? (
-                <div className="flex flex-1 flex-col items-center justify-center gap-2 py-20 text-center">
-                  <AlertCircle
-                    className="size-7 text-muted-foreground/20"
-                    strokeWidth={1.5}
-                  />
-                  <p className="text-[13px] text-muted-foreground/50">
-                    {filters.search || activeFilterCount > 0
-                      ? 'No tasks match your filters.'
-                      : 'No tasks yet. Press N to create one.'}
-                  </p>
-                  {(filters.search || activeFilterCount > 0) && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFilter({ priority: null, status: null, search: '' })
-                      }
-                      className="text-[12px] text-muted-foreground/40 underline-offset-2 transition-colors hover:text-foreground hover:underline"
-                    >
-                      Clear all filters
-                    </button>
-                  )}
-                </div>
-              ) : activeTab === 'all' ||
-                activeTab === 'today' ||
-                activeTab === 'upcoming' ? (
-                <>
-                  {activeTab === 'all' && (
-                    <>
-                      <TaskSection
-                        label="Today"
-                        tasks={groups.today}
-                        sectionKey="today"
-                        selectedId={selectedTaskId}
-                        onSelect={setSelectedTask}
-                        onToggle={toggleComplete}
-                        onDelete={id => {
-                          if (selectedTaskId === id) setSelectedTask(null)
-                          deleteTask(id)
-                        }}
-                      />
-                      <TaskSection
-                        label="Upcoming"
-                        tasks={groups.upcoming}
-                        sectionKey="upcoming"
-                        selectedId={selectedTaskId}
-                        onSelect={setSelectedTask}
-                        onToggle={toggleComplete}
-                        onDelete={id => {
-                          if (selectedTaskId === id) setSelectedTask(null)
-                          deleteTask(id)
-                        }}
-                      />
-                      <TaskSection
-                        label="Inbox"
-                        tasks={groups.inbox}
-                        sectionKey="inbox"
-                        selectedId={selectedTaskId}
-                        onSelect={setSelectedTask}
-                        onToggle={toggleComplete}
-                        onDelete={id => {
-                          if (selectedTaskId === id) setSelectedTask(null)
-                          deleteTask(id)
-                        }}
-                      />
-                      <TaskSection
-                        label="Someday"
-                        tasks={groups.someday}
-                        sectionKey="someday"
-                        selectedId={selectedTaskId}
-                        onSelect={setSelectedTask}
-                        onToggle={toggleComplete}
-                        onDelete={id => {
-                          if (selectedTaskId === id) setSelectedTask(null)
-                          deleteTask(id)
-                        }}
-                      />
-                      {/* Completed section hidden by default */}
-                      {groups.completed.length > 0 && (
+                        key={i}
+                        className="flex items-center gap-3"
+                        style={{ opacity: 1 - i * 0.15 }}
+                      >
+                        <div className="size-4 animate-pulse rounded-full bg-muted" />
+                        <div
+                          className="h-3.5 animate-pulse rounded bg-muted"
+                          style={{ width: `${60 + (i % 3) * 15}%` }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : tabFiltered.length === 0 ? (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-2 py-20 text-center">
+                    <AlertCircle
+                      className="size-7 text-muted-foreground/20"
+                      strokeWidth={1.5}
+                    />
+                    <p className="text-[13px] text-muted-foreground/50">
+                      {filters.search || activeFilterCount > 0
+                        ? 'No tasks match your filters.'
+                        : 'No tasks yet. Press N to create one.'}
+                    </p>
+                    {(filters.search || activeFilterCount > 0) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFilter({
+                            priority: null,
+                            status: null,
+                            search: '',
+                          })
+                        }
+                        className="text-[12px] text-muted-foreground/40 underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                      >
+                        Clear all filters
+                      </button>
+                    )}
+                  </div>
+                ) : activeTab === 'all' ||
+                  activeTab === 'today' ||
+                  activeTab === 'upcoming' ? (
+                  <>
+                    {activeTab === 'all' && (
+                      <>
                         <TaskSection
-                          label="Completed"
-                          tasks={groups.completed}
-                          sectionKey="completed_all"
+                          label={t('tasks.sections.today')}
+                          tasks={groups.today}
+                          sectionKey="today"
                           selectedId={selectedTaskId}
                           onSelect={setSelectedTask}
                           onToggle={toggleComplete}
@@ -1386,54 +1375,107 @@ export function TasksPage({ initialSelectedTaskId, initialViewMode = 'stack' }: 
                             deleteTask(id)
                           }}
                         />
-                      )}
-                    </>
-                  )}
-                  {activeTab === 'today' &&
-                    tabFiltered.map(task => (
-                      <TaskRow
-                        key={task.id}
-                        task={task}
-                        isSelected={task.id === selectedTaskId}
-                        onToggle={() => toggleComplete(task.id)}
-                        onSelect={() => setSelectedTask(task.id)}
-                        onDelete={() => {
-                          if (selectedTaskId === task.id) setSelectedTask(null)
-                          deleteTask(task.id)
-                        }}
-                      />
-                    ))}
-                  {activeTab === 'upcoming' &&
-                    tabFiltered.map(task => (
-                      <TaskRow
-                        key={task.id}
-                        task={task}
-                        isSelected={task.id === selectedTaskId}
-                        onToggle={() => toggleComplete(task.id)}
-                        onSelect={() => setSelectedTask(task.id)}
-                        onDelete={() => {
-                          if (selectedTaskId === task.id) setSelectedTask(null)
-                          deleteTask(task.id)
-                        }}
-                      />
-                    ))}
-                </>
-              ) : (
-                // Completed tab
-                tabFiltered.map(task => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    isSelected={task.id === selectedTaskId}
-                    onToggle={() => toggleComplete(task.id)}
-                    onSelect={() => setSelectedTask(task.id)}
-                    onDelete={() => {
-                      if (selectedTaskId === task.id) setSelectedTask(null)
-                      deleteTask(task.id)
-                    }}
-                  />
-                ))
-              )}
+                        <TaskSection
+                          label={t('tasks.sections.upcoming')}
+                          tasks={groups.upcoming}
+                          sectionKey="upcoming"
+                          selectedId={selectedTaskId}
+                          onSelect={setSelectedTask}
+                          onToggle={toggleComplete}
+                          onDelete={id => {
+                            if (selectedTaskId === id) setSelectedTask(null)
+                            deleteTask(id)
+                          }}
+                        />
+                        <TaskSection
+                          label={t('tasks.sections.waiting')}
+                          tasks={groups.inbox}
+                          sectionKey="inbox"
+                          selectedId={selectedTaskId}
+                          onSelect={setSelectedTask}
+                          onToggle={toggleComplete}
+                          onDelete={id => {
+                            if (selectedTaskId === id) setSelectedTask(null)
+                            deleteTask(id)
+                          }}
+                        />
+                        <TaskSection
+                          label={t('tasks.sections.someday')}
+                          tasks={groups.someday}
+                          sectionKey="someday"
+                          selectedId={selectedTaskId}
+                          onSelect={setSelectedTask}
+                          onToggle={toggleComplete}
+                          onDelete={id => {
+                            if (selectedTaskId === id) setSelectedTask(null)
+                            deleteTask(id)
+                          }}
+                        />
+                        {/* Completed section hidden by default */}
+                        {groups.completed.length > 0 && (
+                          <TaskSection
+                            label={t('tasks.sections.completed')}
+                            tasks={groups.completed}
+                            sectionKey="completed_all"
+                            selectedId={selectedTaskId}
+                            onSelect={setSelectedTask}
+                            onToggle={toggleComplete}
+                            onDelete={id => {
+                              if (selectedTaskId === id) setSelectedTask(null)
+                              deleteTask(id)
+                            }}
+                          />
+                        )}
+                      </>
+                    )}
+                    {activeTab === 'today' &&
+                      tabFiltered.map(task => (
+                        <TaskRow
+                          key={task.id}
+                          task={task}
+                          isSelected={task.id === selectedTaskId}
+                          onToggle={() => toggleComplete(task.id)}
+                          onSelect={() => setSelectedTask(task.id)}
+                          onDelete={() => {
+                            if (selectedTaskId === task.id)
+                              setSelectedTask(null)
+                            deleteTask(task.id)
+                          }}
+                        />
+                      ))}
+                    {activeTab === 'upcoming' &&
+                      tabFiltered.map(task => (
+                        <TaskRow
+                          key={task.id}
+                          task={task}
+                          isSelected={task.id === selectedTaskId}
+                          onToggle={() => toggleComplete(task.id)}
+                          onSelect={() => setSelectedTask(task.id)}
+                          onDelete={() => {
+                            if (selectedTaskId === task.id)
+                              setSelectedTask(null)
+                            deleteTask(task.id)
+                          }}
+                        />
+                      ))}
+                  </>
+                ) : (
+                  // Completed tab
+                  tabFiltered.map(task => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      isSelected={task.id === selectedTaskId}
+                      onToggle={() => toggleComplete(task.id)}
+                      onSelect={() => setSelectedTask(task.id)}
+                      onDelete={() => {
+                        if (selectedTaskId === task.id) setSelectedTask(null)
+                        deleteTask(task.id)
+                      }}
+                    />
+                  ))
+                )}
+              </div>
             </div>
 
             {/* Detail panel (slide-over style) */}
