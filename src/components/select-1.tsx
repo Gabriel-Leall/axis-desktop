@@ -2,20 +2,20 @@ import React from 'react'
 import { Error } from '@/components/error'
 import clsx from 'clsx'
 
-const sizes = [
-  {
+const selectSizes = {
+  withoutPrefix: {
     xsmall: 'h-6 text-xs pl-1.5 pr-[22px]',
     small: 'h-8 text-sm pl-3 pr-9',
     medium: 'h-10 text-sm pl-3 pr-9',
     large: 'h-12 text-base pl-3 pr-9 rounded-lg',
   },
-  {
+  withPrefix: {
     xsmall: 'h-6 text-xs px-[22px]',
     small: 'h-8 text-sm px-9',
     medium: 'h-10 text-sm px-9',
     large: 'h-12 text-base px-9 rounded-lg',
   },
-]
+} as const
 
 const variants = {
   default: '',
@@ -33,7 +33,7 @@ interface SelectProps {
   label?: string
   value?: string
   placeholder?: string
-  size?: keyof (typeof sizes)[0]
+  size?: keyof typeof selectSizes.withoutPrefix
   prefix?: React.ReactNode
   suffix?: React.ReactNode
   disabled?: boolean
@@ -101,7 +101,7 @@ export const Select = ({
           onChange={onChange}
           className={clsx(
             'font-sans appearance-none w-full border rounded-[5px] duration-200 outline-none',
-            sizes[prefix ? 1 : 0][size],
+            (prefix ? selectSizes.withPrefix : selectSizes.withoutPrefix)[size],
             disabled
               ? 'cursor-not-allowed bg-gray-100 text-gray-700'
               : variant === 'default'

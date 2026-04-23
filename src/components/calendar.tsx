@@ -22,10 +22,10 @@ import {
   subWeeks,
   subYears,
 } from 'date-fns'
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/button-1'
 import { Material } from '@/components/material-1'
-import { Input } from '@/components/ui/input'
+import { Input } from '@/components/input'
 import { Select } from '@/components/select-1'
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 import { useClickOutside } from '@/components/use-click-outside'
@@ -110,8 +110,14 @@ const parseRelativeDate = (input: string) => {
     return null
   }
 
-  const value = parseInt(match[1])
-  const unit = match[2].toLowerCase() + 's'
+  const valuePart = match[1]
+  const unitPart = match[2]
+  if (!valuePart || !unitPart) {
+    return null
+  }
+
+  const value = parseInt(valuePart, 10)
+  const unit = unitPart.toLowerCase() + 's'
 
   const now = new Date()
   const start = startOfDay(sub(now, { [unit]: value }))
@@ -168,7 +174,7 @@ const parseExactDate = (input: string) => {
   const dateFormats = ['d MMM yyyy', 'd MMM', 'yyyy-MM-dd']
 
   for (const format of dateFormats) {
-    let date = parse(input.trim(), format, now, { locale: enUS })
+    const date = parse(input.trim(), format, now, { locale: enUS })
 
     if (isValid(date)) {
       if (format === 'd MMM') {
@@ -201,7 +207,7 @@ const parseDateInput = (input: string) => {
   return null
 }
 
-const filterPresets = (obj: Record<string, any>, search: string) => {
+const filterPresets = (obj: Record<string, { text: string; start: Date; end: Date }>, search: string) => {
   if (!search) {
     return obj
   }
@@ -369,13 +375,11 @@ interface CalendarComboboxProps {
   compact: boolean
   value: RangeValue | null
   onChange: (date: RangeValue | null) => void
-  presets: {
-    [key: string]: {
-      text: string
-      start: Date
-      end: Date
-    }
-  }
+  presets: Record<string, {
+    text: string
+    start: Date
+    end: Date
+  }>
   presetIndex?: number
 }
 
@@ -389,7 +393,7 @@ const CalendarCombobox = ({
 }: CalendarComboboxProps) => {
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [inputValue, setInputValue] = useState<string>('')
-  const [currentPreset, setCurrentPreset] = useState<any | null>(null)
+  const [currentPreset, setCurrentPreset] = useState<{ text: string; start: Date; end: Date } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   const onFocus = () => {
@@ -400,7 +404,7 @@ const CalendarCombobox = ({
     setInputValue(value)
   }
 
-  const onClick = (value: any) => {
+  const onClick = (value: { text: string; start: Date; end: Date }) => {
     setInputValue(value.text)
     setCurrentPreset(value)
     onChange({ start: value.start, end: value.end })
@@ -418,14 +422,17 @@ const CalendarCombobox = ({
       presetIndex >= 0 &&
       presetIndex < array.length
     ) {
-      setInputValue(array[presetIndex][1].text)
-      setCurrentPreset(array[presetIndex][1])
+      const preset = array[presetIndex]?.[1]
+      if (!preset) return
+
+      setInputValue(preset.text)
+      setCurrentPreset(preset)
       onChange({
-        start: array[presetIndex][1].start,
-        end: array[presetIndex][1].end,
+        start: preset.start,
+        end: preset.end,
       })
     }
-  }, [presetIndex])
+  }, [presetIndex, presets, onChange])
 
   useEffect(() => {
     if (currentPreset) {
@@ -437,7 +444,7 @@ const CalendarCombobox = ({
         setInputValue('')
       }
     }
-  }, [value])
+  }, [value, currentPreset])
 
   return (
     <div
@@ -576,13 +583,11 @@ interface CalendarProps {
   popoverAlignment?: 'start' | 'center' | 'end'
   value: RangeValue | null
   onChange: (date: RangeValue | null) => void
-  presets?: {
-    [key: string]: {
-      text: string
-      start: Date
-      end: Date
-    }
-  }
+  presets?: Record<string, {
+    text: string
+    start: Date
+    end: Date
+  }>
   presetIndex?: number
   minValue?: Date
   maxValue?: Date
@@ -591,7 +596,7 @@ interface CalendarProps {
 export const Calendar = ({
   allowClear = false,
   compact = false,
-  isDocsPage = false,
+  isDocsPage: _isDocsPage = false,
   stacked = false,
   horizontalLayout = false,
   showTimeInput = true,
@@ -620,7 +625,9 @@ export const Calendar = ({
     ],
     []
   )
-  const [selectedTimezone, setSelectedTimezone] = useState(timezones[1].value)
+  const [selectedTimezone, setSelectedTimezone] = useState(
+    timezones[1]?.value ?? timezones[0]?.value ?? 'UTC'
+  )
   const [startDate, setStartDate] = useState<string>(
     formatInTimeZone(
       value?.start || new Date(),

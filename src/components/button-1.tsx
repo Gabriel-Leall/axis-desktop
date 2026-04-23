@@ -1,21 +1,21 @@
-import React from 'react'
+import type React from 'react'
 import { Spinner } from '@/components/spinner-1'
 import clsx from 'clsx'
 
-const sizes = [
-  {
+const buttonSizes = {
+  content: {
     tiny: 'px-1.5 h-6 text-sm',
     small: 'px-1.5 h-8 text-sm',
     medium: 'px-2.5 h-10 text-sm',
     large: 'px-3.5 h-12 text-base',
   },
-  {
+  icon: {
     tiny: 'w-6 h-6 text-sm',
     small: 'w-8 h-8 text-sm',
     medium: 'w-10 h-10 text-sm',
     large: 'w-12 h-12 text-base',
   },
-]
+} as const
 
 const types = {
   primary:
@@ -49,7 +49,7 @@ const shapes = {
 }
 
 export interface ButtonProps {
-  size?: keyof (typeof sizes)[0]
+  size?: keyof typeof buttonSizes.content
   type?: keyof typeof types
   variant?: 'styled' | 'unstyled'
   shape?: keyof typeof shapes
@@ -93,7 +93,7 @@ export const Button = ({
       tabIndex={0}
       className={clsx(
         'flex justify-center items-center gap-0.5 duration-150',
-        sizes[+svgOnly][size],
+        (svgOnly ? buttonSizes.icon : buttonSizes.content)[size],
         disabled || loading
           ? 'bg-gray-100 text-gray-700 border border-gray-400 cursor-not-allowed'
           : types[type],
