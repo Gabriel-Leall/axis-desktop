@@ -25,8 +25,26 @@ function normalizeTag(tag: string): string {
 }
 
 export function getNoteTitle(content: string): string {
-  const firstLine = (content.split('\n')[0] ?? '').replace(/^#+\s*/, '').trim()
-  return firstLine || 'Untitled'
+  if (!content) {
+    return 'Untitled'
+  }
+
+  const normalized = content.replace(/\r\n/g, '\n')
+  const lines = normalized.split('\n')
+  const firstNonEmptyIndex = lines.findIndex(line => line.trim().length > 0)
+
+  if (firstNonEmptyIndex === -1) {
+    return 'Untitled'
+  }
+
+  const firstLine = lines[firstNonEmptyIndex] ?? ''
+
+  if (firstLine.startsWith('# ')) {
+    const title = firstLine.slice(2).trim()
+    return title || 'Untitled'
+  }
+
+  return firstLine.trim() || 'Untitled'
 }
 
 export function getNotePreview(content: string): string {

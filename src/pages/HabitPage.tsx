@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Flame, Plus, Archive, Trash2 } from 'lucide-react'
+import { Flame, Plus, Archive, Trash2, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -227,176 +227,187 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-4">
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading habits...</p>
-        ) : activeTab === 'today' ? (
-          <div className="space-y-2">
-            {todayHabits.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No habits due today.
-              </p>
-            ) : (
-              todayHabits.map(habit => {
-                const doneToday = todayLogs.some(
-                  log => log.habit_id === habit.id
-                )
-                const streak = selectStreakByHabit(monthLogs, habit.id)
+        <div className="mx-auto w-full max-w-4xl">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading habits...</p>
+          ) : activeTab === 'today' ? (
+            <div className="space-y-2">
+              {todayHabits.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No habits due today.
+                </p>
+              ) : (
+                todayHabits.map(habit => {
+                  const doneToday = todayLogs.some(
+                    log => log.habit_id === habit.id
+                  )
+                  const streak = selectStreakByHabit(monthLogs, habit.id)
+                  const completionDates = selectHabitCompletionDates(
+                    monthLogs,
+                    habit.id
+                  )
+
+                  return (
+                    <div
+                      key={habit.id}
+                      className={cn(
+                        'group rounded-lg border border-border bg-card p-3 transition-colors duration-200 hover:bg-accent/50',
+                        doneToday && 'opacity-75'
+                      )}
+                      style={{ borderInlineStart: `3px solid ${habit.color}` }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => void toggleHabit(habit.id)}
+                          aria-label={
+                            doneToday ? 'Mark as not done' : 'Mark as done'
+                          }
+                          className={cn(
+                            'flex size-5 shrink-0 items-center justify-center rounded-full border transition-all duration-100 active:scale-90 group-hover:border-neutral-400 group-hover:shadow-sm',
+                            doneToday
+                              ? 'border-transparent group-hover:border-transparent'
+                              : 'border-muted-foreground/60'
+                          )}
+                          style={{
+                            backgroundColor: doneToday
+                              ? habit.color
+                              : 'transparent',
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              'text-white transition-all duration-300 ease-out',
+                              doneToday ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
+                            )}
+                            strokeWidth={3}
+                            size={12}
+                          />
+                        </button>
+
+                        <button
+                          type="button"
+                          className={cn(
+                            'flex-1 text-left text-sm font-medium',
+                            doneToday && 'line-through text-muted-foreground'
+                          )}
+                          onClick={() => {
+                            setSelectedHabit(habit.id)
+                            openEdit(habit)
+                          }}
+                        >
+                          {habit.icon ? `${habit.icon} ` : ''}
+                          {habit.name}
+                        </button>
+
+                        <span className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
+                          <Flame className="size-3" />
+                          {streak}
+                        </span>
+                      </div>
+
+                      <div className="mt-2">
+                        <HeatMap
+                          logs={completionDates}
+                          days={7}
+                          color={habit.color}
+                          size="md"
+                        />
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          ) : activeTab === 'overview' ? (
+            <div className="space-y-3">
+              {habits.map(habit => {
                 const completionDates = selectHabitCompletionDates(
                   monthLogs,
                   habit.id
                 )
-
+                const streak = selectStreakByHabit(monthLogs, habit.id)
                 return (
                   <div
                     key={habit.id}
-                    className={cn(
-                      'rounded-lg border border-border bg-card p-3',
-                      doneToday && 'opacity-75'
-                    )}
-                    style={{ borderInlineStart: `3px solid ${habit.color}` }}
+                    className="group rounded-lg border border-border bg-card p-3 transition-colors duration-200 hover:bg-accent/50"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="mb-2 flex items-center justify-between gap-2">
                       <button
                         type="button"
-                        onClick={() => void toggleHabit(habit.id)}
-                        aria-label={
-                          doneToday ? 'Mark as not done' : 'Mark as done'
-                        }
-                        className={cn(
-                          'size-5 rounded-full border transition-colors',
-                          doneToday
-                            ? 'border-transparent'
-                            : 'border-muted-foreground/60'
-                        )}
-                        style={{
-                          backgroundColor: doneToday
-                            ? habit.color
-                            : 'transparent',
-                        }}
-                      />
-
-                      <button
-                        type="button"
-                        className={cn(
-                          'flex-1 text-left text-sm font-medium',
-                          doneToday && 'line-through text-muted-foreground'
-                        )}
-                        onClick={() => {
-                          setSelectedHabit(habit.id)
-                          openEdit(habit)
-                        }}
+                        className="truncate text-sm font-medium"
+                        onClick={() => openEdit(habit)}
                       >
                         {habit.icon ? `${habit.icon} ` : ''}
                         {habit.name}
                       </button>
-
-                      <span className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
-                        <Flame className="size-3" />
-                        {streak}
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {streak}d
                       </span>
                     </div>
-
-                    <div className="mt-2">
-                      <HeatMap
-                        logs={completionDates}
-                        days={7}
-                        color={habit.color}
-                        size="md"
-                      />
-                    </div>
+                    <HeatMap
+                      logs={completionDates}
+                      days={30}
+                      color={habit.color}
+                      size="md"
+                    />
                   </div>
                 )
-              })
-            )}
-          </div>
-        ) : activeTab === 'overview' ? (
-          <div className="space-y-3">
-            {habits.map(habit => {
-              const completionDates = selectHabitCompletionDates(
-                monthLogs,
-                habit.id
-              )
-              const streak = selectStreakByHabit(monthLogs, habit.id)
-              return (
-                <div
-                  key={habit.id}
-                  className="rounded-lg border border-border bg-card p-3"
-                >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      className="truncate text-sm font-medium"
-                      onClick={() => openEdit(habit)}
-                    >
-                      {habit.icon ? `${habit.icon} ` : ''}
-                      {habit.name}
-                    </button>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {streak}d
-                    </span>
-                  </div>
-                  <HeatMap
-                    logs={completionDates}
-                    days={30}
-                    color={habit.color}
-                    size="md"
-                  />
+              })}
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg border border-border bg-card p-4">
+                <p className="text-xs text-muted-foreground">
+                  Current best streak
+                </p>
+                <p className="mt-1 text-sm font-medium">
+                  {stats.topCurrentHabit
+                    ? `${stats.topCurrentHabit.name} - ${stats.topCurrentHabit.streak}d`
+                    : 'No data yet'}
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border bg-card p-4">
+                <p className="text-xs text-muted-foreground">
+                  Monthly completion rate
+                </p>
+                <p className="mt-1 text-sm font-medium">
+                  {stats.monthRate.percentage}% - {stats.monthRate.completedDays}{' '}
+                  of {stats.monthRate.totalDays} days
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border bg-card p-4">
+                <p className="text-xs text-muted-foreground">
+                  Best historical streaks
+                </p>
+                <div className="mt-1 space-y-1">
+                  {stats.bestHistoricalByHabit.length === 0 ? (
+                    <p className="text-sm">No data yet</p>
+                  ) : (
+                    stats.bestHistoricalByHabit.slice(0, 4).map(item => (
+                      <p key={item.habitId} className="text-sm">
+                        {item.name}: {item.streak}d
+                      </p>
+                    ))
+                  )}
                 </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground">
-                Current best streak
-              </p>
-              <p className="mt-1 text-sm font-medium">
-                {stats.topCurrentHabit
-                  ? `${stats.topCurrentHabit.name} - ${stats.topCurrentHabit.streak}d`
-                  : 'No data yet'}
-              </p>
-            </div>
+              </div>
 
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground">
-                Monthly completion rate
-              </p>
-              <p className="mt-1 text-sm font-medium">
-                {stats.monthRate.percentage}% - {stats.monthRate.completedDays}{' '}
-                of {stats.monthRate.totalDays} days
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground">
-                Best historical streaks
-              </p>
-              <div className="mt-1 space-y-1">
-                {stats.bestHistoricalByHabit.length === 0 ? (
-                  <p className="text-sm">No data yet</p>
-                ) : (
-                  stats.bestHistoricalByHabit.slice(0, 4).map(item => (
-                    <p key={item.habitId} className="text-sm">
-                      {item.name}: {item.streak}d
-                    </p>
-                  ))
-                )}
+              <div className="rounded-lg border border-border bg-card p-4">
+                <p className="text-xs text-muted-foreground">
+                  Most consistent weekday
+                </p>
+                <p className="mt-1 text-sm font-medium">
+                  {stats.topWeekday === null
+                    ? 'No data yet'
+                    : weekdayName(stats.topWeekday)}
+                </p>
               </div>
             </div>
-
-            <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground">
-                Most consistent weekday
-              </p>
-              <p className="mt-1 text-sm font-medium">
-                {stats.topWeekday === null
-                  ? 'No data yet'
-                  : weekdayName(stats.topWeekday)}
-              </p>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

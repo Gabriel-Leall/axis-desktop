@@ -39,6 +39,10 @@ interface NotesPageProps {
 }
 
 function parseNoteContent(content: string): { title: string; body: string } {
+  if (!content) {
+    return { title: '', body: '' }
+  }
+
   const normalized = content.replace(/\r\n/g, '\n')
   const lines = normalized.split('\n')
   const firstNonEmptyIndex = lines.findIndex(line => line.trim().length > 0)
@@ -47,60 +51,39 @@ function parseNoteContent(content: string): { title: string; body: string } {
     return { title: '', body: '' }
   }
 
-  const firstLine = lines[firstNonEmptyIndex]?.trim() ?? ''
-  const headingMatch = firstLine.match(/^#\s+(.+)$/)
-  const isHeading = Boolean(headingMatch)
-  const title = (isHeading ? headingMatch?.[1] : firstLine) ?? ''
+  const firstLine = lines[firstNonEmptyIndex] ?? ''
 
-  const bodyLines = isHeading
-    ? lines.filter((_, index) => index !== firstNonEmptyIndex)
-    : lines.filter((_, index) => index !== firstNonEmptyIndex)
+  if (firstLine.startsWith('# ')) {
+    return {
+      title: firstLine.slice(2),
+      body: lines
+        .filter((_, index) => index !== firstNonEmptyIndex)
+        .join('\n')
+        .replace(/^\n+/, ''),
+    }
+  }
 
   return {
-    title: title.trim(),
-    body: bodyLines.join('\n').replace(/^\n+/, ''),
+    title: firstLine.trim(),
+    body: lines
+      .filter((_, index) => index !== firstNonEmptyIndex)
+      .join('\n')
+      .replace(/^\n+/, ''),
   }
 }
 
 function buildNoteContent(title: string, body: string): string {
-  const cleanTitle = title.trim()
-  const cleanBody = body.replace(/^\n+/, '')
+  const normalizedBody = body.replace(/^\n+/, '')
 
-  if (!cleanTitle && !cleanBody) {
+  if (!title && !normalizedBody.trim()) {
     return ''
   }
 
-  if (!cleanTitle) {
-    return cleanBody
+  if (!normalizedBody.trim()) {
+    return `# ${title}`
   }
 
-  if (!cleanBody) {
-    return `# ${cleanTitle}`
-  }
-
-  return `# ${cleanTitle}\n\n${cleanBody}`
-}
-
-function getEditorBlockNode(start: Node): HTMLElement | null {
-  const base =
-    start.nodeType === Node.ELEMENT_NODE
-      ? (start as HTMLElement)
-      : start.parentElement
-
-  return base?.closest('p, li, h1, h2, h3, h4, h5, h6, div') ?? null
-}
-
-function getCurrentLineText(editorRoot: HTMLElement): string | null {
-  const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0) return null
-
-  const range = selection.getRangeAt(0)
-  if (!editorRoot.contains(range.startContainer)) return null
-
-  const block = getEditorBlockNode(range.startContainer)
-  if (!block) return null
-
-  return block.textContent ?? ''
+  return `# ${title}\n\n${normalizedBody}`
 }
 
 const GROUP_LABEL_KEYS: Record<string, string> = {
@@ -399,155 +382,6 @@ function EditorArea({
     }
     setTitleInput(parseNoteContent(note.content).title)
   }, [note])
-
-  useEffect(() => {
-    const root = editorShellRef.current
-    if (!root) return
-
-    const applySpellcheckOff = () => {
-      root
-        .querySelectorAll<HTMLElement>('[contenteditable="true"], textarea')
-        .forEach(element => {
-          element.setAttribute('spellcheck', 'false')
-        })
-    }
-
-    applySpellcheckOff()
-    const timer = window.setTimeout(applySpellcheckOff, 0)
-
-    const getEditorInstance = () => {
-      return editorRef.current?.getInstance() as
-        | {
-            exec: (command: string, payload?: unknown) => void
-            getSelection: () => [number, number] | unknown
-            replaceSelection: (
-              text: string,
-              start?: number | unknown,
-              end?: number | unknown
-            ) => void
-            isWysiwygMode: () => boolean
-            getMarkdown: () => string
-            setMarkdown: (md: string) => void
-          }
-        | undefined
-    }
-
-    const handleMarkdownShortcuts = (event: KeyboardEvent) => {
-      const editableRoot = root.querySelector<HTMLElement>(
-        '[contenteditable="true"]'
-      )
-      if (!editableRoot) return
-
-      const currentLineText = getCurrentLineText(editableRoot)
-      if (currentLineText == null) return
-
-      const editorInstance = getEditorInstance()
-      if (!editorInstance || !editorInstance.isWysiwygMode()) return
-
-      const deletePrefixAtCursor = (prefixLength: number) => {
-        try {
-          const selection = editorInstance.getSelection()
-          if (Array.isArray(selection) && selection.length === 2) {
-            const [, to] = selection
-            if (typeof to === 'number') {
-              const startPos = to - prefixLength
-              if (startPos >= 0) {
-                editorInstance.replaceSelection('', startPos, to)
-              }
-            }
-          }
-        } catch (e) {
-          logger.error(`Error replacing prefix: ${e}`)
-        }
-      }
-
-      const applyBlock = (
-        prefixLength: number,
-        command: string,
-        payload?: unknown
-      ) => {
-        deletePrefixAtCursor(prefixLength)
-        editorInstance.exec(command, payload)
-      }
-
-      const trimmedLine = currentLineText.trimEnd()
-
-      if (event.key === ' ') {
-        const headingMatch = trimmedLine.match(/^(#{1,6})\b/)
-        const headingPrefix = headingMatch?.[1]
-        if (headingPrefix) {
-          event.preventDefault()
-          applyBlock(headingPrefix.length, 'heading', {
-            level: headingPrefix.length,
-          })
-          return
-        }
-
-        if (/^[-*]\b/.test(trimmedLine)) {
-          event.preventDefault()
-          applyBlock(1, 'bulletList')
-          return
-        }
-
-        if (/^1\.\b/.test(trimmedLine) || /^1\b/.test(trimmedLine)) {
-          event.preventDefault()
-          applyBlock(2, 'orderedList')
-          return
-        }
-
-        if (/^>\b/.test(trimmedLine)) {
-          event.preventDefault()
-          applyBlock(1, 'blockQuote')
-          return
-        }
-      }
-
-      if (event.key === 'Enter') {
-        if (trimmedLine === '```') {
-          event.preventDefault()
-          deletePrefixAtCursor(3)
-          editorInstance.exec('codeblock')
-          return
-        }
-
-        if (/^#{1,6}\s+.+$/.test(trimmedLine)) {
-          event.preventDefault()
-          const level = Math.min(trimmedLine.match(/^#+/)?.[0].length ?? 1, 6)
-          deletePrefixAtCursor(level)
-          editorInstance.exec('heading', { level })
-          return
-        }
-
-        if (/^(?:- |\* )/.test(trimmedLine)) {
-          event.preventDefault()
-          deletePrefixAtCursor(2)
-          editorInstance.exec('bulletList')
-          return
-        }
-
-        if (/^1\. /.test(trimmedLine)) {
-          event.preventDefault()
-          deletePrefixAtCursor(3)
-          editorInstance.exec('orderedList')
-          return
-        }
-
-        if (/^> /.test(trimmedLine)) {
-          event.preventDefault()
-          deletePrefixAtCursor(2)
-          editorInstance.exec('blockQuote')
-          return
-        }
-      }
-    }
-
-    root.addEventListener('keydown', handleMarkdownShortcuts, true)
-
-    return () => {
-      root.removeEventListener('keydown', handleMarkdownShortcuts, true)
-      window.clearTimeout(timer)
-    }
-  }, [note?.id])
 
   const handleEditorChange = useCallback(() => {
     if (!note) return

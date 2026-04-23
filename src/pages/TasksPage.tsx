@@ -18,6 +18,7 @@ import {
 } from '@/store/tasks-store'
 import type { Task, Priority, Status } from '@/store/tasks-store'
 import { cn } from '@/lib/utils'
+import { getPriorityTagClass } from '@/lib/priority-tag-styles'
 import { Calendar, type RangeValue } from '@/components/calendar'
 import { KanbanPage } from '@/pages/KanbanPage'
 
@@ -156,14 +157,7 @@ function PriorityBadge({ priority }: { priority: Priority }) {
   const { t } = useTranslation()
 
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
-        priority === 'high' && 'bg-red-500/15 text-red-400',
-        priority === 'medium' && 'bg-amber-400/15 text-amber-300',
-        priority === 'low' && 'bg-sky-400/15 text-sky-300'
-      )}
-    >
+    <span className={getPriorityTagClass(priority)}>
       {t(`tasks.priority.${priority}`)}
     </span>
   )
