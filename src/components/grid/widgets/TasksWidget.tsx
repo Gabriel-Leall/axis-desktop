@@ -1,44 +1,67 @@
-import { useState, useEffect, useRef } from 'react'
-import { CheckSquare, Plus, ChevronRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { CheckSquare, ChevronRight, Plus } from 'lucide-react'
 import { WidgetCard } from '../WidgetCard'
 import {
   useTasksStore,
   selectTodayTasks,
-  getTodayISO,
+  type Task,
 } from '@/store/tasks-store'
-import type { Task } from '@/store/tasks-store'
 import { cn } from '@/lib/utils'
-
-// ─── Priority Dot ──────────────────────────────────────────────────────────────
+import { getPriorityTagClass } from '@/lib/priority-tag-styles'
 
 import { motion, AnimatePresence } from 'motion/react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { listItemVariants } from '@/lib/motion-tokens'
 
-function PriorityDot({ priority }: { priority: Task['priority'] }) {
+function PriorityTag({ priority }: { priority: Task['priority'] }) {
+  const label = priority === 'high' ? 'High' : priority === 'medium' ? 'Medium' : 'Low'
+
   return (
     <span
-      aria-label={`${priority} priority`}
-      className={cn(
-        'inline-block size-1.5 shrink-0 rounded-full',
-        priority === 'high' && 'bg-red-500',
-        priority === 'medium' && 'bg-yellow-400',
-        priority === 'low' && 'bg-muted-foreground/50'
-      )}
-    />
+      className={cn('shrink-0 tracking-wide', getPriorityTagClass(priority))}
+    >
+      {label}
+    </span>
   )
 }
 
-// ─── Task Row ──────────────────────────────────────────────────────────────────
+function QuickAddInput({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
+  const [value, setValue] = useState('')
+
+  const handleSubmit = async () => {
+    const trimmed = value.trim()
+    if (!trimmed) return
+    await onAdd(trimmed)
+    setValue('')
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-1.5 rounded-md border border-dashed border-border/60 px-2 py-1.5 focus-within:border-border">
+      <Plus className="size-3 shrink-0 text-muted-foreground" />
+      <input
+        type="text"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            void handleSubmit()
+          }
+          if (e.key === 'Escape') setValue('')
+        }}
+        placeholder="Add task..."
+        aria-label="Quick add task"
+        className="flex-1 bg-transparent text-[12px] text-foreground placeholder:text-muted-foreground/50 outline-none"
+      />
+    </div>
+  )
+}
 
 function TaskRow({
   task,
-  index,
   onToggle,
   onSelect,
 }: {
   task: Task
-  index: number
   onToggle: () => void
   onSelect: () => void
 }) {
@@ -51,89 +74,69 @@ function TaskRow({
       initial="hidden"
       animate="visible"
       exit="exit"
-      custom={index}
-      className="group flex items-center gap-2 rounded-md px-2 py-1.25 transition-colors hover:bg-accent/50"
+      onClick={onSelect}
+      className="group flex cursor-pointer items-center gap-3 border-b border-neutral-200 py-2.5 last:border-b-0 dark:border-neutral-800"
     >
-      {/* Checkbox */}
-      <button
+      <motion.button
         type="button"
         aria-label={isDone ? 'Mark as incomplete' : 'Mark as complete'}
         onClick={e => {
           e.stopPropagation()
           onToggle()
         }}
+        whileTap={{ scale: 0.92 }}
+        animate={{ scale: isDone ? [1, 1.08, 1] : 1 }}
+        transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
         className={cn(
-          'flex size-4 shrink-0 items-center justify-center rounded-full border transition-all',
+          'relative flex size-5 shrink-0 items-center justify-center rounded border transition-colors',
           isDone
-            ? 'border-muted-foreground/30 bg-muted-foreground/20'
-            : 'border-muted-foreground/50 hover:border-primary'
+            ? 'border-orange-500 bg-orange-500'
+            : 'border-neutral-600 group-hover:border-neutral-400'
         )}
       >
-        {isDone && (
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="block size-2 rounded-full bg-muted-foreground/50"
-          />
-        )}
-      </button>
+        <AnimatePresence>
+          {isDone && (
+            <motion.span
+              className="pointer-events-none absolute inset-0 rounded border border-orange-400"
+              initial={{ opacity: 0.6, scale: 1 }}
+              animate={{ opacity: 0, scale: 1.7 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            />
+          )}
+        </AnimatePresence>
+        <AnimatePresence mode="wait" initial={false}>
+          {isDone && (
+            <motion.span
+              key="check"
+              initial={{ scale: 0.2, opacity: 0, rotate: -14 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              exit={{ scale: 0.2, opacity: 0 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <CheckSquare className="size-3 text-white" strokeWidth={2.5} />
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
 
-      {/* Title */}
-      <button
-        type="button"
-        onClick={onSelect}
+      <span
         className={cn(
-          'flex-1 truncate text-start transition-all',
-          isDone && 'line-through opacity-40'
+          'flex-1 truncate font-sans text-sm',
+          isDone
+            ? 'text-neutral-400 line-through dark:text-neutral-500'
+            : 'text-neutral-800 dark:text-neutral-200'
         )}
-        style={{ fontSize: '13px', fontWeight: 400 }}
       >
         {task.title}
-      </button>
+      </span>
 
-      {/* Priority */}
-      <PriorityDot priority={task.priority} />
+      <PriorityTag priority={task.priority} />
     </motion.div>
   )
 }
 
-// ─── Quick Add Input ─────────────────────────────────────────────────────────
-
-function QuickAddInput({ onAdd }: { onAdd: (title: string) => void }) {
-  const [value, setValue] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const handleSubmit = () => {
-    const trimmed = value.trim()
-    if (!trimmed) return
-    onAdd(trimmed)
-    setValue('')
-  }
-
-  return (
-    <div className="mt-1 flex items-center gap-1.5 rounded-md border border-dashed border-border/60 px-2 py-1 focus-within:border-border">
-      <Plus className="size-3 shrink-0 text-muted-foreground" />
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === 'Enter') handleSubmit()
-          if (e.key === 'Escape') setValue('')
-        }}
-        placeholder="Add task..."
-        aria-label="Quick add task"
-        className="flex-1 bg-transparent text-[12px] text-foreground placeholder:text-muted-foreground/50 outline-none"
-      />
-    </div>
-  )
-}
-
-// ─── Tasks Widget ─────────────────────────────────────────────────────────────
-
 interface TasksWidgetProps {
-  /** Called when "View all →" or a task title is clicked */
   onNavigateToTasks?: (selectedTaskId?: string) => void
 }
 
@@ -146,16 +149,17 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
   const setSelectedTask = useTasksStore(state => state.setSelectedTask)
 
   useEffect(() => {
-    loadTasks()
+    void loadTasks()
   }, [loadTasks])
 
   const todayTasks = selectTodayTasks(tasks)
-  const visibleTasks = todayTasks.slice(0, 6)
-  const pendingCount = todayTasks.filter(t => t.status !== 'done').length
+  const fallbackTasks = tasks.filter(t => t.status !== 'done')
+  const visibleTasks = (todayTasks.length > 0 ? todayTasks : fallbackTasks).slice(0, 4)
   const totalCount = todayTasks.length
+  const pendingCount = todayTasks.filter(t => t.status !== 'done').length
 
   const handleAddTask = async (title: string) => {
-    await addTask(title, { due_date: getTodayISO(), priority: 'medium' })
+    await addTask(title, { priority: 'medium' })
   }
 
   const handleSelect = (taskId: string) => {
@@ -165,8 +169,7 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
 
   return (
     <WidgetCard title="Today" icon={CheckSquare}>
-      <div className="flex h-full flex-col gap-0">
-        {/* Stat row */}
+      <div className="flex h-full flex-col">
         <div className="mb-2 flex items-center justify-between px-1">
           <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             Tasks
@@ -178,63 +181,58 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
           )}
         </div>
 
-        {/* Task list */}
-        <div className="flex flex-1 flex-col gap-0 overflow-y-auto">
-          <AnimatePresence mode="popLayout" initial={false}>
-            {isLoading ? (
-              // Skeleton
-              <motion.div
-                layout
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="px-1 py-1 space-y-2"
-              >
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex gap-2 items-center">
-                    <Skeleton className="size-4 shrink-0 rounded-full" />
-                    <Skeleton className="h-4 flex-1" />
-                  </div>
-                ))}
-              </motion.div>
-            ) : visibleTasks.length === 0 ? (
-              <motion.div
-                layout
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="flex flex-1 flex-col items-center justify-center gap-1.5 py-4 text-center"
-              >
-                <CheckSquare
-                  className="size-5 text-muted-foreground/30"
-                  strokeWidth={1.5}
-                />
-                <span className="text-[12px] text-muted-foreground/50">
-                  Nothing for today
-                </span>
-              </motion.div>
-            ) : (
-              visibleTasks.map((task, i) => (
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          {isLoading ? (
+            <motion.div
+              layout
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-2 px-1 py-1"
+            >
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Skeleton className="size-4 shrink-0 rounded-full" />
+                  <Skeleton className="h-4 flex-1" />
+                </div>
+              ))}
+            </motion.div>
+          ) : visibleTasks.length === 0 ? (
+            <motion.div
+              layout
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex flex-1 flex-col items-center justify-center gap-1.5 py-4 text-center"
+            >
+              <CheckSquare
+                className="size-5 text-muted-foreground/30"
+                strokeWidth={1.5}
+              />
+              <span className="text-[12px] text-muted-foreground/50">
+                Nothing for today
+              </span>
+            </motion.div>
+          ) : (
+            <AnimatePresence mode="popLayout" initial={false}>
+              {visibleTasks.map((task) => (
                 <TaskRow
                   key={task.id}
                   task={task}
-                  index={i}
                   onToggle={() => toggleComplete(task.id)}
                   onSelect={() => handleSelect(task.id)}
                 />
-              ))
-            )}
-          </AnimatePresence>
+              ))}
+            </AnimatePresence>
+          )}
         </div>
 
-        {/* Quick-add */}
         <QuickAddInput onAdd={handleAddTask} />
 
-        {/* Footer */}
         <button
           type="button"
           onClick={() => onNavigateToTasks?.()}
-          className="mt-1.5 flex items-center gap-0.5 self-end text-[11px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+          className="mt-auto flex items-center gap-0.5 self-end text-[11px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
         >
           View all
           <ChevronRight className="size-3" />
