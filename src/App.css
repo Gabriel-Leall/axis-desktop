@@ -138,14 +138,14 @@
   box-shadow: var(--shadow-warm);
 }
 
-/* Dark mode: Resend frost-ring borders */
+/* Dark mode: warm graphite ring borders */
 .dark .card-frost {
-  border: 1px solid rgba(214, 235, 253, 0.19);
+  border: 1px solid rgba(214, 190, 150, 0.28);
 }
 
-/* Frost border utility (Resend signature) */
+/* Warm ring border utility */
 .border-frost {
-  border-color: rgba(214, 235, 253, 0.19) !important;
+  border-color: rgba(214, 190, 150, 0.28) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -233,83 +233,88 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
-   DARK MODE — Resend frost & icy accent system
+   DARK MODE — Warm graphite & amber accent system
    ═══════════════════════════════════════════════════════════ */
 .dark {
-  /* Frost text shadow for subtle glow on text */
-  --text-glow: 0 0 20px rgba(59, 158, 255, 0.18);
-  /* Dark hover — white glass effect */
-  --hover-glass: rgba(255, 255, 255, 0.05);
-  --active-glass: rgba(255, 255, 255, 0.09);
+  /* Soft amber text glow */
+  --text-glow: 0 0 20px rgba(255, 187, 112, 0.12);
+  /* Warm glass hover states */
+  --hover-glass: rgba(255, 231, 195, 0.07);
+  --active-glass: rgba(255, 231, 195, 0.12);
 
-  /* Override shadow with Resend-style frost rings */
-  --shadow-sm: 0px 0px 0px 1px rgba(176, 199, 217, 0.145);
+  /* Override shadow with dark-cream rings */
+  --shadow-sm: 0px 0px 0px 1px rgba(214, 190, 150, 0.2);
   --shadow-md:
-    0px 0px 0px 1px rgba(176, 199, 217, 0.145), 0px 4px 16px rgba(0, 0, 0, 0.25);
+    0px 0px 0px 1px rgba(214, 190, 150, 0.2), 0px 4px 16px rgba(14, 11, 7, 0.3);
   --shadow-lg:
-    0px 0px 0px 1px rgba(176, 199, 217, 0.145), 0px 8px 32px rgba(0, 0, 0, 0.35);
-  --context-card-border: hsla(0, 0%, 18%, 1);
-  --ds-blue-100: oklch(22.17% 0.069 259.89);
-  --ds-blue-900: oklch(71.7% 0.1648 250.79360374054167);
+    0px 0px 0px 1px rgba(214, 190, 150, 0.2), 0px 8px 32px rgba(14, 11, 7, 0.4);
+  --context-card-border: hsla(36, 22%, 34%, 1);
+  --ds-blue-100: oklch(32% 0.03 82);
+  --ds-blue-900: oklch(79% 0.1 80);
   --ds-red-100: oklch(22.1% 0.0657 15.11);
   --ds-red-900: oklch(69.96% 0.2136 22.03);
   --ds-amber-100: oklch(22.46% 0.0538 76.04);
   --ds-amber-900: oklch(77.21% 0.1991 64.28);
-  --ds-gray-100: hsla(0, 0%, 10%, 1);
-  --ds-gray-1000: hsla(0, 0%, 93%, 1);
-  --ds-gray-alpha-400: hsla(0, 0%, 100%, 0.14);
-  --ds-background-100: hsla(0, 0%, 4%, 1);
+  --ds-gray-100: hsla(34, 16%, 20%, 1);
+  --ds-gray-1000: hsla(42, 30%, 92%, 1);
+  --ds-gray-alpha-400: hsla(42, 34%, 88%, 0.16);
+  --ds-background-100: hsla(32, 18%, 14%, 1);
   --color-red-900: oklch(69.96% 0.2136 22.03);
-  --ds-shadow-border: 0 0 0 1px rgba(255, 255, 255, 0.145);
-  --ds-shadow-small: 0px 1px 2px rgba(0, 0, 0, 0.16);
+  --ds-shadow-border: 0 0 0 1px rgba(214, 190, 150, 0.22);
+  --ds-shadow-small: 0px 1px 2px rgba(10, 8, 5, 0.3);
   --ds-shadow-border-small:
-    var(--ds-shadow-border), 0px 1px 2px rgba(0, 0, 0, 0.16);
+    var(--ds-shadow-border), 0px 1px 2px rgba(10, 8, 5, 0.3);
   --ds-shadow-medium:
-    0px 2px 2px rgba(0, 0, 0, 0.32), 0px 8px 8px -8px rgba(0, 0, 0, 0.16);
+    0px 2px 2px rgba(10, 8, 5, 0.4), 0px 8px 8px -8px rgba(10, 8, 5, 0.24);
   --ds-shadow-border-medium:
-    var(--ds-shadow-border), 0px 2px 2px rgba(0, 0, 0, 0.32),
-    0px 8px 8px -8px rgba(0, 0, 0, 0.16);
+    var(--ds-shadow-border), 0px 2px 2px rgba(10, 8, 5, 0.4),
+    0px 8px 8px -8px rgba(10, 8, 5, 0.24);
   --ds-shadow-large:
-    0px 2px 2px rgba(0, 0, 0, 0.04), 0px 8px 16px -4px rgba(0, 0, 0, 0.04);
+    0px 2px 2px rgba(10, 8, 5, 0.16), 0px 8px 16px -4px rgba(10, 8, 5, 0.2);
   --ds-shadow-border-large:
-    var(--ds-shadow-border), 0px 2px 2px rgba(0, 0, 0, 0.04),
-    0px 8px 16px -4px rgba(0, 0, 0, 0.04);
+    var(--ds-shadow-border), 0px 2px 2px rgba(10, 8, 5, 0.16),
+    0px 8px 16px -4px rgba(10, 8, 5, 0.2);
   --ds-shadow-tooltip:
-    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
-    0px 4px 8px rgba(0, 0, 0, 0.04);
+    var(--ds-shadow-border), 0px 1px 1px rgba(14, 11, 7, 0.12),
+    0px 4px 8px rgba(10, 8, 5, 0.2);
   --ds-shadow-menu:
-    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
-    0px 4px 8px -4px rgba(0, 0, 0, 0.04), 0px 16px 24px -8px rgba(0, 0, 0, 0.06);
+    var(--ds-shadow-border), 0px 1px 1px rgba(14, 11, 7, 0.12),
+    0px 4px 8px -4px rgba(10, 8, 5, 0.2),
+    0px 16px 24px -8px rgba(10, 8, 5, 0.26);
   --ds-shadow-modal:
-    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
-    0px 8px 16px -4px rgba(0, 0, 0, 0.04),
-    0px 24px 32px -8px rgba(0, 0, 0, 0.06);
+    var(--ds-shadow-border), 0px 1px 1px rgba(14, 11, 7, 0.12),
+    0px 8px 16px -4px rgba(10, 8, 5, 0.2),
+    0px 24px 32px -8px rgba(10, 8, 5, 0.26);
   --ds-shadow-fullscreen:
-    var(--ds-shadow-border), 0px 1px 1px rgba(0, 0, 0, 0.02),
-    0px 8px 16px -4px rgba(0, 0, 0, 0.04),
-    0px 24px 32px -8px rgba(0, 0, 0, 0.06);
+    var(--ds-shadow-border), 0px 1px 1px rgba(14, 11, 7, 0.12),
+    0px 8px 16px -4px rgba(10, 8, 5, 0.2),
+    0px 24px 32px -8px rgba(10, 8, 5, 0.26);
   --ds-red-800: oklch(58.01% 0.227 25.12);
-  --ds-blue-700: oklch(57.61% 0.2321 258.23);
+  --ds-blue-700: oklch(71% 0.1 76);
   --ds-amber-800: oklch(77.21% 0.1991 64.28);
-  --ds-gray-400: hsla(0, 0%, 18%, 1);
-  --ds-gray-700: hsla(0, 0%, 56%, 1);
-  --ds-gray-1000-h: hsl(0, 0%, 80%);
-  --ds-gray-alpha-200: hsla(0, 0%, 100%, 0.09);
+  --ds-gray-400: hsla(34, 14%, 30%, 1);
+  --ds-gray-700: hsla(34, 14%, 66%, 1);
+  --ds-gray-1000-h: hsl(40, 30%, 80%);
+  --ds-gray-alpha-200: hsla(40, 30%, 92%, 0.12);
   --ds-red-300: oklch(31.47% 0.1105 20.96);
   --ds-red-500: oklch(40.68% 0.1479 23.16);
-  --ds-gray-900: hsla(0, 0%, 63%, 1);
-  --ds-gray-alpha-500: hsla(0, 0%, 100%, 0.24);
-  --ds-gray-alpha-600: hsla(0, 0%, 100%, 0.51);
-  --ds-background-200: hsla(0, 0%, 0%, 1);
-  --geist-foreground: #fff;
+  --ds-gray-900: hsla(34, 14%, 72%, 1);
+  --ds-gray-alpha-500: hsla(40, 30%, 92%, 0.3);
+  --ds-gray-alpha-600: hsla(40, 30%, 92%, 0.58);
+  --ds-background-200: hsla(30, 16%, 12%, 1);
+  --geist-foreground: #f4eedd;
+  --ds-focus-color: var(--ds-amber-800);
+  --ds-focus-ring:
+    0 0 0 2px var(--ds-background-100),
+    0 0 0 4px color-mix(in oklch, var(--ds-amber-800) 62%, white);
   --ds-input-ring:
     0 0 0 1px var(--ds-gray-alpha-600), 0 0 0 4px rgba(255, 255, 255, 0.24);
   --ds-red-900-alpha-160: hsla(358, 100%, 69%, 0.16);
   --geist-error: #ff0000;
-  --ds-gray-200: hsla(0, 0%, 12%, 1);
-  --ds-gray-alpha-100: rgba(255, 255, 255, 0.06);
-  --ds-gray-alpha-300: hsla(0, 0%, 100%, 0.13);
-  --accents-2: #333333;
+  --ds-gray-200: hsla(34, 14%, 22%, 1);
+  --ds-gray-alpha-100: rgba(244, 238, 221, 0.09);
+  --ds-gray-alpha-300: hsla(40, 30%, 92%, 0.18);
+  --accents-2: #534838;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -375,8 +380,8 @@
 }
 
 .dark .notes-inline-editor .toastui-editor-toolbar-icons {
-  filter: brightness(0) saturate(100%) invert(87%) sepia(10%) saturate(278%)
-    hue-rotate(184deg) brightness(96%) contrast(93%);
+  filter: brightness(0) saturate(100%) invert(90%) sepia(26%) saturate(280%)
+    hue-rotate(336deg) brightness(98%) contrast(91%);
 }
 
 .notes-inline-editor .toastui-editor-main {

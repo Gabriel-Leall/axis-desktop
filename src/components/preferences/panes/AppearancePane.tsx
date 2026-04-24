@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useTheme } from '@/hooks/use-theme'
+import type { Theme } from '@/lib/theme-context'
 import { SettingsField, SettingsSection } from '../shared/SettingsComponents'
 import { usePreferences, useSavePreferences } from '@/services/preferences'
 import { availableLanguages } from '@/i18n'
@@ -26,7 +27,7 @@ export function AppearancePane() {
   const { data: preferences } = usePreferences()
   const savePreferences = useSavePreferences()
 
-  const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
+  const handleThemeChange = (value: Theme) => {
     // Update the theme provider immediately for instant UI feedback
     setTheme(value)
 
@@ -118,6 +119,9 @@ export function AppearancePane() {
               </SelectItem>
               <SelectItem value="dark">
                 {t('preferences.appearance.theme.dark')}
+              </SelectItem>
+              <SelectItem value="entardecer">
+                {t('preferences.appearance.theme.entardecer')}
               </SelectItem>
               <SelectItem value="system">
                 {t('preferences.appearance.theme.system')}

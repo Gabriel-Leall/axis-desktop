@@ -3,7 +3,7 @@ import type { Theme as TauriTheme } from '@tauri-apps/api/window'
 import type { Theme } from '@/lib/theme-context'
 import { logger } from '@/lib/logger'
 
-export type ResolvedTheme = 'light' | 'dark'
+export type ResolvedTheme = 'light' | 'dark' | 'entardecer'
 
 export const THEME_STORAGE_KEY = 'ui-theme'
 
@@ -15,10 +15,19 @@ export function resolveThemePreference(
     return prefersDark ? 'dark' : 'light'
   }
 
+  // entardecer resolves to dark mode with warm tones
+  if (theme === 'entardecer') {
+    return 'entardecer'
+  }
+
   return theme
 }
 
 export function toTauriAppTheme(theme: Theme): TauriTheme | null {
+  // entardecer uses dark native theme
+  if (theme === 'entardecer') {
+    return 'dark'
+  }
   return theme === 'system' ? null : theme
 }
 
@@ -30,7 +39,7 @@ export function applyDocumentTheme(theme: Theme): ResolvedTheme {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
   const resolvedTheme = resolveThemePreference(theme, prefersDark)
 
-  root.classList.remove('light', 'dark')
+  root.classList.remove('light', 'dark', 'entardecer')
   root.classList.add(resolvedTheme)
   root.dataset.axisThemeMode = resolvedTheme
 

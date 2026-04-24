@@ -1,7 +1,9 @@
 import { createContext } from 'react'
 import type { ResolvedTheme } from '@/lib/theme'
 
-export type Theme = 'dark' | 'light' | 'system'
+export type { ResolvedTheme }
+
+export type Theme = 'dark' | 'light' | 'system' | 'entardecer'
 
 export interface ThemeProviderState {
   theme: Theme

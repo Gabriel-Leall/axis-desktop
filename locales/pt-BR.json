@@ -33,6 +33,7 @@
   "preferences.appearance.colorThemeDescription": "Choose your preferred color theme",
   "preferences.appearance.theme.light": "Light",
   "preferences.appearance.theme.dark": "Dark",
+  "preferences.appearance.theme.entardecer": "Sunset",
   "preferences.appearance.theme.system": "System",
   "preferences.appearance.selectTheme": "Select theme",
   "preferences.appearance.language": "Language",

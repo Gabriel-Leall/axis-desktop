@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState, useRef } from 'react'
 import { emit } from '@tauri-apps/api/event'
 import { ThemeProviderContext, type Theme } from '@/lib/theme-context'
+import type { ResolvedTheme } from '@/lib/theme'
 import { usePreferences } from '@/services/preferences'
 import {
   applyDocumentTheme,
@@ -24,7 +25,7 @@ export function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   )
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
     resolveThemePreference(
       (localStorage.getItem(storageKey) as Theme) || defaultTheme,
       window.matchMedia('(prefers-color-scheme: dark)').matches
