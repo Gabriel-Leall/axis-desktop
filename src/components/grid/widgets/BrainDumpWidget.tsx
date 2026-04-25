@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Brain, ArrowUpRight, Plus } from 'lucide-react'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { useNotesStore } from '@/store/notes-store'
 
 interface BrainDumpWidgetProps {
@@ -8,6 +9,8 @@ interface BrainDumpWidgetProps {
 }
 
 export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
+  const { t } = useTranslation()
+
   const notes = useNotesStore(state => state.notes)
   const loadNotes = useNotesStore(state => state.loadNotes)
   const createNote = useNotesStore(state => state.createNote)
@@ -98,7 +101,7 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
       >
         <Brain className="size-3.5 text-muted-foreground" strokeWidth={2} />
         <span className="flex-1 text-xs font-medium text-muted-foreground select-none">
-          Brain Dump
+          {t('widgets.brainDump.title')}
         </span>
         <motion.button
           whileHover={{ scale: 1.1 }}
@@ -106,7 +109,7 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
           type="button"
           onClick={handleOpenPage}
           className="rounded p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground"
-          aria-label="Open notes page"
+          aria-label={t('widgets.brainDump.openNotesAria')}
         >
           <ArrowUpRight className="size-3" />
         </motion.button>
@@ -116,7 +119,7 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
           type="button"
           onClick={() => void handleCreateNote()}
           className="rounded p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground"
-          aria-label="New note"
+          aria-label={t('widgets.brainDump.newNoteAria')}
         >
           <Plus className="size-3" />
         </motion.button>
@@ -126,17 +129,17 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
         value={currentNote?.content ?? ''}
         onChange={e => handleContentChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Dump it here..."
+        placeholder={t('widgets.brainDump.placeholder')}
         spellCheck={false}
-        className="font-sans text-base leading-relaxed h-full w-full resize-none bg-transparent p-4 text-foreground placeholder:text-neutral-400 dark:placeholder:text-neutral-600 outline-none"
+        className="font-sans text-base leading-relaxed h-full w-full resize-none bg-transparent p-4 text-foreground placeholder:text-muted-foreground/60 outline-none"
       />
 
       <div className="flex shrink-0 items-center justify-between border-t border-border px-3 py-1">
-        <span className="font-mono text-xs text-neutral-400">
-          {notes.length} {notes.length === 1 ? 'note' : 'notes'}
+        <span className="text-muted-foreground font-mono text-xs">
+          {t('widgets.brainDump.notesCount', { count: notes.length })}
         </span>
         {notes.length > 0 && (
-          <span className="font-mono text-xs text-neutral-400">
+          <span className="text-muted-foreground font-mono text-xs">
             {currentIndex + 1}/{notes.length}
           </span>
         )}
