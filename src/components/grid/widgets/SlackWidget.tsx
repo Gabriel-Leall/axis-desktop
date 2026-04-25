@@ -3,6 +3,7 @@ import { MessageSquare, RefreshCw, ExternalLink } from 'lucide-react'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { WidgetCard } from '../WidgetCard'
 import { motion, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useSlackStore } from '@/store/slack-store'
@@ -55,7 +56,11 @@ function MentionRow({
   message: SlackMessage
   resolvedUser: SlackUser | null
 }) {
-  const displayName = resolvedUser?.real_name ?? resolvedUser?.name ?? 'Unknown'
+  const { t } = useTranslation()
+  const displayName =
+    resolvedUser?.real_name ??
+    resolvedUser?.name ??
+    t('widgets.slack.unknownUser')
   const avatarUrl = resolvedUser?.profile.image_48
 
   const handleClick = async () => {
@@ -108,7 +113,8 @@ function DMRow({
   resolvedUser: SlackUser | null
   teamId: string | null
 }) {
-  const displayName = resolvedUser?.real_name ?? resolvedUser?.name ?? 'DM'
+  const { t } = useTranslation()
+  const displayName = resolvedUser?.real_name ?? resolvedUser?.name ?? t('widgets.slack.dmFallback')
   const avatarUrl = resolvedUser?.profile.image_48
 
   const handleClick = async () => {
@@ -200,14 +206,16 @@ function Section({
 // ─── Connect Prompt ───────────────────────────────────────────────────────────
 
 function ConnectPrompt({ onConnect }: { onConnect: () => void }) {
+  const { t } = useTranslation()
+
   return (
     <div className="flex h-full items-center justify-center">
       <EmptyState
         icon={MessageSquare}
-        title="Connect Slack"
-        description="See mentions and DMs at a glance"
+        title={t('widgets.slack.connectTitle')}
+        description={t('widgets.slack.connectDescription')}
         action={{
-          label: 'Connect',
+          label: t('widgets.slack.connectAction'),
           onClick: onConnect,
         }}
       />
@@ -222,6 +230,8 @@ interface SlackWidgetProps {
 }
 
 export function SlackWidget({ onNavigateToSlack }: SlackWidgetProps) {
+  const { t } = useTranslation()
+
   const isAuthenticated = useSlackStore(state => state.isAuthenticated)
   const user = useSlackStore(state => state.user)
   const teamName = useSlackStore(state => state.teamName)
@@ -267,11 +277,13 @@ export function SlackWidget({ onNavigateToSlack }: SlackWidgetProps) {
   )
 
   const updatedLabel = lastUpdated
-    ? `Updated ${formatSlackTs(String(lastUpdated.getTime() / 1000))}`
+    ? t('widgets.slack.updatedAt', {
+        value: formatSlackTs(String(lastUpdated.getTime() / 1000)),
+      })
     : null
 
   return (
-    <WidgetCard title="Slack" icon={MessageSquare}>
+    <WidgetCard title={t('widgets.slack.title')} icon={MessageSquare}>
       {!isAuthenticated ? (
         <ConnectPrompt onConnect={() => void startOAuthFlow()} />
       ) : (
@@ -287,7 +299,7 @@ export function SlackWidget({ onNavigateToSlack }: SlackWidgetProps) {
                 />
               )}
               <span className="text-[11px] font-medium text-foreground/70">
-                {teamName ?? user?.name ?? 'Workspace'}
+                {teamName ?? user?.name ?? t('widgets.slack.workspaceFallback')}
               </span>
               {totalUnread > 0 && <UnreadBadge count={totalUnread} />}
             </div>
@@ -295,7 +307,7 @@ export function SlackWidget({ onNavigateToSlack }: SlackWidgetProps) {
               type="button"
               id="slack-widget-refresh-btn"
               onClick={() => void refresh()}
-              aria-label="Refresh Slack data"
+              aria-label={t('widgets.slack.refreshAria')}
               className="rounded p-0.5 text-muted-foreground/50 transition-colors hover:text-muted-foreground"
             >
               <RefreshCw className="size-3" />
@@ -304,10 +316,10 @@ export function SlackWidget({ onNavigateToSlack }: SlackWidgetProps) {
 
           {/* Mentions */}
           <Section
-            label="Mentions"
+            label={t('widgets.slack.mentionsLabel')}
             count={mentions.length}
             isLoading={isLoadingMentions}
-            emptyText="No mentions"
+            emptyText={t('widgets.slack.noMentions')}
           >
             <div className="flex flex-col gap-0">
               {visibleMentions.map(msg => (
@@ -322,10 +334,10 @@ export function SlackWidget({ onNavigateToSlack }: SlackWidgetProps) {
 
           {/* DMs */}
           <Section
-            label="Direct Messages"
+            label={t('widgets.slack.directMessagesLabel')}
             count={directMessages.length}
             isLoading={isLoadingDMs}
-            emptyText="No direct messages"
+            emptyText={t('widgets.slack.noDirectMessages')}
           >
             <div className="flex flex-col gap-0">
               {visibleDMs.map(dm => (
@@ -354,7 +366,7 @@ export function SlackWidget({ onNavigateToSlack }: SlackWidgetProps) {
                 !updatedLabel && 'ml-auto'
               )}
             >
-              Open Slack
+              {t('widgets.slack.openButton')}
               <ExternalLink className="size-2.5" />
             </button>
           </div>
