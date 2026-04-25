@@ -1,19 +1,17 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { Timer, Play, Pause, SkipForward, RotateCcw, Link2 } from 'lucide-react'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { WidgetCard } from '../WidgetCard'
 import { usePomodoroStore } from '@/store/pomodoro-store'
 import { useTasksStore } from '@/store/tasks-store'
 import { cn } from '@/lib/utils'
 import { sendNotification } from '@tauri-apps/plugin-notification'
-
-// ─── Format helpers ───────────────────────────────────────────────────────────
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(Math.max(0, seconds) / 60)
-  const s = Math.floor(Math.max(0, seconds) % 60)
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
+import {
+  formatTime,
+  normalizeCycleTotal,
+  getCycleProgress,
+} from './pomodoro-widget.utils'
 
 // ─── Cycle Dots ────────────────────────────────────────────────────────────────
 
@@ -21,32 +19,31 @@ function CycleDots({
   completed,
   total,
   compact = false,
+  ariaLabel,
 }: {
   completed: number
   total: number
   compact?: boolean
+  ariaLabel: string
 }) {
+  const safeTotal = normalizeCycleTotal(total)
+
   const dots = Array.from(
-    { length: total },
+    { length: safeTotal },
     (_, i) =>
-      i < completed % total ||
-      (completed > 0 && completed % total === 0 && i < total)
+      i < completed % safeTotal ||
+      (completed > 0 && completed % safeTotal === 0 && i < safeTotal)
   )
 
   return (
-    <div
-      className="flex items-center gap-0.75"
-      aria-label={`${completed % total || total} of ${total} pomodoros completed`}
-    >
+    <div className="flex items-center gap-0.75" aria-label={ariaLabel}>
       {dots.map((filled, i) => (
         <span
           key={i}
           className={cn(
             'rounded-full transition-all',
             compact ? 'size-1.5' : 'size-2',
-            filled
-              ? 'bg-neutral-500 dark:bg-neutral-400'
-              : 'bg-neutral-200 dark:bg-neutral-700'
+            filled ? 'bg-foreground/50' : 'bg-muted-foreground/25'
           )}
         />
       ))}
@@ -59,8 +56,9 @@ function CycleDots({
 interface PomodoroWidgetProps {
   onNavigateToPomodoro?: () => void
 }
-
 export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
+  const { t } = useTranslation()
+
   const timerState = usePomodoroStore(state => state.timerState)
   const currentType = usePomodoroStore(state => state.currentType)
   const timeRemaining = usePomodoroStore(state => state.timeRemaining)
@@ -79,6 +77,7 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
   const linkedTask = linkedTaskId
     ? tasks.find(t => t.id === linkedTaskId)
     : null
+  const cycleTotal = normalizeCycleTotal(settings.pomos_until_long_break)
 
   // Track previous timerState to detect completion
   const prevTimerState = useRef(timerState)
@@ -103,12 +102,16 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
       const wasBreak = prevType.current !== 'focus'
       void Promise.resolve(
         sendNotification({
-          title: wasBreak ? 'Break is over' : 'Focus session complete!',
+          title: wasBreak
+            ? t('widgets.pomodoro.notification.breakOverTitle')
+            : t('widgets.pomodoro.notification.focusCompleteTitle'),
           body: wasBreak
-            ? 'Ready to focus again?'
-            : 'Time for a break. You earned it.',
+            ? t('widgets.pomodoro.notification.breakOverBody')
+            : t('widgets.pomodoro.notification.focusCompleteBody'),
         })
-      ).catch(console.error)
+      ).catch(() => {
+        // Keep timer flow resilient if native notification fails.
+      })
       setTimeout(() => {
         notifyRef.current = false
       }, 2000)
@@ -116,9 +119,14 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
 
     prevTimerState.current = timerState
     prevType.current = currentType
-  }, [timerState, currentType, settings.sound_notifications])
+  }, [timerState, currentType, settings.sound_notifications, t])
 
   const isRunning = timerState === 'running'
+  const cycleProgress = getCycleProgress(cyclesCompleted, cycleTotal)
+  const cycleAriaLabel = t('widgets.pomodoro.cycleProgress', {
+    completed: cycleProgress,
+    total: cycleTotal,
+  })
 
   const handlePlayPause = useCallback(() => {
     if (isRunning) pause()
@@ -126,14 +134,19 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
   }, [isRunning, pause, start])
 
   return (
-    <WidgetCard title="Focus" icon={Timer} onClick={onNavigateToPomodoro}>
+    <WidgetCard
+      title={t('widgets.pomodoro.title')}
+      icon={Timer}
+      onClick={onNavigateToPomodoro}
+    >
       <div className="flex h-full flex-col items-center justify-center">
         {/* Cycle dots */}
         <div className="mb-2 flex items-center justify-center">
           <CycleDots
             completed={cyclesCompleted}
-            total={settings.pomos_until_long_break}
+            total={cycleTotal}
             compact
+            ariaLabel={cycleAriaLabel}
           />
         </div>
 
@@ -143,17 +156,17 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
           onClick={e => {
             e.stopPropagation()
           }}
-          className="flex items-center gap-1.5 rounded-full bg-neutral-100 px-4 py-1.5 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
+          className="flex items-center gap-1.5 rounded-full bg-muted px-4 py-1.5 transition-colors hover:bg-accent"
         >
-          <Link2 className="size-3.5 shrink-0 text-neutral-500 dark:text-neutral-400" />
-          <span className="max-w-[140px] truncate text-sm text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200">
-            {linkedTask ? linkedTask.title : 'No task selected'}
+          <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+          <span className="max-w-[140px] truncate text-sm text-muted-foreground transition-colors hover:text-foreground">
+            {linkedTask ? linkedTask.title : t('widgets.pomodoro.noTaskSelected')}
           </span>
         </button>
 
         {/* Timer display */}
         <div className="my-6 flex items-center justify-center">
-          <span className="tabular-nums tracking-tight text-6xl font-bold text-neutral-900 dark:text-white">
+          <span className="text-foreground tabular-nums tracking-tight text-6xl font-bold">
             {formatTime(timeRemaining)}
           </span>
         </div>
@@ -168,8 +181,8 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
               e.stopPropagation()
               reset()
             }}
-            aria-label="Reset timer"
-            className="p-2 text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white"
+            aria-label={t('widgets.pomodoro.resetAria')}
+            className="p-2 text-muted-foreground transition-colors hover:text-foreground"
           >
             <RotateCcw className="size-5" />
           </motion.button>
@@ -182,8 +195,12 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
               e.stopPropagation()
               handlePlayPause()
             }}
-            aria-label={isRunning ? 'Pause timer' : 'Start timer'}
-            className="flex size-16 items-center justify-center rounded-full bg-orange-500 text-white shadow-lg transition-all hover:bg-orange-600"
+            aria-label={
+              isRunning
+                ? t('widgets.pomodoro.pauseAria')
+                : t('widgets.pomodoro.startAria')
+            }
+            className="bg-primary text-primary-foreground hover:bg-primary/90 flex size-16 items-center justify-center rounded-full shadow-lg transition-all"
           >
             {isRunning ? (
               <Pause className="size-7" fill="currentColor" />
@@ -200,8 +217,8 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
               e.stopPropagation()
               void skip().catch(console.error)
             }}
-            aria-label="Skip to next interval"
-            className="p-2 text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white"
+            aria-label={t('widgets.pomodoro.skipAria')}
+            className="p-2 text-muted-foreground transition-colors hover:text-foreground"
           >
             <SkipForward className="size-5" />
           </motion.button>
