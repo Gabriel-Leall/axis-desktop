@@ -16,6 +16,7 @@ interface AnalyticsState {
 
   // Data
   summary: AnalyticsSummary | null
+  previousSummary: AnalyticsSummary | null
   focusTimeData: FocusTimeByDay[]
   taskCountData: TaskCountByDay[]
   pomodoroSummary: PomodoroSummary[]
@@ -43,6 +44,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
       period: 'this_week',
 
       summary: null,
+      previousSummary: null,
       focusTimeData: [],
       taskCountData: [],
       pomodoroSummary: [],
@@ -72,8 +74,15 @@ export const useAnalyticsStore = create<AnalyticsState>()(
           const prevStartStr = prevStart.toISOString()
           const prevEndStr = prevEnd.toISOString()
 
+          const windowMs = end.getTime() - start.getTime()
+          const prevWindowMs = prevEnd.getTime() - prevStart.getTime()
+          const baselineWindowMs = prevWindowMs > 0 ? prevWindowMs : windowMs
+          const prev2End = new Date(prevStart)
+          const prev2Start = new Date(prevStart.getTime() - baselineWindowMs)
+
           const [
             summaryResult,
+            previousSummaryResult,
             focusTimeResult,
             taskCountResult,
             pomodoroSummaryResult,
@@ -85,6 +94,12 @@ export const useAnalyticsStore = create<AnalyticsState>()(
               prevStartStr,
               prevEndStr
             ),
+            commands.getAnalyticsSummary(
+              prevStartStr,
+              prevEndStr,
+              prev2Start.toISOString(),
+              prev2End.toISOString()
+            ),
             commands.getFocusTimeByDay(startStr, endStr),
             commands.getTaskCountsByDay(startStr, endStr),
             commands.getPomodoroSummary(startStr, endStr),
@@ -95,6 +110,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
           ])
 
           const summary = unwrapOrThrow(summaryResult)
+          const previousSummary = unwrapOrThrow(previousSummaryResult)
           const focusTimeData = unwrapOrThrow(focusTimeResult)
           const taskCountData = unwrapOrThrow(taskCountResult)
           const pomodoroSummary = unwrapOrThrow(pomodoroSummaryResult)
@@ -103,6 +119,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
           set(
             {
               summary,
+              previousSummary,
               focusTimeData,
               taskCountData,
               pomodoroSummary,
