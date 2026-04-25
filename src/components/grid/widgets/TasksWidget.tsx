@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckSquare, ChevronRight, Plus } from 'lucide-react'
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { WidgetCard } from '../WidgetCard'
 import {
   useTasksStore,
@@ -13,8 +15,19 @@ import { motion, AnimatePresence } from 'motion/react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { listItemVariants } from '@/lib/motion-tokens'
 
-function PriorityTag({ priority }: { priority: Task['priority'] }) {
-  const label = priority === 'high' ? 'High' : priority === 'medium' ? 'Medium' : 'Low'
+function PriorityTag({
+  priority,
+  t,
+}: {
+  priority: Task['priority']
+  t: TFunction
+}) {
+  const label =
+    priority === 'high'
+      ? t('tasks.priority.high')
+      : priority === 'medium'
+        ? t('tasks.priority.medium')
+        : t('tasks.priority.low')
 
   return (
     <span
@@ -25,7 +38,13 @@ function PriorityTag({ priority }: { priority: Task['priority'] }) {
   )
 }
 
-function QuickAddInput({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
+function QuickAddInput({
+  onAdd,
+  t,
+}: {
+  onAdd: (title: string) => Promise<void>
+  t: TFunction
+}) {
   const [value, setValue] = useState('')
 
   const handleSubmit = async () => {
@@ -48,8 +67,8 @@ function QuickAddInput({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
           }
           if (e.key === 'Escape') setValue('')
         }}
-        placeholder="Add task..."
-        aria-label="Quick add task"
+        placeholder={t('widgets.tasks.quickAddPlaceholder')}
+        aria-label={t('widgets.tasks.quickAddAria')}
         className="flex-1 bg-transparent text-[12px] text-foreground placeholder:text-muted-foreground/50 outline-none"
       />
     </div>
@@ -60,10 +79,12 @@ function TaskRow({
   task,
   onToggle,
   onSelect,
+  t,
 }: {
   task: Task
   onToggle: () => void
   onSelect: () => void
+  t: TFunction
 }) {
   const isDone = task.status === 'done'
 
@@ -75,11 +96,15 @@ function TaskRow({
       animate="visible"
       exit="exit"
       onClick={onSelect}
-      className="group flex cursor-pointer items-center gap-3 border-b border-neutral-200 py-2.5 last:border-b-0 dark:border-neutral-800"
+      className="group flex cursor-pointer items-center gap-3 border-b border-border py-2.5 last:border-b-0"
     >
       <motion.button
         type="button"
-        aria-label={isDone ? 'Mark as incomplete' : 'Mark as complete'}
+        aria-label={
+          isDone
+            ? t('widgets.tasks.markIncompleteAria')
+            : t('widgets.tasks.markCompleteAria')
+        }
         onClick={e => {
           e.stopPropagation()
           onToggle()
@@ -90,14 +115,14 @@ function TaskRow({
         className={cn(
           'relative flex size-5 shrink-0 items-center justify-center rounded border transition-colors',
           isDone
-            ? 'border-orange-500 bg-orange-500'
-            : 'border-neutral-600 group-hover:border-neutral-400'
+            ? 'border-primary bg-primary'
+            : 'border-muted-foreground/60 group-hover:border-muted-foreground'
         )}
       >
         <AnimatePresence>
           {isDone && (
             <motion.span
-              className="pointer-events-none absolute inset-0 rounded border border-orange-400"
+              className="pointer-events-none absolute inset-0 rounded border border-primary/70"
               initial={{ opacity: 0.6, scale: 1 }}
               animate={{ opacity: 0, scale: 1.7 }}
               exit={{ opacity: 0 }}
@@ -114,7 +139,10 @@ function TaskRow({
               exit={{ scale: 0.2, opacity: 0 }}
               transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             >
-              <CheckSquare className="size-3 text-white" strokeWidth={2.5} />
+              <CheckSquare
+                className="text-primary-foreground size-3"
+                strokeWidth={2.5}
+              />
             </motion.span>
           )}
         </AnimatePresence>
@@ -124,14 +152,14 @@ function TaskRow({
         className={cn(
           'flex-1 truncate font-sans text-sm',
           isDone
-            ? 'text-neutral-400 line-through dark:text-neutral-500'
-            : 'text-neutral-800 dark:text-neutral-200'
+            ? 'text-muted-foreground line-through'
+            : 'text-foreground'
         )}
       >
         {task.title}
       </span>
 
-      <PriorityTag priority={task.priority} />
+      <PriorityTag priority={task.priority} t={t} />
     </motion.div>
   )
 }
@@ -141,6 +169,8 @@ interface TasksWidgetProps {
 }
 
 export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
+  const { t } = useTranslation()
+
   const tasks = useTasksStore(state => state.tasks)
   const isLoading = useTasksStore(state => state.isLoading)
   const loadTasks = useTasksStore(state => state.loadTasks)
@@ -159,7 +189,11 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
   const pendingCount = todayTasks.filter(t => t.status !== 'done').length
 
   const handleAddTask = async (title: string) => {
-    await addTask(title, { priority: 'medium' })
+    try {
+      await addTask(title, { priority: 'medium' })
+    } catch {
+      // Keep widget usable if quick add fails.
+    }
   }
 
   const handleSelect = (taskId: string) => {
@@ -168,11 +202,11 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
   }
 
   return (
-    <WidgetCard title="Today" icon={CheckSquare}>
+    <WidgetCard title={t('widgets.tasks.title')} icon={CheckSquare}>
       <div className="flex h-full flex-col">
         <div className="mb-2 flex items-center justify-between px-1">
           <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            Tasks
+            {t('widgets.tasks.header')}
           </span>
           {totalCount > 0 && (
             <span className="font-mono text-[10px] text-muted-foreground">
@@ -210,7 +244,7 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
                 strokeWidth={1.5}
               />
               <span className="text-[12px] text-muted-foreground/50">
-                Nothing for today
+                {t('widgets.tasks.empty')}
               </span>
             </motion.div>
           ) : (
@@ -221,20 +255,21 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
                   task={task}
                   onToggle={() => toggleComplete(task.id)}
                   onSelect={() => handleSelect(task.id)}
+                  t={t}
                 />
               ))}
             </AnimatePresence>
           )}
         </div>
 
-        <QuickAddInput onAdd={handleAddTask} />
+        <QuickAddInput onAdd={handleAddTask} t={t} />
 
         <button
           type="button"
           onClick={() => onNavigateToTasks?.()}
           className="mt-auto flex items-center gap-0.5 self-end text-[11px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
         >
-          View all
+          {t('widgets.tasks.viewAll')}
           <ChevronRight className="size-3" />
         </button>
       </div>
