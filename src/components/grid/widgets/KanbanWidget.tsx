@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ArrowUpRight, Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { WidgetCard } from '../WidgetCard'
 import { cn } from '@/lib/utils'
 import { useKanbanStore } from '@/store/kanban-store'
@@ -94,6 +95,8 @@ function MiniCard({
 }
 
 export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
+  const { t } = useTranslation()
+
   const boards = useKanbanStore(state => state.boards)
   const activeBoardId = useKanbanStore(state => state.activeBoardId)
   const fullBoard = useKanbanStore(state => state.fullBoard)
@@ -246,7 +249,7 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
   }
 
   return (
-    <WidgetCard title="Kanban">
+    <WidgetCard title={t('widgets.kanban.title')}>
       <div className="flex h-full flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <select
@@ -265,7 +268,7 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
             type="button"
             onClick={onOpenKanban}
             className="inline-flex h-7 items-center gap-1 rounded border border-border px-2 text-[11px] hover:bg-accent"
-            title="Open full page"
+            title={t('widgets.kanban.openFullPage')}
           >
             <ArrowUpRight className="size-3" />
           </button>
@@ -326,7 +329,7 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
 
                       {hiddenCount > 0 && (
                         <span className="mt-1 text-[10px] text-muted-foreground/70">
-                          +{hiddenCount} more
+                          {t('widgets.kanban.moreCount', { count: hiddenCount })}
                         </span>
                       )}
 
@@ -348,7 +351,7 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
                               }
                             }}
                             className="h-7 w-full rounded border border-border bg-background px-2 text-[11px] outline-none"
-                            placeholder="New card"
+                            placeholder={t('widgets.kanban.newCardPlaceholder')}
                             autoFocus
                           />
                         ) : (
@@ -359,7 +362,7 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
                             }
                             className="flex w-full items-center gap-1 rounded px-1 py-1 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground"
                           >
-                            <Plus className="size-3" /> Add card
+                            <Plus className="size-3" /> {t('widgets.kanban.addCard')}
                           </button>
                         )}
                       </div>
@@ -386,7 +389,7 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
           <div className="rounded border border-border bg-card p-2 text-[11px]">
             <p className="mb-1 font-medium">{selectedCard.title}</p>
             <p className="line-clamp-3 text-muted-foreground">
-              {selectedCard.description || 'No description'}
+              {selectedCard.description || t('widgets.kanban.noDescription')}
             </p>
           </div>
         )}
