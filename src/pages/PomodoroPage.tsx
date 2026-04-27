@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Play,
   Pause,
@@ -31,14 +32,14 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-function typeLabel(type: SessionType): string {
+function typeLabel(type: SessionType, t: (k: string) => string): string {
   switch (type) {
     case 'focus':
-      return 'Focus'
+      return t('pomodoro.session.focus')
     case 'short_break':
-      return 'Short Break'
+      return t('pomodoro.session.shortBreak')
     case 'long_break':
-      return 'Long Break'
+      return t('pomodoro.session.longBreak')
   }
 }
 
@@ -69,17 +70,20 @@ function AutoStartBadge({
   autoStartBreaks: boolean
   autoStartFocus: boolean
 }) {
-  // Determine what will auto-start after the current session
+  const { t } = useTranslation()
   const nextWillAutoStart =
     currentType === 'focus' ? autoStartBreaks : autoStartFocus
-  const nextLabel = currentType === 'focus' ? 'break' : 'focus'
+  const nextType =
+    currentType === 'focus'
+      ? t('pomodoro.session.shortBreak')
+      : t('pomodoro.session.focus')
 
   if (!nextWillAutoStart) return null
 
   return (
     <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
       <Zap className="size-3 shrink-0" strokeWidth={1.5} />
-      <span>Next {nextLabel} starts automatically</span>
+      <span>{t('pomodoro.autoStart', { type: nextType })}</span>
     </div>
   )
 }
@@ -117,7 +121,7 @@ function CycleDotsLarge({
         ))}
       </div>
       <span className="text-[11px] text-muted-foreground">
-        {cyclePos || total} of {total} pomodoros
+        {(() => { const { t } = useTranslation(); return t('pomodoro.cycleLabel', { current: cyclePos || total, total }) })()}
       </span>
     </div>
   )
@@ -148,6 +152,7 @@ function ProgressBarLarge({
 // ─── Task Link Section ────────────────────────────────────────────────────────
 
 function TaskLinkSection() {
+  const { t } = useTranslation()
   const linkedTaskId = usePomodoroStore(state => state.linkedTaskId)
   const linkTask = usePomodoroStore(state => state.linkTask)
   const unlinkTask = usePomodoroStore(state => state.unlinkTask)
@@ -184,7 +189,7 @@ function TaskLinkSection() {
   return (
     <section className="space-y-2">
       <h2 className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-        Linked task
+        {t('pomodoro.linkedTask.heading')}
       </h2>
 
       {linkedTask ? (
@@ -207,7 +212,7 @@ function TaskLinkSection() {
         </div>
       ) : (
         <div className="text-[13px] text-muted-foreground/50 italic px-1">
-          No task linked
+          {t('pomodoro.linkedTask.none')}
         </div>
       )}
 
@@ -219,7 +224,7 @@ function TaskLinkSection() {
           className="flex items-center gap-1.5 text-[12px] text-muted-foreground/70 transition-colors hover:text-foreground"
         >
           <Plus className="size-3.5" />
-          Link a task
+          {t('pomodoro.linkedTask.linkButton')}
         </button>
 
         {showPicker && (
@@ -230,14 +235,14 @@ function TaskLinkSection() {
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search tasks..."
+                placeholder={t('pomodoro.linkedTask.searchPlaceholder')}
                 className="w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/50"
               />
             </div>
             <div className="max-h-48 overflow-y-auto py-1">
               {filtered.length === 0 ? (
                 <div className="px-3 py-2 text-[12px] text-muted-foreground/50">
-                  No tasks found
+                  {t('pomodoro.linkedTask.noResults')}
                 </div>
               ) : (
                 filtered.slice(0, 10).map(task => (
@@ -274,6 +279,7 @@ function SessionIcon({ type }: { type: SessionType }) {
 }
 
 function SessionHistorySection({ sessions }: { sessions: PomodoroSession[] }) {
+  const { t } = useTranslation()
   const tasks = useTasksStore(state => state.tasks)
   const completedFocus = sessions.filter(
     s => s.session_type === 'focus' && s.completed
@@ -283,18 +289,18 @@ function SessionHistorySection({ sessions }: { sessions: PomodoroSession[] }) {
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-          Today&apos;s sessions
+          {t('pomodoro.history.heading')}
         </h2>
         {completedFocus > 0 && (
           <span className="text-[11px] text-muted-foreground">
-            {completedFocus} {completedFocus === 1 ? 'pomo' : 'pomos'}
+            {t('pomodoro.history.pomosCount', { count: completedFocus })}
           </span>
         )}
       </div>
 
       {sessions.length === 0 ? (
         <div className="py-4 text-center text-[12px] text-muted-foreground/50">
-          No sessions today yet
+          {t('pomodoro.history.empty')}
         </div>
       ) : (
         <div className="space-y-0.5">
@@ -316,7 +322,7 @@ function SessionHistorySection({ sessions }: { sessions: PomodoroSession[] }) {
                   {formatSessionTime(session.started_at)}
                 </span>
                 <span className="text-muted-foreground/70 shrink-0">
-                  {typeLabel(session.session_type)}
+                  {typeLabel(session.session_type, t)}
                 </span>
                 <span className="text-muted-foreground/50 shrink-0">
                   {formatDuration(session.duration_seconds)}
@@ -328,7 +334,7 @@ function SessionHistorySection({ sessions }: { sessions: PomodoroSession[] }) {
                 )}
                 {!session.completed && (
                   <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/50 italic">
-                    in progress
+                    {t('pomodoro.history.inProgress')}
                   </span>
                 )}
               </div>
@@ -409,6 +415,7 @@ function SettingsSection({
   settings: PomodoroSettings
   onUpdate: (updates: Partial<PomodoroSettings>) => void
 }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
 
   const rows: {
@@ -420,40 +427,40 @@ function SettingsSection({
     max?: number
   }[] = [
     {
-      label: 'Focus duration',
-      unit: 'min',
+      label: t('pomodoro.settings.focusDuration'),
+      unit: t('pomodoro.settings.unitMin'),
       type: 'number',
       key: 'focus_duration',
       min: 1,
       max: 120,
     },
     {
-      label: 'Short break',
-      unit: 'min',
+      label: t('pomodoro.settings.shortBreak'),
+      unit: t('pomodoro.settings.unitMin'),
       type: 'number',
       key: 'short_break_duration',
       min: 1,
       max: 60,
     },
     {
-      label: 'Long break',
-      unit: 'min',
+      label: t('pomodoro.settings.longBreak'),
+      unit: t('pomodoro.settings.unitMin'),
       type: 'number',
       key: 'long_break_duration',
       min: 1,
       max: 120,
     },
     {
-      label: 'Pomos until long break',
+      label: t('pomodoro.settings.pomosUntilLongBreak'),
       type: 'number',
       key: 'pomos_until_long_break',
       min: 1,
       max: 12,
     },
-    { label: 'Auto-start breaks', type: 'toggle', key: 'auto_start_breaks' },
-    { label: 'Auto-start focus', type: 'toggle', key: 'auto_start_focus' },
+    { label: t('pomodoro.settings.autoStartBreaks'), type: 'toggle', key: 'auto_start_breaks' },
+    { label: t('pomodoro.settings.autoStartFocus'), type: 'toggle', key: 'auto_start_focus' },
     {
-      label: 'Sound notifications',
+      label: t('pomodoro.settings.soundNotifications'),
       type: 'toggle',
       key: 'sound_notifications',
     },
@@ -466,7 +473,7 @@ function SettingsSection({
         onClick={() => setOpen(v => !v)}
         className="flex w-full items-center justify-between text-[11px] font-medium uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
       >
-        Settings
+        {t('pomodoro.settings.heading')}
         {open ? (
           <ChevronUp className="size-3.5" />
         ) : (
@@ -594,11 +601,13 @@ export function PomodoroPage() {
     else start()
   }, [isRunning, pause, start])
 
+  const { t } = useTranslation()
+
   return (
     <div className="flex h-full flex-col overflow-y-auto">
       {/* Page header */}
       <div className="shrink-0 border-b border-border px-6 py-3">
-        <h1 className="text-[13px] font-medium text-foreground">Focus</h1>
+        <h1 className="text-[13px] font-medium text-foreground">{t('pomodoro.pageTitle')}</h1>
       </div>
 
       <div className="flex flex-col gap-8 px-6 py-6 max-w-lg mx-auto w-full">
@@ -614,10 +623,10 @@ export function PomodoroPage() {
                   : 'text-muted-foreground'
               )}
             >
-              {typeLabel(currentType)}
+              {typeLabel(currentType, t)}
             </span>
             <span className="text-[11px] text-muted-foreground">
-              Space to start · S to skip · R to reset
+              {t('pomodoro.hint')}
             </span>
           </div>
 
@@ -636,7 +645,7 @@ export function PomodoroPage() {
                   : 'text-muted-foreground'
               )}
               style={{ fontSize: '80px', fontWeight: 200, lineHeight: 1 }}
-              aria-label={`${formatTime(timeRemaining)} remaining`}
+              aria-label={t('pomodoro.controls.timeRemaining', { time: formatTime(timeRemaining) })}
               aria-live="polite"
               aria-atomic="true"
             >
@@ -658,7 +667,7 @@ export function PomodoroPage() {
             <button
               type="button"
               onClick={reset}
-              aria-label="Reset timer (R)"
+              aria-label={t('pomodoro.controls.resetAria')}
               className="rounded-lg p-2 text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
             >
               <RotateCcw className="size-4" />
@@ -668,7 +677,7 @@ export function PomodoroPage() {
               type="button"
               onClick={handlePlayPause}
               aria-label={
-                isRunning ? 'Pause timer (Space)' : 'Start timer (Space)'
+                isRunning ? t('pomodoro.controls.pauseAria') : t('pomodoro.controls.startAria')
               }
               className={cn(
                 'flex size-12 items-center justify-center rounded-full transition-all',
@@ -687,7 +696,7 @@ export function PomodoroPage() {
             <button
               type="button"
               onClick={() => void skip()}
-              aria-label="Skip interval (S)"
+              aria-label={t('pomodoro.controls.skipAria')}
               className="rounded-lg p-2 text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
             >
               <SkipForward className="size-4" />
