@@ -393,21 +393,40 @@ const CalendarCombobox = ({
 }: CalendarComboboxProps) => {
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [inputValue, setInputValue] = useState<string>('')
-  const [currentPreset, setCurrentPreset] = useState<{ text: string; start: Date; end: Date } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+
+  const currentPreset = useMemo(() => {
+    if (!value?.start || !value?.end) return null
+    return (
+      Object.values(presets).find(
+        p =>
+          p.start.getTime() === value.start?.getTime() &&
+          p.end.getTime() === value.end?.getTime()
+      ) || null
+    )
+  }, [value, presets])
+
+  // Synchronize input value when value prop changes
+  const [prevValue, setPrevValue] = useState(value)
+  if (
+    value?.start?.getTime() !== prevValue?.start?.getTime() ||
+    value?.end?.getTime() !== prevValue?.end?.getTime()
+  ) {
+    setPrevValue(value)
+    setInputValue(currentPreset?.text ?? '')
+  }
 
   const onFocus = () => {
     setIsOpen(true)
   }
 
-  const onChangeInputValue = (value: string) => {
-    setInputValue(value)
+  const onChangeInputValue = (val: string) => {
+    setInputValue(val)
   }
 
-  const onClick = (value: { text: string; start: Date; end: Date }) => {
-    setInputValue(value.text)
-    setCurrentPreset(value)
-    onChange({ start: value.start, end: value.end })
+  const onClick = (preset: { text: string; start: Date; end: Date }) => {
+    setInputValue(preset.text)
+    onChange({ start: preset.start, end: preset.end })
     setIsOpen(false)
   }
 
@@ -425,26 +444,12 @@ const CalendarCombobox = ({
       const preset = array[presetIndex]?.[1]
       if (!preset) return
 
-      setInputValue(preset.text)
-      setCurrentPreset(preset)
       onChange({
         start: preset.start,
         end: preset.end,
       })
     }
   }, [presetIndex, presets, onChange])
-
-  useEffect(() => {
-    if (currentPreset) {
-      if (
-        currentPreset.start !== value?.start ||
-        currentPreset.end !== value?.end
-      ) {
-        setCurrentPreset(null)
-        setInputValue('')
-      }
-    }
-  }, [value, currentPreset])
 
   return (
     <div
@@ -454,12 +459,7 @@ const CalendarCombobox = ({
           'inline-block text-sm font-sans',
           compact ? 'w-45 absolute left-9.5' : 'w-62.5 relative',
           compact && !isOpen && 'pl-35',
-          compact &&
-            (isOpen ||
-              (currentPreset &&
-                currentPreset?.start === value?.start &&
-                currentPreset?.end === value?.end)) &&
-            'pl-0'
+          compact && (isOpen || !!currentPreset) && 'pl-0'
         )
       )}
     >
@@ -706,13 +706,10 @@ export const Calendar = ({
     }
   }
 
-  useEffect(() => {
-    // Stop selection mode after a committed range or when cleared externally.
-    if (!value?.start || value.end) {
-      setIsSelecting(false)
-      setHoverDate(null)
-    }
-  }, [value?.start, value?.end])
+  if ((!value?.start || value.end) && (isSelecting || hoverDate)) {
+    setIsSelecting(false)
+    setHoverDate(null)
+  }
 
   const onApply = () => {
     const parsedStartDate = parse(startDate, 'MMM dd, yyyy', new Date())
@@ -752,7 +749,14 @@ export const Calendar = ({
     }
   }
 
-  useEffect(() => {
+  const [prevValueSync, setPrevValueSync] = useState({ value, selectedTimezone, isOpen })
+  if (
+    value?.start?.getTime() !== prevValueSync.value?.start?.getTime() ||
+    value?.end?.getTime() !== prevValueSync.value?.end?.getTime() ||
+    selectedTimezone !== prevValueSync.selectedTimezone ||
+    isOpen !== prevValueSync.isOpen
+  ) {
+    setPrevValueSync({ value, selectedTimezone, isOpen })
     setStartDate(
       formatInTimeZone(
         value?.start || new Date(),
@@ -781,7 +785,7 @@ export const Calendar = ({
         'HH:mm'
       )
     )
-  }, [isOpen, selectedTimezone, value])
+  }
 
   return (
     <div className="relative">
