@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   DndContext,
   DragOverlay,
@@ -37,9 +38,9 @@ interface KanbanPageProps {
 type DragItemType = 'column' | 'card'
 
 function cardPriorityClass(priority: KanbanCard['priority']): string {
-  if (priority === 'high') return 'bg-red-500'
+  if (priority === 'high') return 'bg-destructive'
   if (priority === 'low') return 'bg-muted-foreground/50'
-  return 'bg-yellow-400'
+  return 'bg-chart-1/70'
 }
 
 function SortableColumnCard({
@@ -134,6 +135,7 @@ function SortableBoardColumn({
   onAddCard: (title: string) => void
   onSelectCard: (cardId: string) => void
 }) {
+  const { t } = useTranslation()
   const {
     attributes,
     listeners,
@@ -173,7 +175,7 @@ function SortableBoardColumn({
           {...attributes}
           {...listeners}
           className="rounded p-1 text-muted-foreground/50 hover:bg-accent hover:text-foreground"
-          aria-label="Drag column"
+          aria-label={t('kanban.dragColumnAria')}
         >
           <GripVertical className="size-3.5" />
         </button>
@@ -217,21 +219,21 @@ function SortableBoardColumn({
               onClick={onStartEditing}
               className="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-accent"
             >
-              <SquarePen className="size-3" /> Rename
+              <SquarePen className="size-3" /> {t('kanban.column.rename')}
             </button>
             <button
               type="button"
               onClick={onClearColumn}
               className="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-accent"
             >
-              <Trash2 className="size-3" /> Clear cards
+              <Trash2 className="size-3" /> {t('kanban.column.clearCards')}
             </button>
             <button
               type="button"
               onClick={onDeleteColumn}
               className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-destructive hover:bg-destructive/10"
             >
-              <Trash2 className="size-3" /> Delete column
+              <Trash2 className="size-3" /> {t('kanban.column.delete')}
             </button>
           </div>
         </details>
@@ -279,7 +281,7 @@ function SortableBoardColumn({
               setIsAddingCard(false)
             }}
             className="h-8 w-full rounded border border-border bg-background px-2 text-[12px] outline-none"
-            placeholder="Card title"
+            placeholder={t('kanban.cardTitle')}
             autoFocus
           />
         ) : (
@@ -288,7 +290,7 @@ function SortableBoardColumn({
             onClick={() => setIsAddingCard(true)}
             className="flex w-full items-center gap-1 rounded px-2 py-1 text-[12px] text-muted-foreground hover:bg-accent hover:text-foreground"
           >
-            <Plus className="size-3.5" /> Add a card
+            <Plus className="size-3.5" /> {t('kanban.card.addButton')}
           </button>
         )}
       </div>
@@ -297,6 +299,7 @@ function SortableBoardColumn({
 }
 
 function CardDetailPanel() {
+  const { t } = useTranslation()
   const fullBoard = useKanbanStore(state => state.fullBoard)
   const selectedCardId = useKanbanStore(state => state.selectedCardId)
   const selectCard = useKanbanStore(state => state.selectCard)
@@ -354,20 +357,20 @@ function CardDetailPanel() {
         onClick={event => event.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-medium">Card details</h2>
+          <h2 className="text-sm font-medium">{t('kanban.detail.heading')}</h2>
           <button
             type="button"
             onClick={() => selectCard(null)}
             className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
           >
-            Close
+            {t('kanban.detail.close')}
           </button>
         </div>
 
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-[11px] text-muted-foreground">
-              Title
+              {t('kanban.detail.titleLabel')}
             </label>
             <input
               value={card.title}
@@ -380,7 +383,7 @@ function CardDetailPanel() {
 
           <div>
             <label className="mb-1 block text-[11px] text-muted-foreground">
-              Description
+              {t('kanban.detail.descriptionLabel')}
             </label>
             <textarea
               value={card.description ?? ''}
@@ -390,14 +393,14 @@ function CardDetailPanel() {
                 })
               }
               className="h-28 w-full resize-none rounded border border-border bg-background px-2 py-1.5 text-[13px] outline-none"
-              placeholder="Markdown supported"
+              placeholder={t('kanban.detail.descriptionPlaceholder')}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="mb-1 block text-[11px] text-muted-foreground">
-                Priority
+                {t('kanban.detail.priorityLabel')}
               </label>
               <select
                 value={card.priority}
@@ -408,15 +411,15 @@ function CardDetailPanel() {
                 }
                 className="h-8 w-full rounded border border-border bg-background px-2 text-[12px]"
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
+                <option value="low">{t('kanban.detail.priority.low')}</option>
+                <option value="medium">{t('kanban.detail.priority.medium')}</option>
+                <option value="high">{t('kanban.detail.priority.high')}</option>
               </select>
             </div>
 
             <div>
               <label className="mb-1 block text-[11px] text-muted-foreground">
-                Move to column
+                {t('kanban.detail.moveToColumn')}
               </label>
               <select
                 value={card.column_id}
@@ -443,7 +446,7 @@ function CardDetailPanel() {
           <div>
             <div className="mb-1 flex items-center justify-between">
               <label className="text-[11px] text-muted-foreground">
-                Subtasks
+                {t('kanban.detail.subtasksLabel')}
               </label>
               <span className="text-[11px] text-muted-foreground">
                 {subtasks.filter(item => item.completed).length}/
@@ -484,21 +487,21 @@ function CardDetailPanel() {
                 }
               }}
               className="h-8 w-full rounded border border-border bg-background px-2 text-[12px] outline-none"
-              placeholder="Add subtask"
+              placeholder={t('kanban.detail.addSubtask')}
             />
           </div>
 
           <button
             type="button"
             onClick={() => {
-              const shouldDelete = window.confirm('Delete this card?')
+              const shouldDelete = window.confirm(t('kanban.detail.deleteConfirm'))
               if (!shouldDelete) return
               void deleteCard(card.id)
               selectCard(null)
             }}
             className="inline-flex items-center gap-1 rounded border border-destructive/40 px-2 py-1 text-[12px] text-destructive hover:bg-destructive/10"
           >
-            <Trash2 className="size-3" /> Delete card
+            <Trash2 className="size-3" /> {t('kanban.detail.deleteCard')}
           </button>
         </div>
       </aside>
@@ -507,6 +510,7 @@ function CardDetailPanel() {
 }
 
 export function KanbanPage({ compact = false }: KanbanPageProps) {
+  const { t } = useTranslation()
   const boards = useKanbanStore(state => state.boards)
   const activeBoardId = useKanbanStore(state => state.activeBoardId)
   const fullBoard = useKanbanStore(state => state.fullBoard)
@@ -675,7 +679,7 @@ export function KanbanPage({ compact = false }: KanbanPageProps) {
   if (isLoading && !fullBoard) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Loading kanban...
+        {t('kanban.loading')}
       </div>
     )
   }
@@ -683,7 +687,7 @@ export function KanbanPage({ compact = false }: KanbanPageProps) {
   if (!activeBoard || !fullBoard) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        No active board.
+        {t('kanban.noActiveBoard')}
       </div>
     )
   }
@@ -734,12 +738,12 @@ export function KanbanPage({ compact = false }: KanbanPageProps) {
           <button
             type="button"
             onClick={async () => {
-              const id = await createBoard('Untitled Board')
+              const id = await createBoard(t('kanban.board.untitledName'))
               setEditingBoardNameId(id)
             }}
             className="inline-flex h-8 items-center gap-1 rounded border border-border px-2 text-xs hover:bg-accent"
           >
-            <Plus className="size-3.5" /> New Board
+            <Plus className="size-3.5" /> {t('kanban.board.newBoard')}
           </button>
         </div>
 
@@ -749,7 +753,7 @@ export function KanbanPage({ compact = false }: KanbanPageProps) {
             onClick={() => setEditingBoardNameId(activeBoard.id)}
             className="inline-flex h-8 items-center gap-1 rounded border border-border px-2 text-xs hover:bg-accent"
           >
-            <SquarePen className="size-3.5" /> Board settings
+            <SquarePen className="size-3.5" /> {t('kanban.board.settings')}
           </button>
           {!compact && (
             <button
@@ -763,13 +767,13 @@ export function KanbanPage({ compact = false }: KanbanPageProps) {
           <button
             type="button"
             onClick={() => {
-              const confirmed = window.confirm('Delete this board?')
+              const confirmed = window.confirm(t('kanban.board.deleteConfirm'))
               if (!confirmed) return
               void deleteBoard(activeBoard.id)
             }}
             className="inline-flex h-8 items-center gap-1 rounded border border-destructive/40 px-2 text-xs text-destructive hover:bg-destructive/10"
           >
-            <Trash2 className="size-3.5" /> Delete
+            <Trash2 className="size-3.5" /> {t('kanban.board.delete')}
           </button>
         </div>
       </div>

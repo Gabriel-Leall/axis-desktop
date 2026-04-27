@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Archive, Check, Flame, Plus, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { HeatMap } from '@/components/habits/HeatMap'
@@ -29,6 +30,8 @@ import {
   type HabitLog,
 } from '@/store/habits-store'
 
+// HABIT_COLORS: user-facing accent swatches — intentionally not design-system tokens
+// because they are stored per-habit and displayed as absolute color swatches.
 const HABIT_COLORS = [
   '#0ea5e9',
   '#22c55e',
@@ -48,11 +51,6 @@ const FREQUENCY_LABELS: Record<HabitFrequency, string> = {
   weekends: 'Weekends',
   custom: 'Custom',
 }
-
-const DISPLAY_FONT_FAMILY =
-  '"Aptos Display", "Segoe UI Variable Display", "Trebuchet MS", "Gill Sans MT", sans-serif'
-const BODY_FONT_FAMILY =
-  '"Aptos", "Segoe UI Variable Text", "Segoe UI", "Candara", sans-serif'
 
 interface HabitPageProps {
   initialSelectedHabitId?: string
@@ -182,6 +180,7 @@ function SegmentedTab({
 }
 
 export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
+  const { t } = useTranslation()
   const [modalOpen, setModalOpen] = useState(false)
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null)
   const [form, setForm] = useState<HabitFormState>(defaultFormState())
@@ -278,7 +277,6 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
   return (
     <div
       className="relative flex h-full flex-col overflow-hidden bg-background text-foreground"
-      style={{ fontFamily: BODY_FONT_FAMILY }}
     >
       <div
         aria-hidden
@@ -294,16 +292,15 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
           <div className="space-y-2">
             <h1
               className="text-2xl font-semibold leading-tight md:text-[2rem]"
-              style={{ fontFamily: DISPLAY_FONT_FAMILY }}
             >
-              Disciplined Momentum
+              {t('habits.pageTitle')}
             </h1>
             <p className="text-sm text-muted-foreground">{todayLabel()}</p>
           </div>
 
           <Button size="sm" onClick={openCreate}>
             <Plus className="size-4" />
-            New Habit
+            {t('habits.newHabit')}
           </Button>
         </div>
 
@@ -311,10 +308,10 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
           <section className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur-[1px]">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                Daily Completion
+                {t('habits.dailyCompletion')}
               </p>
               <p className="text-sm font-medium">
-                {progress.done} of {progress.total} due habits finished
+                {t('habits.dailyCompletionDetail', { done: progress.done, total: progress.total })}
               </p>
             </div>
 
@@ -331,15 +328,14 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
           <section className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur-[1px]">
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                Monthly Signal
+                {t('habits.monthlySignal')}
               </p>
               <p className="font-medium">
-                {stats.monthRate.percentage}% consistency
+                {t('habits.monthlyConsistency', { percentage: stats.monthRate.percentage })}
               </p>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Completed activity on {stats.monthRate.completedDays} of{' '}
-              {stats.monthRate.totalDays} tracked days.
+              {t('habits.monthlyDetail', { completed: stats.monthRate.completedDays, total: stats.monthRate.totalDays })}
             </p>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-muted/70">
               <motion.div
@@ -357,17 +353,17 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
         <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/70 p-1">
           <SegmentedTab
             active={activeTab === 'today'}
-            label="Today"
+            label={t('habits.tabs.today')}
             onClick={() => setActiveTab('today')}
           />
           <SegmentedTab
             active={activeTab === 'overview'}
-            label="Overview"
+            label={t('habits.tabs.overview')}
             onClick={() => setActiveTab('overview')}
           />
           <SegmentedTab
             active={activeTab === 'stats'}
-            label="Stats"
+            label={t('habits.tabs.stats')}
             onClick={() => setActiveTab('stats')}
           />
         </div>
@@ -387,10 +383,10 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
               <section className="overflow-hidden rounded-2xl border border-border/70 bg-card/80 backdrop-blur-[1px]">
                 <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
                   <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    Execution Queue
+                    {t('habits.executionQueue')}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {todayHabits.length} due today
+                    {t('habits.dueToday', { count: todayHabits.length })}
                   </p>
                 </div>
 
@@ -403,15 +399,15 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                 ) : todayHabits.length === 0 ? (
                   <div className="space-y-3 px-4 py-8 text-center">
                     <p className="text-sm font-medium">
-                      No habits scheduled today.
+                      {t('habits.empty.title')}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Add a habit to start building your daily cadence.
+                      {t('habits.empty.hint')}
                     </p>
                     <div>
                       <Button size="sm" variant="outline" onClick={openCreate}>
                         <Plus className="size-3.5" />
-                        Create Habit
+                        {t('habits.empty.createButton')}
                       </Button>
                     </div>
                   </div>
@@ -445,14 +441,14 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                             type="button"
                             aria-label={
                               doneToday
-                                ? `Mark ${habit.name} as not done`
-                                : `Mark ${habit.name} as done`
+                                ? t('habits.markUndoneAria', { name: habit.name })
+                                : t('habits.markDoneAria', { name: habit.name })
                             }
                             onClick={() => void toggleHabit(habit.id)}
                             className={cn(
                               'mt-0.5 flex size-8 items-center justify-center self-start rounded-full border transition-all',
                               doneToday
-                                ? 'border-transparent text-white'
+                                ? 'border-transparent text-primary-foreground'
                                 : 'border-muted-foreground/45 text-transparent hover:border-foreground/60'
                             )}
                             style={{
@@ -498,7 +494,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                             <div className="flex items-center gap-3">
                               <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
                                 <Flame className="size-3.5" />
-                                {streak} day run
+                                {t('habits.streakRun', { count: streak })}
                               </span>
                               <Button
                                 variant="ghost"
@@ -521,11 +517,10 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                        Hábito em foco
+                        {t('habits.focusHabit.heading')}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Selecione um hábito na lista para ver consistência e
-                        ajustar frequência.
+                        {t('habits.focusHabit.hint')}
                       </p>
                     </div>
                     {focusedHabit ? (
@@ -534,7 +529,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                         size="sm"
                         onClick={() => openEdit(focusedHabit)}
                       >
-                        Manage
+                        {t('habits.focusHabit.manage')}
                       </Button>
                     ) : null}
                   </div>
@@ -556,8 +551,8 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                           onChange={event =>
                             setSelectedHabit(event.target.value || null)
                           }
-                          className="h-8 max-w-[190px] rounded-md border border-border bg-background px-2 text-xs"
-                          aria-label="Trocar hábito em foco"
+                          className="h-8 max-w-47.5 rounded-md border border-border bg-background px-2 text-xs"
+                          aria-label={t('habits.focusHabit.switchAria')}
                         >
                           {habits.map(habit => (
                             <option key={habit.id} value={habit.id}>
@@ -575,7 +570,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                             <div
                               key={dateISO}
                               title={`${dateISO} - ${completed ? 'Completed' : 'Missed'}`}
-                              className="size-3 rounded-[4px] border border-border/60"
+                              className="size-3 rounded-lg border border-border/60"
                               style={{
                                 backgroundColor: completed
                                   ? focusedHabit.color
@@ -588,33 +583,31 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                       </div>
 
                       <p className="text-xs text-muted-foreground">
-                        Current streak: {focusStreak} day
-                        {focusStreak === 1 ? '' : 's'}
+                        {t('habits.focusHabit.currentStreak', { count: focusStreak })}
                       </p>
                     </div>
                   ) : (
                     <p className="mt-3 text-xs text-muted-foreground">
-                      Nenhum hábito selecionado. Clique em um item da lista para
-                      abrir os detalhes aqui.
+                      {t('habits.focusHabit.noneSelected')}
                     </p>
                   )}
                 </section>
 
                 <section className="rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur-[1px]">
                   <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    Resumo rápido
+                    {t('habits.quickSummary')}
                   </p>
                   <div className="mt-3 space-y-2 text-xs text-muted-foreground">
                     <p>
-                      Top current streak:{' '}
+                      {t('habits.quickSummary.topStreak')}{' '}
                       {stats.topCurrentHabit
                         ? `${stats.topCurrentHabit.name} (${stats.topCurrentHabit.streak}d)`
-                        : 'No data yet'}
+                        : t('habits.quickSummary.noData')}
                     </p>
                     <p>
-                      Most consistent weekday:{' '}
+                      {t('habits.quickSummary.topWeekday')}{' '}
                       {stats.topWeekday === null
-                        ? 'No data yet'
+                        ? t('habits.quickSummary.noData')
                         : weekdayName(stats.topWeekday)}
                     </p>
                   </div>
@@ -633,10 +626,10 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
               {habits.length === 0 ? (
                 <section className="rounded-2xl border border-border/70 bg-card/80 px-4 py-8 text-center backdrop-blur-[1px]">
                   <p className="text-sm font-medium">
-                    No habits in your system yet.
+                    {t('habits.overview.empty.title')}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Create one habit to unlock this overview.
+                    {t('habits.overview.empty.hint')}
                   </p>
                 </section>
               ) : (
@@ -691,7 +684,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                         </div>
 
                         <p className="mt-3 text-xs text-muted-foreground">
-                          {doneToday ? 'Completed today' : 'Pending today'}
+                          {doneToday ? t('habits.completedToday') : t('habits.pendingToday')}
                         </p>
                       </article>
                     )
@@ -710,7 +703,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
             >
               <section className="rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur-[1px]">
                 <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Weekday Pressure Map
+                  {t('habits.stats.weekdayPressureMap')}
                 </p>
 
                 <div className="mt-3 space-y-2">
@@ -740,12 +733,12 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
 
               <section className="rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur-[1px]">
                 <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Historical Board
+                  {t('habits.stats.historicalBoard')}
                 </p>
 
                 {stats.bestHistoricalByHabit.length === 0 ? (
                   <p className="mt-3 text-sm text-muted-foreground">
-                    No streak data yet.
+                    {t('habits.stats.noStreakData')}
                   </p>
                 ) : (
                   <ol className="mt-3 space-y-2">
@@ -768,8 +761,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                 )}
 
                 <p className="mt-4 text-xs text-muted-foreground">
-                  Completion window: {stats.monthRate.completedDays} active days
-                  out of {stats.monthRate.totalDays}.
+                  {t('habits.stats.completionWindow', { completed: stats.monthRate.completedDays, total: stats.monthRate.totalDays })}
                 </p>
               </section>
             </motion.section>
@@ -778,13 +770,13 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
       </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[620px]">
+        <DialogContent className="sm:max-w-155">
           <DialogHeader>
             <DialogTitle>
-              {editingHabitId ? 'Edit Habit' : 'Create New Habit'}
+              {editingHabitId ? t('habits.modal.editTitle') : t('habits.modal.createTitle')}
             </DialogTitle>
             <DialogDescription>
-              Define cadence, visual tag, and execution days.
+              {t('habits.modal.description')}
             </DialogDescription>
           </DialogHeader>
 
@@ -796,19 +788,19 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="habit-name">Habit Name</Label>
+              <Label htmlFor="habit-name">{t('habits.modal.habitName')}</Label>
               <Input
                 id="habit-name"
                 value={form.name}
                 onChange={event =>
                   setForm(current => ({ ...current, name: event.target.value }))
                 }
-                placeholder="Evening walk"
+                placeholder={t('habits.modal.namePlaceholder')}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="habit-icon">Icon (emoji)</Label>
+              <Label htmlFor="habit-icon">{t('habits.modal.iconLabel')}</Label>
               <Input
                 id="habit-icon"
                 maxLength={2}
@@ -816,12 +808,12 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                 onChange={event =>
                   setForm(current => ({ ...current, icon: event.target.value }))
                 }
-                placeholder="🚶"
+                placeholder={t('habits.modal.iconPlaceholder')}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Frequency</Label>
+              <Label>{t('habits.modal.frequencyLabel')}</Label>
               <div className="grid grid-cols-2 gap-2">
                 {(Object.keys(FREQUENCY_LABELS) as HabitFrequency[]).map(
                   frequency => (
@@ -858,7 +850,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
 
             {form.frequency === 'custom' && (
               <div className="space-y-2">
-                <Label>Custom Days</Label>
+                <Label>{t('habits.modal.customDaysLabel')}</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {WEEKDAY_LABELS.map((label, day) => {
                     const active = form.frequencyDays.includes(day)
@@ -892,14 +884,14 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                 </div>
                 {form.frequencyDays.length === 0 && (
                   <p className="text-xs text-destructive">
-                    Pick at least one day.
+                    {t('habits.modal.atLeastOneDay')}
                   </p>
                 )}
               </div>
             )}
 
             <div className="space-y-2">
-              <Label>Color</Label>
+              <Label>{t('habits.modal.colorLabel')}</Label>
               <div className="flex flex-wrap gap-2">
                 {HABIT_COLORS.map(color => (
                   <button
@@ -913,7 +905,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                         : 'border-transparent'
                     )}
                     style={{ backgroundColor: color }}
-                    aria-label={`Select color ${color}`}
+                    aria-label={t('habits.modal.colorAria', { color })}
                   />
                 ))}
               </div>
@@ -963,10 +955,10 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                   size="sm"
                   onClick={() => setModalOpen(false)}
                 >
-                  Cancel
+                  {t('habits.modal.cancel')}
                 </Button>
                 <Button type="submit" size="sm" disabled={!canSubmit}>
-                  {editingHabitId ? 'Save Changes' : 'Create Habit'}
+                  {editingHabitId ? t('habits.modal.saveChanges') : t('habits.modal.create')}
                 </Button>
               </div>
             </DialogFooter>
@@ -976,8 +968,8 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
 
       <div className="relative border-t border-border/70 px-5 py-2 text-[11px] text-muted-foreground md:px-8">
         {focusedHabit
-          ? `Focus lock: ${focusedHabit.name}`
-          : 'Focus lock: select a habit to track its signal.'}
+          ? t('habits.focusLock', { name: focusedHabit.name })
+          : t('habits.focusLockNone')}
       </div>
     </div>
   )
