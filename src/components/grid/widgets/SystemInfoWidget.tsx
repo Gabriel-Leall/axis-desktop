@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { WidgetCard } from '../WidgetCard'
 import { Monitor } from 'lucide-react'
 import { platform, arch } from '@tauri-apps/plugin-os'
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 
 interface SystemData {
   platform: string
@@ -13,28 +15,35 @@ interface SystemData {
  * System Info widget — displays basic system information.
  */
 export function SystemInfoWidget() {
+  const { t } = useTranslation()
   const [data, setData] = useState<SystemData>({
-    platform: 'Loading...',
-    uptime: '–',
-    memory: '–',
+    platform: t('widgets.systemInfo.loading'),
+    uptime: t('widgets.systemInfo.unknown'),
+    memory: t('widgets.systemInfo.unknown'),
   })
 
   useEffect(() => {
     const loadSystemInfo = async () => {
+      const cpuCores = navigator.hardwareConcurrency ?? 0
+      const memoryLabel =
+        cpuCores > 0
+          ? t('widgets.systemInfo.cores', { count: cpuCores })
+          : t('widgets.systemInfo.unknown')
+
       try {
         const os = await platform()
         const architecture = await arch()
 
         setData({
           platform: `${os} (${architecture})`,
-          uptime: formatUptime(performance.now()),
-          memory: `${navigator.hardwareConcurrency} cores`,
+          uptime: formatUptime(performance.now(), t),
+          memory: memoryLabel,
         })
       } catch {
         setData({
-          platform: navigator.platform,
-          uptime: formatUptime(performance.now()),
-          memory: `${navigator.hardwareConcurrency} cores`,
+          platform: navigator.platform || t('widgets.systemInfo.unknown'),
+          uptime: formatUptime(performance.now(), t),
+          memory: memoryLabel,
         })
       }
     }
@@ -45,19 +54,19 @@ export function SystemInfoWidget() {
     const interval = setInterval(() => {
       setData(prev => ({
         ...prev,
-        uptime: formatUptime(performance.now()),
+        uptime: formatUptime(performance.now(), t),
       }))
     }, 60_000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [t])
 
   return (
-    <WidgetCard title="System Info" icon={Monitor}>
+    <WidgetCard title={t('widgets.systemInfo.title')} icon={Monitor}>
       <div className="flex h-full flex-col justify-center gap-3">
-        <InfoRow label="Platform" value={data.platform} />
-        <InfoRow label="Session" value={data.uptime} />
-        <InfoRow label="CPU" value={data.memory} />
+        <InfoRow label={t('widgets.systemInfo.platformLabel')} value={data.platform} />
+        <InfoRow label={t('widgets.systemInfo.sessionLabel')} value={data.uptime} />
+        <InfoRow label={t('widgets.systemInfo.cpuLabel')} value={data.memory} />
       </div>
     </WidgetCard>
   )
@@ -72,10 +81,12 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function formatUptime(ms: number): string {
+function formatUptime(ms: number, t: TFunction): string {
   const totalMinutes = Math.floor(ms / 60000)
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
+  if (hours > 0) {
+    return t('widgets.systemInfo.uptimeHoursMinutes', { hours, minutes })
+  }
+  return t('widgets.systemInfo.uptimeMinutes', { minutes })
 }

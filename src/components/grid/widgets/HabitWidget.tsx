@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { Flame, CheckCircle2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { WidgetCard } from '../WidgetCard'
 import {
   selectSortedTodayHabits,
@@ -17,6 +18,8 @@ interface HabitWidgetProps {
 }
 
 export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
+  const { t } = useTranslation()
+
   const habits = useHabitsStore(state => state.habits)
   const todayLogs = useHabitsStore(state => state.todayLogs)
   const monthLogs = useHabitsStore(state => state.monthLogs)
@@ -40,11 +43,14 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
   const progress = selectTodayProgress(habits, todayLogs)
 
   return (
-    <WidgetCard title="Protocol" icon={CheckCircle2}>
+    <WidgetCard title={t('widgets.habits.title')} icon={CheckCircle2}>
       <div className="flex h-full flex-col gap-4">
         <div className="flex items-center justify-between border-b-2 border-foreground pb-2">
           <span className="text-xs font-bold uppercase tracking-widest text-accent">
-            {progress.done}/{progress.total || 0} Active
+            {t('widgets.habits.activeCount', {
+              done: progress.done,
+              total: progress.total || 0,
+            })}
           </span>
         </div>
 
@@ -84,7 +90,7 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
                   strokeWidth={1.5}
                 />
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground/50">
-                  No active protocols
+                  {t('widgets.habits.empty')}
                 </span>
               </motion.div>
             ) : (
@@ -109,8 +115,8 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
                         className={cn(
                           'group/pill relative flex items-center justify-between overflow-hidden rounded-md border p-3 shadow-md transition-colors',
                           doneToday
-                            ? 'border-foreground bg-foreground shadow-[0_8px_24px_-8px_rgba(0,0,0,0.3)]'
-                            : 'border-border bg-background shadow-[0_8px_24px_-8px_rgba(0,0,0,0.15)]'
+                            ? 'border-foreground bg-foreground shadow-lg'
+                            : 'border-border bg-background shadow-md'
                         )}
                       >
                         {/* Habit Name */}
@@ -138,7 +144,7 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
                                 : 'text-muted-foreground'
                             )}
                           >
-                            Streak: {streak}
+                            {t('widgets.habits.streak', { count: streak })}
                           </span>
                         </div>
 
@@ -157,15 +163,15 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
                             type="button"
                             aria-label={
                               doneToday
-                                ? 'Mark habit as not done'
-                                : 'Mark habit as done'
+                                ? t('widgets.habits.markUndoneAria')
+                                : t('widgets.habits.markDoneAria')
                             }
                             onClick={() => void toggleHabit(habit.id)}
                             className={cn(
                               'group/btn z-0 flex h-12 w-12 items-center justify-center rounded-full border-[3px] transition-colors duration-200',
                               doneToday
                                 ? 'border-chart-1 bg-chart-1 text-background'
-                                : 'border-muted bg-background text-muted-foreground hover:border-chart-1 hover:bg-chart-1 hover:text-white'
+                                : 'border-muted bg-background text-muted-foreground hover:border-chart-1 hover:bg-chart-1 hover:text-primary-foreground'
                             )}
                           >
                             <Flame
@@ -189,7 +195,7 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
           onClick={() => onNavigateToHabits?.()}
           className="self-end text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
         >
-          View All
+          {t('widgets.habits.viewAll')}
         </button>
       </div>
     </WidgetCard>

@@ -1,8 +1,10 @@
 import { useEffect } from 'react'
 import { GitPullRequest, RefreshCw, ExternalLink } from 'lucide-react'
+import type { TFunction } from 'i18next'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { WidgetCard } from '../WidgetCard'
 import { motion, AnimatePresence } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useGitHubStore } from '@/store/github-store'
@@ -12,12 +14,12 @@ import type { PullRequest } from '@/types/github'
 
 // ─── CI Status Badge ──────────────────────────────────────────────────────────
 
-function CIBadge({ status }: { status: PullRequest['ci_status'] }) {
+function CIBadge({ status, t }: { status: PullRequest['ci_status']; t: TFunction }) {
   if (status === 'success') {
     return (
       <span
-        className="text-[10px] font-medium text-emerald-500"
-        aria-label="CI passed"
+        className="text-chart-1 text-[10px] font-medium"
+        aria-label={t('widgets.github.ciPassedAria')}
       >
         ✓
       </span>
@@ -27,7 +29,7 @@ function CIBadge({ status }: { status: PullRequest['ci_status'] }) {
     return (
       <span
         className="text-[10px] font-medium text-destructive"
-        aria-label="CI failed"
+        aria-label={t('widgets.github.ciFailedAria')}
       >
         ✗
       </span>
@@ -36,7 +38,7 @@ function CIBadge({ status }: { status: PullRequest['ci_status'] }) {
   return (
     <span
       className="text-[10px] text-muted-foreground/50"
-      aria-label="CI pending"
+      aria-label={t('widgets.github.ciPendingAria')}
     >
       ○
     </span>
@@ -46,6 +48,7 @@ function CIBadge({ status }: { status: PullRequest['ci_status'] }) {
 // ─── PR Row ───────────────────────────────────────────────────────────────────
 
 function PRRow({ pr }: { pr: PullRequest }) {
+  const { t } = useTranslation()
   const repoName = extractRepoName(pr.repository_url)
   const shortRepo = repoName.split('/')[1] ?? repoName
 
@@ -85,7 +88,7 @@ function PRRow({ pr }: { pr: PullRequest }) {
             {formatRelativeTime(pr.updated_at)}
           </span>
           <span className="text-muted-foreground/30">·</span>
-          <CIBadge status={pr.ci_status} />
+          <CIBadge status={pr.ci_status} t={t} />
         </div>
       </div>
     </motion.button>
@@ -139,14 +142,16 @@ function Section({
 // ─── Unauthenticated State ────────────────────────────────────────────────────
 
 function ConnectPrompt({ onConnect }: { onConnect: () => void }) {
+  const { t } = useTranslation()
+
   return (
     <div className="flex h-full items-center justify-center">
       <EmptyState
         icon={GitPullRequest}
-        title="Connect GitHub"
-        description="See PRs and reviews at a glance"
+        title={t('widgets.github.connectTitle')}
+        description={t('widgets.github.connectDescription')}
         action={{
-          label: 'Connect',
+          label: t('widgets.github.connectAction'),
           onClick: onConnect,
         }}
       />
@@ -161,6 +166,8 @@ interface GitHubWidgetProps {
 }
 
 export function GitHubWidget({ onNavigateToGitHub }: GitHubWidgetProps) {
+  const { t } = useTranslation()
+
   const isAuthenticated = useGitHubStore(state => state.isAuthenticated)
   const user = useGitHubStore(state => state.user)
   const reviewRequests = useGitHubStore(state => state.reviewRequests)
@@ -180,11 +187,13 @@ export function GitHubWidget({ onNavigateToGitHub }: GitHubWidgetProps) {
   const visibleMyPRs = myPRs.slice(0, 3)
 
   const updatedLabel = lastUpdated
-    ? `Updated ${formatRelativeTime(lastUpdated.toISOString())}`
+    ? t('widgets.github.updatedAt', {
+        value: formatRelativeTime(lastUpdated.toISOString()),
+      })
     : null
 
   return (
-    <WidgetCard title="GitHub" icon={GitPullRequest}>
+    <WidgetCard title={t('widgets.github.title')} icon={GitPullRequest}>
       {!isAuthenticated ? (
         <ConnectPrompt onConnect={() => void startOAuthFlow()} />
       ) : (
@@ -207,7 +216,7 @@ export function GitHubWidget({ onNavigateToGitHub }: GitHubWidgetProps) {
               type="button"
               id="github-widget-refresh-btn"
               onClick={() => void refresh()}
-              aria-label="Refresh GitHub data"
+              aria-label={t('widgets.github.refreshAria')}
               className="rounded p-0.5 text-muted-foreground/50 transition-colors hover:text-muted-foreground"
             >
               <RefreshCw className="size-3" />
@@ -216,10 +225,10 @@ export function GitHubWidget({ onNavigateToGitHub }: GitHubWidgetProps) {
 
           {/* Review Requests */}
           <Section
-            label="Reviews"
+            label={t('widgets.github.reviewsLabel')}
             count={reviewRequests.length}
             isLoading={isLoadingReviews}
-            emptyText="No pending reviews"
+            emptyText={t('widgets.github.noPendingReviews')}
           >
             <div className="flex flex-col gap-0">
               {visibleReviews.map(pr => (
@@ -230,10 +239,10 @@ export function GitHubWidget({ onNavigateToGitHub }: GitHubWidgetProps) {
 
           {/* My Open PRs */}
           <Section
-            label="My PRs"
+            label={t('widgets.github.myPrsLabel')}
             count={myPRs.length}
             isLoading={isLoadingMyPRs}
-            emptyText="No open PRs"
+            emptyText={t('widgets.github.noOpenPrs')}
           >
             <div className="flex flex-col gap-0">
               {visibleMyPRs.map(pr => (
@@ -257,7 +266,7 @@ export function GitHubWidget({ onNavigateToGitHub }: GitHubWidgetProps) {
                 !updatedLabel && 'ml-auto'
               )}
             >
-              Open GitHub
+              {t('widgets.github.openButton')}
               <ExternalLink className="size-2.5" />
             </button>
           </div>

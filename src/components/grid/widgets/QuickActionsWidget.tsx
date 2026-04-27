@@ -1,41 +1,43 @@
 import { WidgetCard } from '../WidgetCard'
 import { Zap, Settings, FolderOpen, Terminal, Palette } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useUIStore } from '@/store/ui-store'
 
 /**
  * Quick Actions widget — shortcut buttons for common actions.
  */
 export function QuickActionsWidget() {
+  const { t } = useTranslation()
   const togglePreferences = useUIStore(state => state.togglePreferences)
   const toggleCommandPalette = useUIStore(state => state.toggleCommandPalette)
 
   const actions = [
     {
-      label: 'Settings',
+      label: t('widgets.quickActions.actions.settings'),
       icon: Settings,
       onClick: togglePreferences,
     },
     {
-      label: 'Command Palette',
+      label: t('widgets.quickActions.actions.commandPalette'),
       icon: Terminal,
       onClick: toggleCommandPalette,
     },
     {
-      label: 'Open Folder',
+      label: t('widgets.quickActions.actions.openFolder'),
       icon: FolderOpen,
       onClick: () => {
         // Placeholder
       },
     },
     {
-      label: 'Themes',
+      label: t('widgets.quickActions.actions.themes'),
       icon: Palette,
       onClick: togglePreferences,
     },
   ]
 
   return (
-    <WidgetCard title="Quick Actions" icon={Zap}>
+    <WidgetCard title={t('widgets.quickActions.title')} icon={Zap}>
       <div className="grid h-full grid-cols-2 gap-2">
         {actions.map(action => (
           <button
