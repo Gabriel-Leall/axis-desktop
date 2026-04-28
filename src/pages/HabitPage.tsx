@@ -1,7 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Archive, Check, Flame, Plus, Trash2 } from 'lucide-react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import {
+  AnimatePresence,
+  LazyMotion,
+  domAnimation,
+  m,
+  useReducedMotion,
+} from 'motion/react'
 import { HeatMap } from '@/components/habits/HeatMap'
 import { Button } from '@/components/ui/button'
 import {
@@ -183,7 +189,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
   const { t } = useTranslation()
   const [modalOpen, setModalOpen] = useState(false)
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null)
-  const [form, setForm] = useState<HabitFormState>(defaultFormState())
+  const [form, setForm] = useState<HabitFormState>(() => defaultFormState())
   const reduceMotion = useReducedMotion()
 
   const habits = useHabitsStore(state => state.habits)
@@ -204,15 +210,17 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
   const archiveHabit = useHabitsStore(state => state.archiveHabit)
   const deleteHabit = useHabitsStore(state => state.deleteHabit)
 
+  // Sync initial selection from navigation prop once on mount
+  const didSyncInitialHabit = useRef(false)
+  useEffect(() => {
+    if (didSyncInitialHabit.current || !initialSelectedHabitId) return
+    didSyncInitialHabit.current = true
+    setSelectedHabit(initialSelectedHabitId)
+  }, [initialSelectedHabitId, setSelectedHabit])
+
   useEffect(() => {
     void Promise.all([loadHabits(), loadTodayLogs(), loadMonthLogs()])
   }, [loadHabits, loadMonthLogs, loadTodayLogs])
-
-  useEffect(() => {
-    if (initialSelectedHabitId) {
-      setSelectedHabit(initialSelectedHabitId)
-    }
-  }, [initialSelectedHabitId, setSelectedHabit])
 
   const todayHabits = selectSortedTodayHabits(habits, todayLogs)
   const todayDoneSet = selectTodayDoneSet(todayLogs)
@@ -275,9 +283,10 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
   }
 
   return (
-    <div
-      className="relative flex h-full flex-col overflow-hidden bg-background text-foreground"
-    >
+    <LazyMotion features={domAnimation}>
+      <div
+        className="relative flex h-full flex-col overflow-hidden bg-background text-foreground"
+      >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -316,7 +325,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
             </div>
 
             <div className="mt-2 h-4 overflow-hidden rounded-full bg-muted/70">
-              <motion.div
+              <m.div
                 className="h-full rounded-full bg-foreground/85"
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
@@ -338,7 +347,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
               {t('habits.monthlyDetail', { completed: stats.monthRate.completedDays, total: stats.monthRate.totalDays })}
             </p>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-muted/70">
-              <motion.div
+              <m.div
                 className="h-full rounded-full bg-foreground/80"
                 initial={{ width: 0 }}
                 animate={{ width: `${stats.monthRate.percentage}%` }}
@@ -372,7 +381,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
       <div className="relative flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-6">
         <AnimatePresence mode="wait">
           {activeTab === 'today' ? (
-            <motion.section
+            <m.section
               key="today"
               initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -422,7 +431,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                       )
 
                       return (
-                        <motion.article
+                        <m.article
                           key={habit.id}
                           initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -437,7 +446,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                               : `color-mix(in oklab, ${habit.color} 12%, var(--card))`,
                           }}
                         >
-                          <button
+                          <m.button
                             type="button"
                             aria-label={
                               doneToday
@@ -445,6 +454,9 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                                 : t('habits.markDoneAria', { name: habit.name })
                             }
                             onClick={() => void toggleHabit(habit.id)}
+                            whileTap={{ scale: 0.85 }}
+                            animate={{ scale: doneToday ? [1, 1.15, 1] : 1 }}
+                            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
                             className={cn(
                               'mt-0.5 flex size-8 items-center justify-center self-start rounded-full border transition-all',
                               doneToday
@@ -458,7 +470,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                             }}
                           >
                             <Check className="size-3.5" strokeWidth={3} />
-                          </button>
+                          </m.button>
 
                           <div className="min-w-0">
                             <div className="flex min-w-0 items-center gap-2">
@@ -505,7 +517,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                               </Button>
                             </div>
                           </div>
-                        </motion.article>
+                        </m.article>
                       )
                     })}
                   </div>
@@ -613,9 +625,9 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                   </div>
                 </section>
               </aside>
-            </motion.section>
+            </m.section>
           ) : activeTab === 'overview' ? (
-            <motion.section
+            <m.section
               key="overview"
               initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -691,9 +703,9 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                   })}
                 </div>
               )}
-            </motion.section>
+            </m.section>
           ) : (
-            <motion.section
+            <m.section
               key="stats"
               initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -764,7 +776,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                   {t('habits.stats.completionWindow', { completed: stats.monthRate.completedDays, total: stats.monthRate.totalDays })}
                 </p>
               </section>
-            </motion.section>
+            </m.section>
           )}
         </AnimatePresence>
       </div>
@@ -813,7 +825,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>{t('habits.modal.frequencyLabel')}</Label>
+              <Label htmlFor="habit-frequency">{t('habits.modal.frequencyLabel')}</Label>
               <div className="grid grid-cols-2 gap-2">
                 {(Object.keys(FREQUENCY_LABELS) as HabitFrequency[]).map(
                   frequency => (
@@ -850,7 +862,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
 
             {form.frequency === 'custom' && (
               <div className="space-y-2">
-                <Label>{t('habits.modal.customDaysLabel')}</Label>
+                <Label htmlFor="habit-custom-days">{t('habits.modal.customDaysLabel')}</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {WEEKDAY_LABELS.map((label, day) => {
                     const active = form.frequencyDays.includes(day)
@@ -891,7 +903,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
             )}
 
             <div className="space-y-2">
-              <Label>{t('habits.modal.colorLabel')}</Label>
+              <Label htmlFor="habit-color">{t('habits.modal.colorLabel')}</Label>
               <div className="flex flex-wrap gap-2">
                 {HABIT_COLORS.map(color => (
                   <button
@@ -971,6 +983,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
           ? t('habits.focusLock', { name: focusedHabit.name })
           : t('habits.focusLockNone')}
       </div>
-    </div>
+      </div>
+    </LazyMotion>
   )
 }
