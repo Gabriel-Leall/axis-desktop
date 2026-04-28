@@ -8,6 +8,7 @@ import {
 import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -17,6 +18,9 @@ import {
 } from '@/components/ui/select'
 import { logger } from '@/lib/logger'
 import { SettingsField, SettingsSection } from '../shared/SettingsComponents'
+import { useOnboardingStore } from '@/store/onboarding-store'
+import { useGitHubStore } from '@/store/github-store'
+import { useUIStore } from '@/store/ui-store'
 
 export function AdvancedPane() {
   const { t } = useTranslation()
@@ -25,18 +29,25 @@ export function AdvancedPane() {
   // 1. Add the field to AppPreferences in both Rust and TypeScript
   // 2. Use usePreferencesManager() and updatePreferences()
   const [exampleDropdown, setExampleDropdown] = useState('option1')
-  const [autostartEnabled, setAutostartEnabled] = useState(false)
-  const [autostartLoading, setAutostartLoading] = useState(true)
+  const [autostartState, setAutostartState] = useState({
+    enabled: false,
+    loading: true,
+  })
+  const autostartEnabled = autostartState.enabled
+  const autostartLoading = autostartState.loading
 
+  const resetOnboarding = useOnboardingStore(state => state.resetOnboarding)
+  const logoutGitHub = useGitHubStore(state => state.logout)
+  const setPreferencesOpen = useUIStore(state => state.setPreferencesOpen)
+  
   useEffect(() => {
     const loadAutostartState = async () => {
       try {
         const enabled = await isAutostartEnabled()
-        setAutostartEnabled(enabled)
+        setAutostartState({ enabled, loading: false })
       } catch (error) {
         logger.warn('Failed to load autostart state', { error })
-      } finally {
-        setAutostartLoading(false)
+        setAutostartState(prev => ({ ...prev, loading: false }))
       }
     }
 
@@ -44,7 +55,7 @@ export function AdvancedPane() {
   }, [])
 
   const handleAutostartChange = async (enabled: boolean) => {
-    setAutostartLoading(true)
+    setAutostartState(prev => ({ ...prev, loading: true }))
 
     try {
       if (enabled) {
@@ -53,7 +64,7 @@ export function AdvancedPane() {
         await disableAutostart()
       }
 
-      setAutostartEnabled(enabled)
+      setAutostartState({ enabled, loading: false })
       toast.success(
         enabled
           ? t('toast.success.autostartEnabled')
@@ -62,9 +73,19 @@ export function AdvancedPane() {
     } catch (error) {
       logger.error('Failed to update autostart state', { error, enabled })
       toast.error(t('toast.error.autostartFailed'))
-    } finally {
-      setAutostartLoading(false)
+      setAutostartState(prev => ({ ...prev, loading: false }))
     }
+  }
+
+  const handleResetOnboarding = () => {
+    resetOnboarding()
+    setPreferencesOpen(false)
+    toast.success('Onboarding resetado com sucesso.')
+  }
+
+  const handleGitHubLogout = async () => {
+    await logoutGitHub()
+    toast.success('Desconectado do GitHub.')
   }
 
   return (
@@ -85,6 +106,26 @@ export function AdvancedPane() {
               {autostartEnabled ? t('common.enabled') : t('common.disabled')}
             </Label>
           </div>
+        </SettingsField>
+      </SettingsSection>
+
+      <SettingsSection title="Developer / Reset">
+        <SettingsField
+          label="Reset Onboarding"
+          description="Reinicia o fluxo inicial de boas-vindas do aplicativo."
+        >
+          <Button variant="destructive" size="sm" onClick={handleResetOnboarding}>
+            Resetar Onboarding
+          </Button>
+        </SettingsField>
+
+        <SettingsField
+          label="GitHub Logout"
+          description="Desconecta sua conta do GitHub do Axis Desktop."
+        >
+          <Button variant="outline" size="sm" onClick={handleGitHubLogout}>
+            Desconectar GitHub
+          </Button>
         </SettingsField>
       </SettingsSection>
 
