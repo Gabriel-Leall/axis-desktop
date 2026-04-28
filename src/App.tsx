@@ -10,8 +10,10 @@ import { commands } from './lib/tauri-bindings'
 import { registerDeepLinkHandler } from './lib/oauth-handler'
 import { useGitHubStore } from './store/github-store'
 import { useSlackStore } from './store/slack-store'
+import { useOnboardingStore } from './store/onboarding-store'
 import './App.css'
 import { MainWindow } from './components/layout/MainWindow'
+import { OnboardingPage } from './pages/onboarding/OnboardingPage'
 import { ThemeProvider } from './components/ThemeProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { TooltipProvider } from './components/ui/tooltip'
@@ -20,6 +22,8 @@ import { Toaster } from './components/ui/sonner'
 
 function App() {
   useSquareCornersEffect()
+  
+  const hasCompletedOnboarding = useOnboardingStore(state => state.hasCompleted)
 
   // Initialize command system and cleanup on app startup
   useEffect(() => {
@@ -127,7 +131,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <TooltipProvider delayDuration={300}>
-          <MainWindow />
+          {hasCompletedOnboarding ? <MainWindow /> : <OnboardingPage />}
           <Toaster position="bottom-right" closeButton />
         </TooltipProvider>
       </ThemeProvider>
@@ -136,3 +140,4 @@ function App() {
 }
 
 export default App
+

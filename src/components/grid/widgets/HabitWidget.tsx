@@ -9,7 +9,7 @@ import {
   useHabitsStore,
 } from '@/store/habits-store'
 import { cn } from '@/lib/utils'
-import { motion, AnimatePresence } from 'motion/react'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'motion/react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { listItemVariants } from '@/lib/motion-tokens'
 
@@ -41,9 +41,11 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
   )
   const visibleHabits = todayHabits.slice(0, 6)
   const progress = selectTodayProgress(habits, todayLogs)
+  const skeletonKeys = ['habit-skeleton-1', 'habit-skeleton-2', 'habit-skeleton-3']
 
   return (
-    <WidgetCard title={t('widgets.habits.title')} icon={CheckCircle2}>
+    <LazyMotion features={domAnimation}>
+      <WidgetCard title={t('widgets.habits.title')} icon={CheckCircle2}>
       <div className="flex h-full flex-col gap-4">
         <div className="flex items-center justify-between border-b-2 border-foreground pb-2">
           <span className="text-xs font-bold uppercase tracking-widest text-accent">
@@ -57,16 +59,16 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
         <div className="flex-1 overflow-y-auto overflow-x-hidden pr-1">
           <AnimatePresence mode="popLayout" initial={false}>
             {isLoading ? (
-              <motion.div
+              <m.div
                 layout
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="space-y-4"
               >
-                {[...Array(3)].map((_, i) => (
+                {skeletonKeys.map(key => (
                   <div
-                    key={i}
+                    key={key}
                     className="flex items-center justify-between border border-border bg-background p-3 shadow-sm"
                   >
                     <div className="flex flex-col gap-2">
@@ -76,9 +78,9 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
                     <Skeleton className="size-12 rounded-full" />
                   </div>
                 ))}
-              </motion.div>
+              </m.div>
             ) : visibleHabits.length === 0 ? (
-              <motion.div
+              <m.div
                 layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -92,7 +94,7 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground/50">
                   {t('widgets.habits.empty')}
                 </span>
-              </motion.div>
+              </m.div>
             ) : (
               <div className="flex flex-col gap-4">
                 {visibleHabits.map((habit, i) => {
@@ -101,7 +103,7 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
                   )
                   const streak = selectStreakByHabit(monthLogs, habit.id)
                   return (
-                    <motion.div
+                    <m.div
                       key={habit.id}
                       layout
                       variants={listItemVariants}
@@ -159,7 +161,7 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
                           >
                             {doneToday ? '' : '+1'}
                           </div>
-                          <button
+                          <m.button
                             type="button"
                             aria-label={
                               doneToday
@@ -167,6 +169,9 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
                                 : t('widgets.habits.markDoneAria')
                             }
                             onClick={() => void toggleHabit(habit.id)}
+                            whileTap={{ scale: 0.85 }}
+                            animate={{ scale: doneToday ? [1, 1.15, 1] : 1 }}
+                            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
                             className={cn(
                               'group/btn z-0 flex h-12 w-12 items-center justify-center rounded-full border-[3px] transition-colors duration-200',
                               doneToday
@@ -179,10 +184,10 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
                               strokeWidth={doneToday ? 3 : 2}
                               fill={doneToday ? 'currentColor' : 'none'}
                             />
-                          </button>
+                          </m.button>
                         </div>
                       </div>
-                    </motion.div>
+                    </m.div>
                   )
                 })}
               </div>
@@ -198,6 +203,7 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
           {t('widgets.habits.viewAll')}
         </button>
       </div>
-    </WidgetCard>
+      </WidgetCard>
+    </LazyMotion>
   )
 }
