@@ -97,20 +97,28 @@ export function OnboardingPage() {
       <div className="flex flex-1 flex-row overflow-hidden relative">
         {/* Left Side: Form Content */}
         <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
-        {/* Progress Bar (scoped to left half on lg) */}
-        <div className="absolute top-12 left-0 w-full h-1 bg-muted/30 z-10">
-          <motion.div 
-            className="h-full bg-primary"
-            initial={{ width: '0%' }}
-            animate={{ 
-              width: currentStep === 'obstacle' ? '25%' : 
-                     currentStep === 'goal' ? '50%' : 
-                     currentStep === 'loading' ? '75%' : 
-                     currentStep === 'login' ? '90%' : '100%' 
-            }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-          />
-        </div>
+          {/* Pill Stepper */}
+          <div className="absolute top-12 left-0 w-full flex items-center justify-center gap-2 z-10">
+            {['Obstáculo', 'Meta', 'Conexão', 'Pronto'].map((label, idx) => {
+              const stepMap: Record<string, number> = { obstacle: 0, goal: 1, loading: 2, login: 3, done: 4 }
+              const currentIdx = stepMap[currentStep] ?? 0
+              const isActive = idx <= currentIdx
+              const isCurrent = idx === currentIdx
+              return (
+                <div key={label} className="flex items-center gap-2">
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors ${isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                    {idx + 1}
+                  </div>
+                  <span className={`text-xs font-medium ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    {label}
+                  </span>
+                  {idx < 3 && (
+                    <div className={`w-8 h-0.5 mx-1 ${isActive && idx < currentIdx ? 'bg-primary' : 'bg-muted'}`} />
+                  )}
+                </div>
+              )
+            })}
+          </div>
 
         <AnimatePresence mode="wait">
           
