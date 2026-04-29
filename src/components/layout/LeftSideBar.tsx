@@ -47,6 +47,9 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
         className="flex flex-col items-center gap-1 p-2 pt-3"
         aria-label="Main navigation"
       >
+        <div className="mb-6 mt-1 flex items-center justify-center">
+          <img src="/Axis-Logo.png" alt="Axis Logo" className="size-8 object-contain drop-shadow-sm" />
+        </div>
         {NAV_ITEMS.map(item => {
           const isActive = activePage === item.id
           return (

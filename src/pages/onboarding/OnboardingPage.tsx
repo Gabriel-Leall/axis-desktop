@@ -284,7 +284,7 @@ export function OnboardingPage() {
       {/* Right Side: Image Placeholder */}
       <div className="hidden lg:flex w-1/2 bg-muted relative items-center justify-center overflow-hidden border-l border-border/50">
         <img 
-          src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80" 
+          src="/Onboarding-Image.webp" 
           alt="Onboarding" 
           className="w-full h-full object-cover opacity-90" 
         />

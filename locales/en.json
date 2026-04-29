@@ -1,5 +1,5 @@
 {
-  "app.name": "Tauri Template",
+  "app.name": "Axis",
 
   "menu.about": "About {{appName}}",
   "menu.checkForUpdates": "Check for Updates...",
@@ -31,8 +31,9 @@
   "preferences.appearance.theme": "Theme",
   "preferences.appearance.colorTheme": "Color Theme",
   "preferences.appearance.colorThemeDescription": "Choose your preferred color theme",
-  "preferences.appearance.theme.light": "Light",
-  "preferences.appearance.theme.dark": "Dark",
+  "preferences.appearance.theme.light": "Glacial White",
+  "preferences.appearance.theme.dark": "Nord Dark",
+  "preferences.appearance.theme.cream": "Cream Sweet",
   "preferences.appearance.theme.entardecer": "Sunset",
   "preferences.appearance.theme.system": "System",
   "preferences.appearance.selectTheme": "Select theme",
@@ -428,7 +429,7 @@
   "commandPalette.placeholder": "Type a command or search...",
   "commandPalette.noResults": "No results found.",
 
-  "titlebar.default": "Tauri App",
+  "titlebar.default": "Axis",
   "titlebar.showLeftSidebar": "Show Left Sidebar",
   "titlebar.hideLeftSidebar": "Hide Left Sidebar",
   "titlebar.showRightSidebar": "Show Right Sidebar",
