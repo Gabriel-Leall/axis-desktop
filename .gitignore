@@ -26,3 +26,7 @@ jscpd-report
 *.njsproj
 *.sln
 *.sw?
+
+DESIGN
+favicon_io.zip
+ui-changes.md

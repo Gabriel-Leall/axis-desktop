@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useLayoutEffect,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus,
@@ -21,6 +27,7 @@ import { cn } from '@/lib/utils'
 import { getPriorityTagClass } from '@/lib/priority-tag-styles'
 import { Calendar, type RangeValue } from '@/components/calendar'
 import { KanbanPage } from '@/pages/KanbanPage'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'motion/react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -228,27 +235,51 @@ function TaskRow({
       )}
     >
       {/* Checkbox */}
-      <button
+      <m.button
         type="button"
         aria-label={isDone ? 'Mark as incomplete' : 'Mark as complete'}
         onClick={e => {
           e.stopPropagation()
           onToggle()
         }}
+        whileTap={{ scale: 0.85 }}
+        animate={{ scale: isDone ? [1, 1.15, 1] : 1 }}
+        transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
         className={cn(
-          'flex size-4.5 shrink-0 items-center justify-center rounded-full border transition-all',
+          'relative flex size-4.5 shrink-0 items-center justify-center rounded-full border transition-all',
           isDone
             ? 'border-muted-foreground/30 bg-muted-foreground/15'
             : 'border-muted-foreground/40 hover:border-primary hover:bg-accent'
         )}
       >
-        {isDone && (
-          <Check
-            className="size-2.5 text-muted-foreground/60"
-            strokeWidth={3}
-          />
-        )}
-      </button>
+        <AnimatePresence>
+          {isDone && (
+            <m.span
+              className="pointer-events-none absolute inset-0 rounded-full border border-primary/70"
+              initial={{ opacity: 0.6, scale: 1 }}
+              animate={{ opacity: 0, scale: 1.7 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            />
+          )}
+        </AnimatePresence>
+        <AnimatePresence mode="wait" initial={false}>
+          {isDone && (
+            <m.span
+              key="check"
+              initial={{ scale: 0.2, opacity: 0, rotate: -14 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              exit={{ scale: 0.2, opacity: 0 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <Check
+                className="size-2.5 text-muted-foreground/60"
+                strokeWidth={3}
+              />
+            </m.span>
+          )}
+        </AnimatePresence>
+      </m.button>
 
       {/* Main content */}
       <button
@@ -426,7 +457,6 @@ function TaskDetailPanel({
   const [title, setTitle] = useState(task?.title ?? '')
   const [description, setDescription] = useState(task?.description ?? '')
   const [priority, setPriority] = useState<Priority>(task?.priority ?? 'medium')
-  const [dueDate, setDueDate] = useState(task?.due_date ?? '')
   const [dateRange, setDateRange] = useState<RangeValue | null>(() => {
     if (task?.due_date) {
       const date = isoToDate(task.due_date)
@@ -437,18 +467,13 @@ function TaskDetailPanel({
   const [newSubtask, setNewSubtask] = useState('')
   const titleRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
+  // Focus title input when task changes
+  useLayoutEffect(() => {
     if (task) titleRef.current?.focus()
   }, [task])
 
-  // Sync dateRange with dueDate state
-  useEffect(() => {
-    if (dateRange?.start) {
-      setDueDate(dateToIso(dateRange.start) || '')
-    } else {
-      setDueDate('')
-    }
-  }, [dateRange])
+  // Derive dueDate synchronously from dateRange — no need for a syncing effect
+  const dueDate = dateRange?.start ? (dateToIso(dateRange.start) ?? '') : ''
 
   // Keyboard: Escape to close
   useEffect(() => {
@@ -458,6 +483,8 @@ function TaskDetailPanel({
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   }, [onClose])
+
+
 
   if (!task) return null
 
@@ -545,10 +572,10 @@ function TaskDetailPanel({
 
         {/* Priority */}
         <div>
-          <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+          <span id="priority-label" className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
             Priority
-          </label>
-          <div className="flex gap-2">
+          </span>
+          <div className="flex gap-2" aria-labelledby="priority-label">
             {(['low', 'medium', 'high'] as Priority[]).map(p => (
               <PriorityButton
                 key={p}
@@ -565,9 +592,9 @@ function TaskDetailPanel({
 
         {/* Due date */}
         <div>
-          <label className="mb-3 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+          <span id="due-date-label" className="mb-3 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
             Due date
-          </label>
+          </span>
           <Calendar
             value={dateRange}
             onChange={newRange => {
@@ -590,9 +617,9 @@ function TaskDetailPanel({
 
         {/* Subtasks */}
         <div>
-          <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+          <span id="subtasks-label" className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
             Subtasks
-          </label>
+          </span>
 
           <div className="flex flex-col gap-1">
             {task.subtasks.map(subtask => (
@@ -689,6 +716,11 @@ function TaskDetailPanel({
   )
 }
 
+interface SubtaskDraft {
+  id: string
+  title: string
+}
+
 // ─── New Task Modal / Quick-Create ────────────────────────────────────────────
 
 function NewTaskModal({
@@ -711,12 +743,8 @@ function NewTaskModal({
   const [priority, setPriority] = useState<Priority>('medium')
   const [dateRange, setDateRange] = useState<RangeValue | null>(null)
   const [subtaskInput, setSubtaskInput] = useState('')
-  const [subtasks, setSubtasks] = useState<string[]>([])
+  const [subtasks, setSubtasks] = useState<SubtaskDraft[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -735,7 +763,10 @@ function NewTaskModal({
       ? dateToIso(dateRange.end ?? dateRange.start)
       : undefined
 
-    const normalizedSubtasks = subtasks.map(item => item.trim()).filter(Boolean)
+    const normalizedSubtasks = subtasks.flatMap(item => {
+      const trimmed = item.title.trim()
+      return trimmed ? [trimmed] : []
+    })
 
     await onAdd(trimmed, {
       priority,
@@ -750,7 +781,11 @@ function NewTaskModal({
     const trimmed = subtaskInput.trim()
     if (!trimmed) return
 
-    setSubtasks(prev => [...prev, trimmed])
+    const nextSubtask = {
+      id: crypto.randomUUID(),
+      title: trimmed,
+    }
+    setSubtasks(prev => [...prev, nextSubtask])
     setSubtaskInput('')
   }
 
@@ -761,19 +796,27 @@ function NewTaskModal({
       onClick={e => {
         if (e.target === e.currentTarget) onClose()
       }}
+      onKeyDown={e => {
+        if (e.key === 'Escape') onClose()
+      }}
       role="dialog"
       aria-modal="true"
       aria-label="Create new task"
+      tabIndex={-1}
     >
       <div className="w-full max-w-3xl rounded-xl border border-border bg-card p-5 shadow-2xl">
         <div className="space-y-4">
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
             <div>
-              <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+              <label
+                htmlFor="modal-task-title"
+                className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50"
+              >
                 Task name
               </label>
               <input
                 ref={inputRef}
+                id="modal-task-title"
                 type="text"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
@@ -787,10 +830,13 @@ function NewTaskModal({
             </div>
 
             <div>
-              <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+              <span
+                id="modal-priority-label"
+                className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50"
+              >
                 Priority
-              </label>
-              <div className="flex items-center gap-1.5">
+              </span>
+              <div className="flex items-center gap-1.5" aria-labelledby="modal-priority-label">
                 {(['low', 'medium', 'high'] as Priority[]).map(p => (
                   <PriorityButton
                     key={p}
@@ -803,10 +849,11 @@ function NewTaskModal({
             </div>
 
             <div>
-              <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+              <label htmlFor="modal-description" className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
                 Description
               </label>
               <textarea
+                id="modal-description"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 rows={4}
@@ -817,9 +864,12 @@ function NewTaskModal({
             </div>
 
             <div>
-              <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+              <span
+                id="modal-date-label"
+                className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50"
+              >
                 Task date
-              </label>
+              </span>
               <Calendar
                 value={dateRange}
                 onChange={setDateRange}
@@ -832,12 +882,16 @@ function NewTaskModal({
           </div>
 
           <div>
-            <label className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+            <label
+              htmlFor="modal-subtask-input"
+              className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50"
+            >
               Subtask
             </label>
 
             <div className="flex gap-2">
               <input
+                id="modal-subtask-input"
                 type="text"
                 value={subtaskInput}
                 onChange={e => setSubtaskInput(e.target.value)}
@@ -862,19 +916,19 @@ function NewTaskModal({
 
             {subtasks.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {subtasks.map((subtask, index) => (
+                {subtasks.map(subtask => (
                   <button
-                    key={`${subtask}-${index}`}
+                    key={subtask.id}
                     type="button"
                     onClick={() => {
                       setSubtasks(prev =>
-                        prev.filter((_, itemIndex) => itemIndex !== index)
+                        prev.filter(item => item.id !== subtask.id)
                       )
                     }}
                     className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent"
-                    aria-label={`Remove subtask ${subtask}`}
+                    aria-label={`Remove subtask ${subtask.title}`}
                   >
-                    {subtask} ×
+                    {subtask.title} ×
                   </button>
                 ))}
               </div>
@@ -1058,7 +1112,8 @@ export function TasksPage({
   const setFilter = useTasksStore(state => state.setFilter)
 
   const [activeTab, setActiveTab] = useState<TabKey>('all')
-  const [viewMode, setViewMode] = useState<'stack' | 'kanban'>(initialViewMode)
+  // viewMode is stable on mount from initialViewMode — treat prop as initial value only
+  const [viewMode, setViewMode] = useState<'stack' | 'kanban'>(() => initialViewMode)
   const [searchVisible, setSearchVisible] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
@@ -1070,11 +1125,12 @@ export function TasksPage({
     loadTasks()
   }, [loadTasks])
 
-  // Set initial selection from widget navigation
+  // Sync initial selection from navigation prop once on mount
+  const didSyncInitialTask = useRef(false)
   useEffect(() => {
-    if (initialSelectedTaskId) {
-      setSelectedTask(initialSelectedTaskId)
-    }
+    if (didSyncInitialTask.current || !initialSelectedTaskId) return
+    didSyncInitialTask.current = true
+    setSelectedTask(initialSelectedTaskId)
   }, [initialSelectedTaskId, setSelectedTask])
 
   // Keyboard shortcut: N to create
@@ -1101,11 +1157,6 @@ export function TasksPage({
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
-
-  // Focus search when shown
-  useEffect(() => {
-    if (searchVisible) searchRef.current?.focus()
-  }, [searchVisible])
 
   // Filter tasks by active tab
   const baseFiltered = selectFilteredTasks(tasks, filters)
@@ -1169,7 +1220,8 @@ export function TasksPage({
   )
 
   return (
-    <div className="flex h-full flex-col bg-background">
+    <LazyMotion features={domAnimation}>
+      <div className="flex h-full flex-col bg-background">
       {/* ── Page Header ────────────────────────────────────────────────────── */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
         <div className="flex items-center gap-3">
@@ -1266,7 +1318,10 @@ export function TasksPage({
               ) : (
                 <button
                   type="button"
-                  onClick={() => setSearchVisible(true)}
+                  onClick={() => {
+                    setSearchVisible(true)
+                    requestAnimationFrame(() => searchRef.current?.focus())
+                  }}
                   aria-label="Search"
                   className="flex size-7 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:bg-accent hover:text-foreground"
                 >
@@ -1493,6 +1548,7 @@ export function TasksPage({
           onClose={() => setNewTaskOpen(false)}
         />
       )}
-    </div>
+      </div>
+    </LazyMotion>
   )
 }

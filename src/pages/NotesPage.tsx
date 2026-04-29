@@ -327,6 +327,7 @@ function EditorArea({
   const [showMenu, setShowMenu] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [titleInput, setTitleInput] = useState('')
+  const [prevNoteId, setPrevNoteId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<ToastEditor>(null)
   const editorShellRef = useRef<HTMLDivElement>(null)
@@ -375,13 +376,10 @@ function EditorArea({
     setShowMenu(false)
   }, [note])
 
-  useEffect(() => {
-    if (!note) {
-      setTitleInput('')
-      return
-    }
-    setTitleInput(parseNoteContent(note.content).title)
-  }, [note])
+  if (note?.id !== prevNoteId) {
+    setPrevNoteId(note?.id ?? null)
+    setTitleInput(note ? parseNoteContent(note.content).title : '')
+  }
 
   const handleEditorChange = useCallback(() => {
     if (!note) return

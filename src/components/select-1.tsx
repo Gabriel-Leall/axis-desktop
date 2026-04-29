@@ -17,10 +17,7 @@ const selectSizes = {
   },
 } as const
 
-const variants = {
-  default: '',
-  ghost: '',
-}
+type Variant = 'default' | 'ghost'
 
 export interface Option {
   value: string
@@ -28,7 +25,7 @@ export interface Option {
 }
 
 interface SelectProps {
-  variant?: keyof typeof variants
+  variant?: Variant
   options?: Option[]
   label?: string
   value?: string
@@ -128,7 +125,7 @@ export const Select = ({
           <span
             className={clsx(
               `inline-flex absolute pointer-events-none duration-150 ${size}IconContainer`,
-              size === 'xsmall' ? 'left-[5px]' : 'left-3'
+              size === 'xsmall' ? 'left-1.25' : 'left-3'
             )}
           >
             {prefix}
@@ -137,7 +134,7 @@ export const Select = ({
         <span
           className={clsx(
             `inline-flex absolute pointer-events-none duration-150 ${size}IconContainer`,
-            size === 'xsmall' ? 'right-[5px]' : 'right-3'
+            size === 'xsmall' ? 'right-1.25' : 'right-3'
           )}
         >
           {suffix ? suffix : <ArrowBottom />}

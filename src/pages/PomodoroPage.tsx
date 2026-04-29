@@ -23,6 +23,7 @@ import type {
 } from '@/store/pomodoro-types'
 import { cn } from '@/lib/utils'
 import { sendNotification } from '@tauri-apps/plugin-notification'
+import { LazyMotion, domAnimation, m } from 'motion/react'
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -97,8 +98,10 @@ function CycleDotsLarge({
   completed: number
   total: number
 }) {
+  const { t } = useTranslation()
   const cyclePos = completed % total
   const dots = Array.from({ length: total }, (_, i) => ({
+    id: `cycle-dot-${total}-${i}`,
     filled: i < cyclePos || (completed > 0 && cyclePos === 0 && i < total),
   }))
 
@@ -108,9 +111,9 @@ function CycleDotsLarge({
         className="flex items-center gap-1.5"
         aria-label={`${cyclePos || total} of ${total}`}
       >
-        {dots.map((dot, i) => (
+        {dots.map(dot => (
           <span
-            key={i}
+            key={dot.id}
             className={cn(
               'size-2.5 rounded-full transition-all',
               dot.filled
@@ -121,7 +124,7 @@ function CycleDotsLarge({
         ))}
       </div>
       <span className="text-[11px] text-muted-foreground">
-        {(() => { const { t } = useTranslation(); return t('pomodoro.cycleLabel', { current: cyclePos || total, total }) })()}
+        {t('pomodoro.cycleLabel', { current: cyclePos || total, total })}
       </span>
     </div>
   )
@@ -166,6 +169,7 @@ function TaskLinkSection() {
   const [showPicker, setShowPicker] = useState(false)
   const [search, setSearch] = useState('')
   const pickerRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Close picker on click outside
   useEffect(() => {
@@ -220,7 +224,15 @@ function TaskLinkSection() {
       <div className="relative" ref={pickerRef}>
         <button
           type="button"
-          onClick={() => setShowPicker(v => !v)}
+          onClick={() => {
+            setShowPicker(prev => {
+              const next = !prev
+              if (!prev) {
+                requestAnimationFrame(() => searchInputRef.current?.focus())
+              }
+              return next
+            })
+          }}
           className="flex items-center gap-1.5 text-[12px] text-muted-foreground/70 transition-colors hover:text-foreground"
         >
           <Plus className="size-3.5" />
@@ -231,7 +243,7 @@ function TaskLinkSection() {
           <div className="absolute top-full left-0 z-50 mt-1.5 w-72 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
             <div className="border-b border-border px-3 py-2">
               <input
-                autoFocus
+                ref={searchInputRef}
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -604,7 +616,8 @@ export function PomodoroPage() {
   const { t } = useTranslation()
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <LazyMotion features={domAnimation}>
+      <div className="flex h-full flex-col overflow-y-auto">
       {/* Page header */}
       <div className="shrink-0 border-b border-border px-6 py-3">
         <h1 className="text-[13px] font-medium text-foreground">{t('pomodoro.pageTitle')}</h1>
@@ -664,18 +677,20 @@ export function PomodoroPage() {
 
           {/* Controls */}
           <div className="flex items-center gap-4">
-            <button
+            <m.button
               type="button"
               onClick={reset}
+              whileTap={{ scale: 0.9 }}
               aria-label={t('pomodoro.controls.resetAria')}
               className="rounded-lg p-2 text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
             >
               <RotateCcw className="size-4" />
-            </button>
+            </m.button>
 
-            <button
+            <m.button
               type="button"
               onClick={handlePlayPause}
+              whileTap={{ scale: 0.9 }}
               aria-label={
                 isRunning ? t('pomodoro.controls.pauseAria') : t('pomodoro.controls.startAria')
               }
@@ -691,16 +706,17 @@ export function PomodoroPage() {
               ) : (
                 <Play className="size-5 translate-x-px" fill="currentColor" />
               )}
-            </button>
+            </m.button>
 
-            <button
+            <m.button
               type="button"
               onClick={() => void skip()}
+              whileTap={{ scale: 0.9 }}
               aria-label={t('pomodoro.controls.skipAria')}
               className="rounded-lg p-2 text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
             >
               <SkipForward className="size-4" />
-            </button>
+            </m.button>
           </div>
 
           {/* Auto-start indicator */}
@@ -732,6 +748,7 @@ export function PomodoroPage() {
         {/* Bottom padding */}
         <div className="h-4" />
       </div>
-    </div>
+      </div>
+    </LazyMotion>
   )
 }
