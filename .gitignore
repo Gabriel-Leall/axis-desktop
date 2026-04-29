@@ -28,3 +28,5 @@ jscpd-report
 *.sw?
 
 DESIGN
+favicon_io.zip
+ui-changes.md
