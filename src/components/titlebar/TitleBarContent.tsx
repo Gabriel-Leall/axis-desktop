@@ -100,7 +100,7 @@ interface TitleBarTitleProps {
  * Centered title for the title bar.
  * Uses absolute positioning to stay centered regardless of other content.
  */
-export function TitleBarTitle({ title = 'Axis' }: TitleBarTitleProps) {
+export function TitleBarTitle(_props: TitleBarTitleProps) {
   return null
 }
 

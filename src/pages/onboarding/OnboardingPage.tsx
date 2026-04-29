@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Check, Loader2, ArrowRight } from 'lucide-react'
+import { Check, ArrowRight, Zap, Calendar, LayoutGrid } from 'lucide-react'
 import { useOnboardingStore } from '@/store/onboarding-store'
 import { useHabitsStore } from '@/store/habits-store'
 import { useTasksStore } from '@/store/tasks-store'
@@ -25,37 +25,149 @@ const GithubIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
+const GoogleIcon = ({ className }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width="24" 
+    height="24" 
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1 .67-2.28 1.07-3.71 1.07-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+    <path d="M5.84 14.11c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l3.66-2.8z" fill="#FBBC05"/>
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.84c.87-2.6 3.3-4.55 6.16-4.55z" fill="#EA4335"/>
+  </svg>
+)
+
 type Step = 'obstacle' | 'goal' | 'loading' | 'login' | 'done'
 
-const OBSTACLES = [
-  { id: 'procrastination', label: 'Procrastinação', desc: 'Deixar as coisas importantes para depois.' },
-  { id: 'organization', label: 'Falta de Organização', desc: 'Sentimento de caos e excesso de informações.' },
-  { id: 'habits', label: 'Esquecer Hábitos', desc: 'Dificuldade em manter a consistência diária.' },
+
+
+interface ObstacleOption { id: string; label: string; desc: string; tag: string }
+interface GoalOption { id: string; label: string; desc: string; icon: React.ReactNode }
+
+const OBSTACLES: ObstacleOption[] = [
+  {
+    id: 'procrastination',
+    label: 'Procrastinação crônica',
+    desc: 'As tarefas mais importantes ficam para depois — e o dia termina sem avançar nada que importa.',
+    tag: 'Foco',
+  },
+  {
+    id: 'organization',
+    label: 'Excesso sem estrutura',
+    desc: 'Muitas abas abertas, listas espalhadas e a sensação constante de que algo vai escapar.',
+    tag: 'Organização',
+  },
+  {
+    id: 'habits',
+    label: 'Consistência zero',
+    desc: 'Começa bem, perde o ritmo. Os hábitos existem no plano — mas não no dia a dia.',
+    tag: 'Hábitos',
+  },
 ]
 
-const GOALS = [
-  { id: 'focus', label: 'Foco Profundo', desc: 'Sessões de trabalho ininterruptas e valiosas.' },
-  { id: 'morning', label: 'Rotina Matinal', desc: 'Começar o dia no controle, antes de todos.' },
-  { id: 'planning', label: 'Planejamento Semanal', desc: 'Saber exatamente o que fazer a cada dia.' },
+const GOALS: GoalOption[] = [
+  {
+    id: 'focus',
+    label: 'Foco profundo',
+    desc: 'Blocos de trabalho ininterrupto. Menos distrações, mais produção real por hora.',
+    icon: <Zap className="w-4 h-4" />,
+  },
+  {
+    id: 'morning',
+    label: 'Rotina matinal sólida',
+    desc: 'Começar o dia antes de todos. Com ritmo, intenção e controle desde a primeira hora.',
+    icon: <Calendar className="w-4 h-4" />,
+  },
+  {
+    id: 'planning',
+    label: 'Planejamento semanal',
+    desc: 'Visão clara da semana. Saber exatamente o que fazer — sem improvisar, sem surpresas.',
+    icon: <LayoutGrid className="w-4 h-4" />,
+  },
 ]
+
+const STEP_LABELS: Record<number, string> = { 0: 'Diagnóstico', 1: 'Objetivo', 2: 'Conta' }
+
+/** Inline pill stepper — active step shows label, others are minimal capsules */
+function PillStepper({ activeIndex }: { activeIndex: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {[0, 1, 2].map(i => {
+        const isPast    = i < activeIndex
+        const isCurrent = i === activeIndex
+        return (
+          <motion.div
+            key={i}
+            layout
+            transition={{ duration: 0.35, ease: [0.25, 0, 0, 1] }}
+            className={[
+              'flex items-center rounded-full border transition-all duration-300 overflow-hidden',
+              isCurrent
+                ? 'border-foreground/20 bg-foreground/5 px-2.5 py-1'
+                : isPast
+                  ? 'border-primary/30 bg-primary/8 w-6 h-5'
+                  : 'border-border bg-transparent w-6 h-5',
+            ].join(' ')}
+          >
+            {isCurrent && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="text-[10px] font-semibold tracking-[0.12em] uppercase text-foreground whitespace-nowrap"
+              >
+                {STEP_LABELS[i]}
+              </motion.span>
+            )}
+            {!isCurrent && (
+              <span className={[
+                'block w-1.5 h-1.5 rounded-full mx-auto',
+                isPast ? 'bg-primary/50' : 'bg-border',
+              ].join(' ')} />
+            )}
+          </motion.div>
+        )
+      })}
+    </div>
+  )
+}
 
 export function OnboardingPage() {
-  const [step, setStep] = useState<Step>('obstacle')
+  const [step, setStep]           = useState<Step>('obstacle')
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null)
-  
-  const completeOnboarding = useOnboardingStore(state => state.completeOnboarding)
-  const addHabit = useHabitsStore(state => state.addHabit)
-  const addTask = useTasksStore(state => state.addTask)
-  
-  const startOAuthFlow = useGitHubStore(state => state.startOAuthFlow)
-  const isAuthenticated = useGitHubStore(state => state.isAuthenticated)
+  const [loadingProgress, setLoadingProgress] = useState(0)
 
+  const completeOnboarding = useOnboardingStore(state => state.completeOnboarding)
+  const addHabit           = useHabitsStore(state => state.addHabit)
+  const addTask            = useTasksStore(state => state.addTask)
+  const startOAuthFlow     = useGitHubStore(state => state.startOAuthFlow)
+  const isAuthenticated    = useGitHubStore(state => state.isAuthenticated)
+
+  // Loading animation then advance — reset is done via functional updater, never synchronously
   useEffect(() => {
-    if (step === 'loading') {
-      const timer = setTimeout(() => {
-        setStep('login')
-      }, 2000)
-      return () => clearTimeout(timer)
+    if (step !== 'loading') return
+
+    let frame = 0
+    const progressInterval = setInterval(() => {
+      frame += 1
+      setLoadingProgress(frame === 1 ? 0 : prev => {
+        if (prev >= 100) { clearInterval(progressInterval); return 100 }
+        return prev + 2
+      })
+    }, 30)
+
+    const timer = setTimeout(() => {
+      clearInterval(progressInterval)
+      setStep('login')
+    }, 2000)
+
+    return () => {
+      clearTimeout(timer)
+      clearInterval(progressInterval)
     }
   }, [step])
 
@@ -67,7 +179,6 @@ export function OnboardingPage() {
   }
 
   const handleFinish = async () => {
-    // Populate data based on the chosen goal
     try {
       if (selectedGoal === 'morning') {
         await addHabit({ name: 'Beber água', color: '#3b82f6', frequency: 'daily' })
@@ -80,216 +191,333 @@ export function OnboardingPage() {
         await addHabit({ name: 'Revisão do dia', color: '#10b981', frequency: 'daily' })
         await addTask('Revisão Semanal de Metas', { priority: 'high' })
       } else {
-        // Fallback or generic defaults
-        await addHabit({ name: 'Hábitos fundamentais', color: '#f59e0b', frequency: 'daily' })
+        await addHabit({ name: 'Hábito diário', color: '#f59e0b', frequency: 'daily' })
       }
     } catch (e) {
       console.error('Failed to populate default data', e)
     }
-
     completeOnboarding()
+  }
+
+  // Shared transition config
+  const transition = { duration: 0.38, ease: [0.25, 0, 0, 1] as const }
+  const variants = {
+    hidden:  { opacity: 0, y: 12 },
+    visible: { opacity: 1, y: 0 },
+    exit:    { opacity: 0, y: -12 },
   }
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
       <TitleBar className="bg-transparent border-b-0 absolute top-0 w-full z-50" />
-      
+
       <div className="flex flex-1 flex-row overflow-hidden relative">
-        {/* Left Side: Form Content */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
-          {/* Pill Stepper */}
-          <div className="absolute top-12 left-0 w-full flex items-center justify-center gap-2 z-10">
-            {['Obstáculo', 'Meta', 'Conexão', 'Pronto'].map((label, idx) => {
-              const stepMap: Record<string, number> = { obstacle: 0, goal: 1, loading: 2, login: 3, done: 4 }
-              const currentIdx = stepMap[currentStep] ?? 0
-              const isActive = idx <= currentIdx
-              const isCurrent = idx === currentIdx
-              return (
-                <div key={label} className="flex items-center gap-2">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors ${isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                    {idx + 1}
-                  </div>
-                  <span className={`text-xs font-medium ${isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}>
-                    {label}
-                  </span>
-                  {idx < 3 && (
-                    <div className={`w-8 h-0.5 mx-1 ${isActive && idx < currentIdx ? 'bg-primary' : 'bg-muted'}`} />
-                  )}
-                </div>
-              )
-            })}
+
+        {/* ── Left Panel ────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col items-center justify-center px-10 py-8 relative">
+
+          {/* Brand mark — top right */}
+          <div className="absolute top-14 right-10 select-none">
+            <span className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground/40">
+              Axis
+            </span>
           </div>
 
-        <AnimatePresence mode="wait">
-          
-          {currentStep === 'obstacle' && (
-            <motion.div
-              key="obstacle"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="max-w-xl w-full"
-            >
-              <h1 className="text-3xl font-medium tracking-tight mb-2 text-foreground">
-                Qual é o seu maior obstáculo hoje?
-              </h1>
-              <p className="text-muted-foreground mb-8 text-lg">
-                Vamos personalizar sua experiência para resolver isso primeiro.
-              </p>
-              
-              <div className="flex flex-col gap-3">
-                {OBSTACLES.map(obs => (
-                  <button
-                    key={obs.id}
-                    onClick={() => {
-                      setStep('goal')
-                    }}
-                    className="flex flex-col items-start p-5 rounded-lg border border-border bg-card hover:bg-accent/50 hover:border-accent-foreground/20 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
-                  >
-                    <span className="text-lg font-medium text-card-foreground mb-1">
-                      {obs.label}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {obs.desc}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
+          <AnimatePresence mode="wait">
 
-          {currentStep === 'goal' && (
-            <motion.div
-              key="goal"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="max-w-xl w-full"
-            >
-              <h1 className="text-3xl font-medium tracking-tight mb-2 text-foreground">
-                O que você quer dominar primeiro?
-              </h1>
-              <p className="text-muted-foreground mb-8 text-lg">
-                Escolha o seu principal objetivo para os próximos 30 dias.
-              </p>
-              
-              <div className="flex flex-col gap-3">
-                {GOALS.map(goal => (
-                  <button
-                    key={goal.id}
-                    onClick={() => handleGoalSelect(goal.id)}
-                    className="flex flex-col items-start p-5 rounded-lg border border-border bg-card hover:bg-accent/50 hover:border-accent-foreground/20 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
-                  >
-                    <span className="text-lg font-medium text-card-foreground mb-1">
-                      {goal.label}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {goal.desc}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {currentStep === 'loading' && (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
-              className="flex flex-col items-center justify-center"
-            >
-              <Loader2 className="w-12 h-12 text-primary animate-spin mb-6" />
-              <h2 className="text-2xl font-medium text-foreground tracking-tight">
-                Montando o seu Dashboard ideal...
-              </h2>
-              <p className="text-muted-foreground mt-2">
-                Ajustando widgets e protocolos iniciais.
-              </p>
-            </motion.div>
-          )}
-
-          {currentStep === 'login' && (
-            <motion.div
-              key="login"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="max-w-md w-full text-center flex flex-col items-center"
-            >
-              <h1 className="text-3xl font-medium tracking-tight mb-2 text-foreground">
-                Conecte sua conta
-              </h1>
-              <p className="text-muted-foreground mb-8 text-lg">
-                Sincronize seu progresso, hábitos e tarefas com segurança.
-              </p>
-              
-              <div className="flex flex-col gap-4 w-full">
-                <button
-                  onClick={() => startOAuthFlow()}
-                  className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 text-sm font-medium text-white bg-[#24292e] rounded-md overflow-hidden transition-all hover:bg-[#2f363d] focus:outline-none focus:ring-2 focus:ring-[#24292e] focus:ring-offset-2 focus:ring-offset-background w-full"
-                >
-                  <GithubIcon className="w-5 h-5" />
-                  Conectar com GitHub
-                </button>
-                
-                <button
-                  onClick={() => setStep('done')}
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
-                >
-                  Pular por enquanto
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {currentStep === 'done' && (
-            <motion.div
-              key="done"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="max-w-md w-full text-center flex flex-col items-center"
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                <Check className="w-8 h-8 text-primary" />
-              </div>
-              <h1 className="text-3xl font-medium tracking-tight mb-4 text-foreground">
-                Seu protocolo está pronto.
-              </h1>
-              <p className="text-muted-foreground mb-10 text-lg leading-relaxed">
-                Nós configuramos tudo o que você precisa para começar. Entre agora para salvar seu progresso e acessar o Dashboard.
-              </p>
-              
-              <button
-                onClick={handleFinish}
-                className="group relative inline-flex items-center justify-center px-8 py-4 text-sm font-medium text-primary-foreground bg-primary rounded-md overflow-hidden transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background w-full"
+            {/* ── Step 1: Obstacle ──────────────────────────── */}
+            {currentStep === 'obstacle' && (
+              <motion.div
+                key="obstacle"
+                variants={variants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={transition}
+                className="max-w-lg w-full"
               >
-                <span className="relative z-10 flex items-center gap-2">
-                  Começar Agora
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </button>
-            </motion.div>
-          )}
+                <div className="flex items-center gap-3 mb-5">
+                  <span className="text-[10px] font-semibold tracking-[0.14em] uppercase text-muted-foreground/60">
+                    Passo 1 de 3
+                  </span>
+                  <PillStepper activeIndex={0} />
+                </div>
+                <h1 className="text-[2rem] font-semibold tracking-tight leading-[1.15] text-foreground mb-3">
+                  O que está travando<br />seu progresso?
+                </h1>
+                <p className="text-base text-muted-foreground mb-10 leading-relaxed max-w-sm">
+                  Escolha o obstáculo que mais ressoa com você agora.
+                </p>
 
-        </AnimatePresence>
-      </div>
+                <div className="flex flex-col gap-2.5">
+                  {OBSTACLES.map((obs, i) => (
+                    <motion.button
+                      key={obs.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.32, delay: i * 0.06, ease: [0.25, 0, 0, 1] }}
+                      onClick={() => setStep('goal')}
+                      className="group flex items-start justify-between gap-4 p-5 rounded-lg border border-border bg-card hover:bg-accent/30 hover:border-primary/20 transition-all duration-200 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer"
+                    >
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <span className="text-sm font-semibold text-foreground leading-snug">
+                          {obs.label}
+                        </span>
+                        <span className="text-sm text-muted-foreground leading-relaxed">
+                          {obs.desc}
+                        </span>
+                      </div>
+                      <div className="shrink-0 flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground/60 bg-muted px-2 py-0.5 rounded-sm">
+                          {obs.tag}
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
 
-      {/* Right Side: Image Placeholder */}
-      <div className="hidden lg:flex w-1/2 bg-muted relative items-center justify-center overflow-hidden border-l border-border/50">
-        <img 
-          src="/Onboarding-Image.webp" 
-          alt="Onboarding" 
-          className="w-full h-full object-cover opacity-90" 
-        />
-        <div className="absolute inset-0 bg-linear-to-t from-background/80 via-transparent to-transparent pointer-events-none" />
-      </div>
+            {/* ── Step 2: Goal ──────────────────────────────── */}
+            {currentStep === 'goal' && (
+              <motion.div
+                key="goal"
+                variants={variants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={transition}
+                className="max-w-lg w-full"
+              >
+                <div className="flex items-center gap-3 mb-5">
+                  <span className="text-[10px] font-semibold tracking-[0.14em] uppercase text-muted-foreground/60">
+                    Passo 2 de 3
+                  </span>
+                  <PillStepper activeIndex={1} />
+                </div>
+                <h1 className="text-[2rem] font-semibold tracking-tight leading-[1.15] text-foreground mb-3">
+                  Qual resultado você<br />quer nos próximos 30 dias?
+                </h1>
+                <p className="text-base text-muted-foreground mb-10 leading-relaxed max-w-sm">
+                  Seu dashboard e hábitos iniciais serão configurados com base nisso.
+                </p>
+
+                <div className="flex flex-col gap-2.5">
+                  {GOALS.map((goal, i) => (
+                    <motion.button
+                      key={goal.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.32, delay: i * 0.06, ease: [0.25, 0, 0, 1] }}
+                      onClick={() => handleGoalSelect(goal.id)}
+                      className="group flex items-start justify-between gap-4 p-5 rounded-lg border border-border bg-card hover:bg-accent/30 hover:border-primary/20 transition-all duration-200 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer"
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span className="shrink-0 mt-0.5 text-muted-foreground/50 group-hover:text-primary transition-colors duration-200">
+                          {goal.icon}
+                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-semibold text-foreground leading-snug">
+                            {goal.label}
+                          </span>
+                          <span className="text-sm text-muted-foreground leading-relaxed">
+                            {goal.desc}
+                          </span>
+                        </div>
+                      </div>
+                      <ArrowRight className="shrink-0 mt-0.5 w-3.5 h-3.5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── Step 3: Loading ───────────────────────────── */}
+            {currentStep === 'loading' && (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.02 }}
+                transition={{ duration: 0.45, ease: [0.25, 0, 0, 1] }}
+                className="flex flex-col items-center justify-center gap-6 max-w-xs text-center"
+              >
+                {/* Progress ring */}
+                <div className="relative w-16 h-16">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 64 64">
+                    <circle
+                      cx="32" cy="32" r="26"
+                      fill="none"
+                      stroke="var(--color-border)"
+                      strokeWidth="2"
+                    />
+                    <motion.circle
+                      cx="32" cy="32" r="26"
+                      fill="none"
+                      stroke="var(--color-primary)"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 26}`}
+                      strokeDashoffset={`${2 * Math.PI * 26 * (1 - loadingProgress / 100)}`}
+                      style={{ transition: 'stroke-dashoffset 0.1s linear' }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xs font-semibold text-foreground tabular-nums">
+                      {Math.round(loadingProgress)}%
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-semibold text-foreground tracking-tight mb-2">
+                    Configurando seu espaço
+                  </h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Ajustando widgets, hábitos e protocolos com base nas suas respostas.
+                  </p>
+                </div>
+
+                {/* Animated tasks */}
+                <div className="flex flex-col gap-1.5 w-full text-left">
+                  {[
+                    'Criando estrutura do dashboard',
+                    'Definindo hábitos iniciais',
+                    'Aplicando preferências',
+                  ].map((item, i) => (
+                    <motion.div
+                      key={item}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 + i * 0.35, duration: 0.3, ease: 'easeOut' }}
+                      className="flex items-center gap-2"
+                    >
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.5 + i * 0.35, duration: 0.2 }}
+                        className="w-3.5 h-3.5 rounded-full bg-primary/10 flex items-center justify-center shrink-0"
+                      >
+                        <Check className="w-2 h-2 text-primary" />
+                      </motion.div>
+                      <span className="text-xs text-muted-foreground">{item}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── Step 4: Login ─────────────────────────────── */}
+            {currentStep === 'login' && (
+              <motion.div
+                key="login"
+                variants={variants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={transition}
+                className="max-w-sm w-full"
+              >
+                <div className="flex items-center gap-3 mb-5">
+                  <span className="text-[10px] font-semibold tracking-[0.14em] uppercase text-muted-foreground/60">
+                    Passo 3 de 3
+                  </span>
+                  <PillStepper activeIndex={2} />
+                </div>
+                <h1 className="text-[2rem] font-semibold tracking-tight leading-[1.15] text-foreground mb-3">
+                  Salve seu progresso
+                </h1>
+                <p className="text-base text-muted-foreground mb-10 leading-relaxed">
+                  Conecte sua conta para sincronizar dados e manter tudo seguro entre dispositivos.
+                </p>
+
+                <div className="flex flex-col gap-3 w-full">
+                  <button
+                    id="onboarding-google-connect"
+                    onClick={() => {
+                      // Placeholder for Google login
+                      console.log('Google login clicked')
+                      setStep('done')
+                    }}
+                    className="group flex items-center justify-center gap-2.5 px-5 py-3.5 text-sm font-medium text-foreground bg-background rounded-lg border border-border hover:bg-accent/50 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full cursor-pointer shadow-sm"
+                  >
+                    <GoogleIcon className="w-4 h-4" />
+                    Continuar com Google
+                    <ArrowRight className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200" />
+                  </button>
+
+                  <button
+                    id="onboarding-github-connect"
+                    onClick={() => startOAuthFlow()}
+                    className="group flex items-center justify-center gap-2.5 px-5 py-3.5 text-sm font-medium text-white bg-[#1b1f23] rounded-lg border border-[#1b1f23] hover:bg-[#272c31] transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full cursor-pointer shadow-sm"
+                  >
+                    <GithubIcon className="w-4 h-4" />
+                    Continuar com GitHub
+                    <ArrowRight className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200" />
+                  </button>
+
+                  <button
+                    id="onboarding-skip"
+                    onClick={() => setStep('done')}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 py-2.5 text-center cursor-pointer"
+                  >
+                    Pular por enquanto — configurar depois
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── Step 5: Done ──────────────────────────────── */}
+            {currentStep === 'done' && (
+              <motion.div
+                key="done"
+                variants={variants}
+                initial="hidden"
+                animate="visible"
+                transition={{ ...transition, duration: 0.55 }}
+                className="max-w-sm w-full flex flex-col"
+              >
+                <motion.div
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
+                  className="w-10 h-10 rounded-full border border-border bg-card flex items-center justify-center mb-7"
+                >
+                  <Check className="w-4 h-4 text-foreground" />
+                </motion.div>
+
+                <h1 className="text-[2rem] font-semibold tracking-tight leading-[1.15] text-foreground mb-3">
+                  Tudo pronto.
+                </h1>
+                <p className="text-base text-muted-foreground mb-10 leading-relaxed">
+                  Seu espaço foi configurado. Hábitos, tarefas e dashboard aguardam — só falta você começar.
+                </p>
+
+                <button
+                  id="onboarding-start"
+                  onClick={handleFinish}
+                  className="group flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:opacity-90 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full cursor-pointer"
+                >
+                  Entrar no Dashboard
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform duration-200" />
+                </button>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+        </div>
+
+        {/* ── Right Panel: Image ────────────────────────────── */}
+        <div className="hidden lg:flex w-[46%] bg-muted relative items-center justify-center overflow-hidden border-l border-border/50">
+          <img
+            src="/Onboarding-Image.webp"
+            alt="Onboarding visual"
+            className="w-full h-full object-cover"
+          />
+          {/* Subtle vignette only at bottom */}
+          <div className="absolute inset-0 bg-linear-to-t from-background/60 via-transparent to-transparent pointer-events-none" />
+        </div>
 
       </div>
     </div>

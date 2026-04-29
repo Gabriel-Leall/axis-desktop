@@ -21,6 +21,7 @@ interface UIState {
   lastQuickPaneEntry: string | null
   activePage: AppPage
   activePageData: Record<string, string>
+  activePreferencesPane: string
 
   toggleLeftSidebar: () => void
   setLeftSidebarVisible: (visible: boolean) => void
@@ -29,7 +30,8 @@ interface UIState {
   toggleCommandPalette: () => void
   setCommandPaletteOpen: (open: boolean) => void
   togglePreferences: () => void
-  setPreferencesOpen: (open: boolean) => void
+  setPreferencesOpen: (open: boolean, pane?: string) => void
+  setActivePreferencesPane: (pane: string) => void
   setLastQuickPaneEntry: (text: string) => void
   setSquareCorners: (enabled: boolean) => void
   navigateTo: (page: AppPage, data?: Record<string, string>) => void
@@ -45,6 +47,7 @@ export const useUIStore = create<UIState>()(
       lastQuickPaneEntry: null,
       activePage: 'grid' as AppPage,
       activePageData: {},
+      activePreferencesPane: 'general',
 
       toggleLeftSidebar: () =>
         set(
@@ -91,8 +94,22 @@ export const useUIStore = create<UIState>()(
           'togglePreferences'
         ),
 
-      setPreferencesOpen: open =>
-        set({ preferencesOpen: open }, undefined, 'setPreferencesOpen'),
+      setPreferencesOpen: (open, pane) =>
+        set(
+          state => ({
+            preferencesOpen: open,
+            activePreferencesPane: pane || state.activePreferencesPane,
+          }),
+          undefined,
+          'setPreferencesOpen'
+        ),
+
+      setActivePreferencesPane: pane =>
+        set(
+          { activePreferencesPane: pane },
+          undefined,
+          'setActivePreferencesPane'
+        ),
 
       setLastQuickPaneEntry: text =>
         set({ lastQuickPaneEntry: text }, undefined, 'setLastQuickPaneEntry'),

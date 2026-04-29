@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { Error } from '@/components/error'
 import clsx from 'clsx'
 
@@ -49,7 +49,10 @@ export const Input = ({
   ...rest
 }: InputProps) => {
   const [_value, set_value] = useState(value || '')
-  const _ref = ref ? ref : useRef<HTMLInputElement>(null)
+  const internalRef = useRef<HTMLInputElement>(null)
+  const _ref = ref || internalRef
+
+  const displayValue = value !== undefined ? value : _value
 
   const _onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     set_value(e.target.value)
@@ -57,12 +60,6 @@ export const Input = ({
       onChange(e.target.value)
     }
   }
-
-  useEffect(() => {
-    if (value !== undefined) {
-      set_value(value)
-    }
-  }, [value])
 
   return (
     <div className="flex flex-col gap-2" onClick={() => _ref.current?.focus()}>
@@ -104,7 +101,7 @@ export const Input = ({
           )}
           placeholder={placeholder}
           disabled={disabled}
-          value={_value}
+          value={displayValue}
           onChange={_onChange}
           onFocus={onFocus}
           onBlur={onBlur}
