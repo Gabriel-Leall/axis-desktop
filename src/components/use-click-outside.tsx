@@ -1,10 +1,17 @@
-import { RefObject, useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import type { RefObject } from 'react'
 
-export const useClickOutside = (ref: RefObject<any>, callback: () => void) => {
+export const useClickOutside = (ref: RefObject<HTMLElement | null>, callback: () => void) => {
+  const savedCallback = useRef(callback)
+
+  useEffect(() => {
+    savedCallback.current = callback
+  }, [callback])
+
   useEffect(() => {
     function handleClickOutside(event: Event) {
       if (ref.current && !ref.current.contains(event.target as Node)) {
-        callback()
+        savedCallback.current()
       }
     }
 

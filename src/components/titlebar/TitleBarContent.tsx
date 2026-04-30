@@ -100,12 +100,8 @@ interface TitleBarTitleProps {
  * Centered title for the title bar.
  * Uses absolute positioning to stay centered regardless of other content.
  */
-export function TitleBarTitle({ title = 'Tauri App' }: TitleBarTitleProps) {
-  return (
-    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-      <span className="text-sm font-medium text-foreground/80">{title}</span>
-    </div>
-  )
+export function TitleBarTitle(_props: TitleBarTitleProps) {
+  return null
 }
 
 /**
@@ -114,7 +110,7 @@ export function TitleBarTitle({ title = 'Tauri App' }: TitleBarTitleProps) {
  *
  * For more control, use TitleBarLeftActions, TitleBarRightActions, and TitleBarTitle separately.
  */
-export function TitleBarContent({ title = 'Tauri App' }: TitleBarTitleProps) {
+export function TitleBarContent({ title = 'Axis' }: TitleBarTitleProps) {
   return (
     <>
       <TitleBarLeftActions />

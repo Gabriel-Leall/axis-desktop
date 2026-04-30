@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Settings, Palette, Zap } from 'lucide-react'
+import { Settings, Palette, Zap, User as UserIcon } from 'lucide-react'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -29,8 +28,9 @@ import { useUIStore } from '@/store/ui-store'
 import { GeneralPane } from './panes/GeneralPane'
 import { AppearancePane } from './panes/AppearancePane'
 import { AdvancedPane } from './panes/AdvancedPane'
+import { UserPane } from './panes/UserPane'
 
-type PreferencePane = 'general' | 'appearance' | 'advanced'
+type PreferencePane = 'general' | 'appearance' | 'advanced' | 'user'
 
 const navigationItems = [
   {
@@ -48,13 +48,19 @@ const navigationItems = [
     labelKey: 'preferences.advanced',
     icon: Zap,
   },
+  {
+    id: 'user' as const,
+    labelKey: 'preferences.user',
+    icon: UserIcon,
+  },
 ] as const
 
 export function PreferencesDialog() {
   const { t } = useTranslation()
-  const [activePane, setActivePane] = useState<PreferencePane>('general')
   const preferencesOpen = useUIStore(state => state.preferencesOpen)
   const setPreferencesOpen = useUIStore(state => state.setPreferencesOpen)
+  const activePane = useUIStore(state => state.activePreferencesPane) as PreferencePane
+  const setActivePane = useUIStore(state => state.setActivePreferencesPane)
 
   const getPaneTitle = (pane: PreferencePane): string => {
     return t(`preferences.${pane}`)
@@ -121,6 +127,7 @@ export function PreferencesDialog() {
               {activePane === 'general' && <GeneralPane />}
               {activePane === 'appearance' && <AppearancePane />}
               {activePane === 'advanced' && <AdvancedPane />}
+              {activePane === 'user' && <UserPane />}
             </div>
           </main>
         </SidebarProvider>

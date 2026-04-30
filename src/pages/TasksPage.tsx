@@ -484,9 +484,13 @@ function TaskDetailPanel({
     return () => window.removeEventListener('keydown', handleKey)
   }, [onClose])
 
+<<<<<<< HEAD
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
+=======
+
+>>>>>>> 85f334e5047b759fca3af8336ed27d399a740d57
 
   if (!task) return null
 
@@ -718,7 +722,11 @@ function TaskDetailPanel({
   )
 }
 
+<<<<<<< HEAD
 type SubtaskDraft = {
+=======
+interface SubtaskDraft {
+>>>>>>> 85f334e5047b759fca3af8336ed27d399a740d57
   id: string
   title: string
 }

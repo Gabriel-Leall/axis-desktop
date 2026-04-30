@@ -5,7 +5,9 @@ import {
   CircleCheck,
   NotebookPen,
   BarChart2,
+  User as UserIcon,
 } from 'lucide-react'
+import { useGitHubStore } from '@/store/github-store'
 import {
   Tooltip,
   TooltipTrigger,
@@ -39,6 +41,8 @@ interface LeftSideBarProps {
 export function LeftSideBar({ children, className }: LeftSideBarProps) {
   const activePage = useUIStore(state => state.activePage)
   const navigateTo = useUIStore(state => state.navigateTo)
+  const setPreferencesOpen = useUIStore(state => state.setPreferencesOpen)
+  const user = useGitHubStore(state => state.user)
 
   return (
     <div className={cn('flex h-full flex-col border-r bg-sidebar', className)}>
@@ -47,6 +51,9 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
         className="flex flex-col items-center gap-1 p-2 pt-3"
         aria-label="Main navigation"
       >
+        <div className="mb-6 mt-1 flex items-center justify-center">
+          <img src="/Axis-Logo.png" alt="Axis Logo" className="size-8 object-contain drop-shadow-sm" />
+        </div>
         {NAV_ITEMS.map(item => {
           const isActive = activePage === item.id
           return (
@@ -72,7 +79,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                   >
                     <item.icon
                       className={cn(
-                        'size-[18px] transition-colors',
+                        'size-4.5 transition-colors',
                         isActive
                           ? 'text-foreground'
                           : 'text-muted-foreground group-hover:text-foreground'
@@ -89,6 +96,27 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           )
         })}
       </nav>
+
+      <div className="mt-auto flex flex-col items-center pb-4">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setPreferencesOpen(true, 'user')}
+              className="group relative flex size-9 items-center justify-center rounded-full border border-border bg-sidebar-accent/50 shadow-sm transition-all hover:border-primary/30 hover:ring-2 hover:ring-primary/10 overflow-hidden"
+            >
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt={user.login} className="h-full w-full object-cover" />
+              ) : (
+                <UserIcon className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {user?.name || user?.login || 'Conta'}
+          </TooltipContent>
+        </Tooltip>
+      </div>
 
       {/* Slot for additional content */}
       {children}

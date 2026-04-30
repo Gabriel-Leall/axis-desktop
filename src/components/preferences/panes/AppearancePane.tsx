@@ -123,6 +123,9 @@ export function AppearancePane() {
               <SelectItem value="entardecer">
                 {t('preferences.appearance.theme.entardecer')}
               </SelectItem>
+              <SelectItem value="cream">
+                {t('preferences.appearance.theme.cream')}
+              </SelectItem>
               <SelectItem value="system">
                 {t('preferences.appearance.theme.system')}
               </SelectItem>

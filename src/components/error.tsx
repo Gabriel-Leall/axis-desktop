@@ -49,7 +49,7 @@ export const Error = ({
           large: 'text-base',
         }[size]
       }`}
-      // @ts-ignore
+      // @ts-expect-error -- CSS custom properties exist but are not in React.CSSProperties
       style={{ '--geist-link-color': 'var(--ds-red-900)' }}
     >
       <ErrorIcon />
@@ -57,9 +57,9 @@ export const Error = ({
         <>
           {error.message}
           <a
-            className="font-medium flex items-center gap-0.5 -ml-1 hover:no-underline hover:opacity-60 duration-150 relative after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-full after:h-[1px] after:bg-red-900"
+            className="font-medium flex items-center gap-0.5 -ml-1 hover:no-underline hover:opacity-60 duration-150 relative after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-full after:h-px after:bg-red-900"
             href={error.link}
-            target="_blank"
+            target="_blank" rel="noreferrer noopener"
           >
             {error.action}
             <ErrorLinkIcon />

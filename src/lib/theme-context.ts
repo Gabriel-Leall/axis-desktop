@@ -3,7 +3,7 @@ import type { ResolvedTheme } from '@/lib/theme'
 
 export type { ResolvedTheme }
 
-export type Theme = 'dark' | 'light' | 'system' | 'entardecer'
+export type Theme = 'dark' | 'light' | 'system' | 'entardecer' | 'cream'
 
 export interface ThemeProviderState {
   theme: Theme
