@@ -30,3 +30,7 @@ jscpd-report
 DESIGN
 favicon_io.zip
 ui-changes.md
+
+# Graphify knowledge graph output
+graphify-out/
+src/graphify-out/

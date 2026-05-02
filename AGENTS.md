@@ -141,3 +141,23 @@ Task-focused agents that leverage separate context for focused work:
 
 - `cleanup-analyzer` - Analyze static analysis output (used by `/cleanup`)
 - `userguide-reviewer` - Review user guide against actual system features
+
+## Graphify - Knowledge Graph
+
+This project has a pre-built knowledge graph in `graphify-out/graph.html` and `graphify-out/graph.json`.
+
+**Before searching code** for architecture questions, check the graph first:
+
+- Open `graphify-out/graph.html` in browser to explore visually
+- Use `/graphify query "question"` to ask the graph
+- Use `/graphify explain "ConceptName"` to explain a node
+- Use `/graphify path "ConceptA" "ConceptB"` to find shortest path
+
+The graph shows:
+
+- God nodes (most connected - core abstractions)
+- Community clusters (related code modules)
+- Surprising connections (you probably didn't know)
+- Extracted relationships (EXTRACTED/INFERRED/AMBIGUOUS)
+
+Run `/graphify src` to rebuild after code changes.

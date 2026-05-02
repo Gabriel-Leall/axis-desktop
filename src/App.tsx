@@ -22,7 +22,7 @@ import { Toaster } from './components/ui/sonner'
 
 function App() {
   useSquareCornersEffect()
-  
+
   const hasCompletedOnboarding = useOnboardingStore(state => state.hasCompleted)
 
   // Initialize command system and cleanup on app startup
@@ -140,4 +140,3 @@ function App() {
 }
 
 export default App
-
