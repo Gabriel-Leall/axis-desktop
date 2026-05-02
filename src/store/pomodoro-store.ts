@@ -29,6 +29,8 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { commands } from '@/lib/tauri-bindings'
 import { logger } from '@/lib/logger'
+import { notifications } from '@/lib/notifications'
+import i18n from '@/i18n/config'
 
 import type {
   PomodoroSettings,
@@ -453,6 +455,31 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
         logger.debug(
           `[pomodoro] Session completed: ${currentType} cycle ${newCycles}`
         )
+
+        // ── Notifications ──────────────────────────────────────────────────────
+        if (settings.sound_notifications) {
+          const wasFocus = currentType === 'focus'
+          const title = wasFocus
+            ? i18n.t('widgets.pomodoro.notification.focusCompleteTitle', {
+                defaultValue: 'Focus session complete!',
+              })
+            : i18n.t('widgets.pomodoro.notification.breakOverTitle', {
+                defaultValue: 'Break is over',
+              })
+
+          const body = wasFocus
+            ? i18n.t('widgets.pomodoro.notification.focusCompleteBody', {
+                defaultValue: 'Time for a break. You earned it.',
+              })
+            : i18n.t('widgets.pomodoro.notification.breakOverBody', {
+                defaultValue: 'Ready to focus again?',
+              })
+
+          // Send native notification for background support
+          void notifications.success(title, body, true)
+          // Also send toast for in-app feedback if app is focused
+          void notifications.success(title, body, false)
+        }
       },
 
       // ── Link / Unlink task ────────────────────────────────────────────────────

@@ -484,14 +484,6 @@ function TaskDetailPanel({
     return () => window.removeEventListener('keydown', handleKey)
   }, [onClose])
 
-<<<<<<< HEAD
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
-=======
-
->>>>>>> 85f334e5047b759fca3af8336ed27d399a740d57
-
   if (!task) return null
 
   const handleSave = () => {
@@ -578,7 +570,10 @@ function TaskDetailPanel({
 
         {/* Priority */}
         <div>
-          <span id="priority-label" className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+          <span
+            id="priority-label"
+            className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50"
+          >
             Priority
           </span>
           <div className="flex gap-2" aria-labelledby="priority-label">
@@ -598,7 +593,10 @@ function TaskDetailPanel({
 
         {/* Due date */}
         <div>
-          <span id="due-date-label" className="mb-3 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+          <span
+            id="due-date-label"
+            className="mb-3 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50"
+          >
             Due date
           </span>
           <Calendar
@@ -623,7 +621,10 @@ function TaskDetailPanel({
 
         {/* Subtasks */}
         <div>
-          <span id="subtasks-label" className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+          <span
+            id="subtasks-label"
+            className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50"
+          >
             Subtasks
           </span>
 
@@ -722,11 +723,7 @@ function TaskDetailPanel({
   )
 }
 
-<<<<<<< HEAD
-type SubtaskDraft = {
-=======
 interface SubtaskDraft {
->>>>>>> 85f334e5047b759fca3af8336ed27d399a740d57
   id: string
   title: string
 }
@@ -846,7 +843,10 @@ function NewTaskModal({
               >
                 Priority
               </span>
-              <div className="flex items-center gap-1.5" aria-labelledby="modal-priority-label">
+              <div
+                className="flex items-center gap-1.5"
+                aria-labelledby="modal-priority-label"
+              >
                 {(['low', 'medium', 'high'] as Priority[]).map(p => (
                   <PriorityButton
                     key={p}
@@ -859,7 +859,10 @@ function NewTaskModal({
             </div>
 
             <div>
-              <label htmlFor="modal-description" className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+              <label
+                htmlFor="modal-description"
+                className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50"
+              >
                 Description
               </label>
               <textarea
@@ -1123,7 +1126,9 @@ export function TasksPage({
 
   const [activeTab, setActiveTab] = useState<TabKey>('all')
   // viewMode is stable on mount from initialViewMode — treat prop as initial value only
-  const [viewMode, setViewMode] = useState<'stack' | 'kanban'>(() => initialViewMode)
+  const [viewMode, setViewMode] = useState<'stack' | 'kanban'>(
+    () => initialViewMode
+  )
   const [searchVisible, setSearchVisible] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
@@ -1232,250 +1237,200 @@ export function TasksPage({
   return (
     <LazyMotion features={domAnimation}>
       <div className="flex h-full flex-col bg-background">
-      {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-[18px] font-semibold text-foreground">Tasks</h1>
-          <span className="font-mono text-[11px] text-muted-foreground/40">
-            {tasks.filter(t => t.status !== 'done').length}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* View Mode Toggle */}
-          <div className="flex items-center rounded-lg border border-border p-0.5">
-            <button
-              type="button"
-              onClick={() => setViewMode('stack')}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-[12px] transition-colors',
-                viewMode === 'stack'
-                  ? 'bg-accent text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Formato de pilha
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('kanban')}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-[12px] transition-colors',
-                viewMode === 'kanban'
-                  ? 'bg-accent text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Formato kanban
-            </button>
+        {/* ── Page Header ────────────────────────────────────────────────────── */}
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-6 py-4">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[18px] font-semibold text-foreground">Tasks</h1>
+            <span className="font-mono text-[11px] text-muted-foreground/40">
+              {tasks.filter(t => t.status !== 'done').length}
+            </span>
           </div>
 
-          {/* New Task Button - appears in both modes */}
-          <button
-            type="button"
-            onClick={() => setNewTaskOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-[13px] text-background transition-all hover:opacity-80"
-          >
-            <Plus className="size-3.5" strokeWidth={2.5} />
-            New Task
-          </button>
-        </div>
-      </div>
+          <div className="flex items-center gap-3">
+            {/* View Mode Toggle */}
+            <div className="flex items-center rounded-lg border border-border p-0.5">
+              <button
+                type="button"
+                onClick={() => setViewMode('stack')}
+                className={cn(
+                  'rounded-md px-2.5 py-1 text-[12px] transition-colors',
+                  viewMode === 'stack'
+                    ? 'bg-accent text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                Formato de pilha
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('kanban')}
+                className={cn(
+                  'rounded-md px-2.5 py-1 text-[12px] transition-colors',
+                  viewMode === 'kanban'
+                    ? 'bg-accent text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                Formato kanban
+              </button>
+            </div>
 
-      {/* ── Content ────────────────────────────────────────────────────────── */}
-      {viewMode === 'kanban' ? (
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <KanbanPage />
+            {/* New Task Button - appears in both modes */}
+            <button
+              type="button"
+              onClick={() => setNewTaskOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-[13px] text-background transition-all hover:opacity-80"
+            >
+              <Plus className="size-3.5" strokeWidth={2.5} />
+              New Task
+            </button>
+          </div>
         </div>
-      ) : (
-        <>
-          {/* ── Filter Bar ─────────────────────────────────────────────────────── */}
-          <div className="flex shrink-0 items-center gap-2 border-b border-border px-6 py-2">
-            <TabBar active={activeTab} onChange={setActiveTab} />
 
-            <div className="ml-auto flex items-center gap-1.5">
-              {/* Search */}
-              {searchVisible ? (
-                <div className="flex items-center gap-1.5 rounded-md border border-border bg-accent/30 px-2 py-1 focus-within:border-border">
-                  <Search className="size-3 text-muted-foreground/50" />
-                  <input
-                    ref={searchRef}
-                    type="text"
-                    value={filters.search}
-                    onChange={e => setFilter({ search: e.target.value })}
-                    onKeyDown={e => {
-                      if (e.key === 'Escape') {
+        {/* ── Content ────────────────────────────────────────────────────────── */}
+        {viewMode === 'kanban' ? (
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            <KanbanPage />
+          </div>
+        ) : (
+          <>
+            {/* ── Filter Bar ─────────────────────────────────────────────────────── */}
+            <div className="flex shrink-0 items-center gap-2 border-b border-border px-6 py-2">
+              <TabBar active={activeTab} onChange={setActiveTab} />
+
+              <div className="ml-auto flex items-center gap-1.5">
+                {/* Search */}
+                {searchVisible ? (
+                  <div className="flex items-center gap-1.5 rounded-md border border-border bg-accent/30 px-2 py-1 focus-within:border-border">
+                    <Search className="size-3 text-muted-foreground/50" />
+                    <input
+                      ref={searchRef}
+                      type="text"
+                      value={filters.search}
+                      onChange={e => setFilter({ search: e.target.value })}
+                      onKeyDown={e => {
+                        if (e.key === 'Escape') {
+                          setFilter({ search: '' })
+                          setSearchVisible(false)
+                        }
+                      }}
+                      placeholder="Search tasks..."
+                      aria-label="Search tasks"
+                      className="w-40 bg-transparent text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
                         setFilter({ search: '' })
                         setSearchVisible(false)
-                      }
-                    }}
-                    placeholder="Search tasks..."
-                    aria-label="Search tasks"
-                    className="w-40 bg-transparent text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none"
-                  />
+                      }}
+                      aria-label="Close search"
+                      className="text-muted-foreground/40 hover:text-foreground"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                ) : (
                   <button
                     type="button"
                     onClick={() => {
-                      setFilter({ search: '' })
-                      setSearchVisible(false)
+                      setSearchVisible(true)
+                      requestAnimationFrame(() => searchRef.current?.focus())
                     }}
-                    aria-label="Close search"
-                    className="text-muted-foreground/40 hover:text-foreground"
+                    aria-label="Search"
+                    className="flex size-7 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:bg-accent hover:text-foreground"
                   >
-                    <X className="size-3" />
+                    <Search className="size-3.5" />
                   </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchVisible(true)
-                    requestAnimationFrame(() => searchRef.current?.focus())
-                  }}
-                  aria-label="Search"
-                  className="flex size-7 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:bg-accent hover:text-foreground"
-                >
-                  <Search className="size-3.5" />
-                </button>
-              )}
+                )}
 
-              {/* Filter */}
-              <div ref={filterRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setFilterOpen(v => !v)}
-                  aria-label="Filter"
-                  className={cn(
-                    'flex items-center gap-1.5 rounded text-[12px] transition-colors',
-                    filterOpen || activeFilterCount > 0
-                      ? 'bg-accent px-2 py-1 text-foreground'
-                      : 'size-7 justify-center text-muted-foreground/40 hover:bg-accent hover:text-foreground'
-                  )}
-                >
-                  <Filter className="size-3.5" />
-                  {activeFilterCount > 0 && (
-                    <span className="font-mono text-[10px]">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
-                <FilterDropdown
-                  open={filterOpen}
-                  onClose={() => setFilterOpen(false)}
-                />
+                {/* Filter */}
+                <div ref={filterRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setFilterOpen(v => !v)}
+                    aria-label="Filter"
+                    className={cn(
+                      'flex items-center gap-1.5 rounded text-[12px] transition-colors',
+                      filterOpen || activeFilterCount > 0
+                        ? 'bg-accent px-2 py-1 text-foreground'
+                        : 'size-7 justify-center text-muted-foreground/40 hover:bg-accent hover:text-foreground'
+                    )}
+                  >
+                    <Filter className="size-3.5" />
+                    {activeFilterCount > 0 && (
+                      <span className="font-mono text-[10px]">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+                  <FilterDropdown
+                    open={filterOpen}
+                    onClose={() => setFilterOpen(false)}
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* ── Task List + Detail ───────────────────────────────────────────────── */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* Task List */}
-            <div className="flex flex-1 flex-col overflow-y-auto px-4 py-3">
-              <div className="mx-auto w-full max-w-4xl">
-                {isLoading ? (
-                  // Skeleton loaders
-                  <div className="flex flex-col gap-2 px-3 py-2">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-3"
-                        style={{ opacity: 1 - i * 0.15 }}
-                      >
-                        <div className="size-4 animate-pulse rounded-full bg-muted" />
+            {/* ── Task List + Detail ───────────────────────────────────────────────── */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* Task List */}
+              <div className="flex flex-1 flex-col overflow-y-auto px-4 py-3">
+                <div className="mx-auto w-full max-w-4xl">
+                  {isLoading ? (
+                    // Skeleton loaders
+                    <div className="flex flex-col gap-2 px-3 py-2">
+                      {Array.from({ length: 5 }).map((_, i) => (
                         <div
-                          className="h-3.5 animate-pulse rounded bg-muted"
-                          style={{ width: `${60 + (i % 3) * 15}%` }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : tabFiltered.length === 0 ? (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-2 py-20 text-center">
-                    <AlertCircle
-                      className="size-7 text-muted-foreground/20"
-                      strokeWidth={1.5}
-                    />
-                    <p className="text-[13px] text-muted-foreground/50">
-                      {filters.search || activeFilterCount > 0
-                        ? 'No tasks match your filters.'
-                        : 'No tasks yet. Press N to create one.'}
-                    </p>
-                    {(filters.search || activeFilterCount > 0) && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFilter({
-                            priority: null,
-                            status: null,
-                            search: '',
-                          })
-                        }
-                        className="text-[12px] text-muted-foreground/40 underline-offset-2 transition-colors hover:text-foreground hover:underline"
-                      >
-                        Clear all filters
-                      </button>
-                    )}
-                  </div>
-                ) : activeTab === 'all' ||
-                  activeTab === 'today' ||
-                  activeTab === 'upcoming' ? (
-                  <>
-                    {activeTab === 'all' && (
-                      <>
-                        <TaskSection
-                          label={t('tasks.sections.today')}
-                          tasks={groups.today}
-                          sectionKey="today"
-                          selectedId={selectedTaskId}
-                          onSelect={setSelectedTask}
-                          onToggle={toggleComplete}
-                          onDelete={id => {
-                            if (selectedTaskId === id) setSelectedTask(null)
-                            deleteTask(id)
-                          }}
-                        />
-                        <TaskSection
-                          label={t('tasks.sections.upcoming')}
-                          tasks={groups.upcoming}
-                          sectionKey="upcoming"
-                          selectedId={selectedTaskId}
-                          onSelect={setSelectedTask}
-                          onToggle={toggleComplete}
-                          onDelete={id => {
-                            if (selectedTaskId === id) setSelectedTask(null)
-                            deleteTask(id)
-                          }}
-                        />
-                        <TaskSection
-                          label={t('tasks.sections.waiting')}
-                          tasks={groups.inbox}
-                          sectionKey="inbox"
-                          selectedId={selectedTaskId}
-                          onSelect={setSelectedTask}
-                          onToggle={toggleComplete}
-                          onDelete={id => {
-                            if (selectedTaskId === id) setSelectedTask(null)
-                            deleteTask(id)
-                          }}
-                        />
-                        <TaskSection
-                          label={t('tasks.sections.someday')}
-                          tasks={groups.someday}
-                          sectionKey="someday"
-                          selectedId={selectedTaskId}
-                          onSelect={setSelectedTask}
-                          onToggle={toggleComplete}
-                          onDelete={id => {
-                            if (selectedTaskId === id) setSelectedTask(null)
-                            deleteTask(id)
-                          }}
-                        />
-                        {/* Completed section hidden by default */}
-                        {groups.completed.length > 0 && (
+                          key={i}
+                          className="flex items-center gap-3"
+                          style={{ opacity: 1 - i * 0.15 }}
+                        >
+                          <div className="size-4 animate-pulse rounded-full bg-muted" />
+                          <div
+                            className="h-3.5 animate-pulse rounded bg-muted"
+                            style={{ width: `${60 + (i % 3) * 15}%` }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : tabFiltered.length === 0 ? (
+                    <div className="flex flex-1 flex-col items-center justify-center gap-2 py-20 text-center">
+                      <AlertCircle
+                        className="size-7 text-muted-foreground/20"
+                        strokeWidth={1.5}
+                      />
+                      <p className="text-[13px] text-muted-foreground/50">
+                        {filters.search || activeFilterCount > 0
+                          ? 'No tasks match your filters.'
+                          : 'No tasks yet. Press N to create one.'}
+                      </p>
+                      {(filters.search || activeFilterCount > 0) && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFilter({
+                              priority: null,
+                              status: null,
+                              search: '',
+                            })
+                          }
+                          className="text-[12px] text-muted-foreground/40 underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                        >
+                          Clear all filters
+                        </button>
+                      )}
+                    </div>
+                  ) : activeTab === 'all' ||
+                    activeTab === 'today' ||
+                    activeTab === 'upcoming' ? (
+                    <>
+                      {activeTab === 'all' && (
+                        <>
                           <TaskSection
-                            label={t('tasks.sections.completed')}
-                            tasks={groups.completed}
-                            sectionKey="completed_all"
+                            label={t('tasks.sections.today')}
+                            tasks={groups.today}
+                            sectionKey="today"
                             selectedId={selectedTaskId}
                             onSelect={setSelectedTask}
                             onToggle={toggleComplete}
@@ -1484,80 +1439,130 @@ export function TasksPage({
                               deleteTask(id)
                             }}
                           />
-                        )}
-                      </>
-                    )}
-                    {activeTab === 'today' &&
-                      tabFiltered.map(task => (
-                        <TaskRow
-                          key={task.id}
-                          task={task}
-                          isSelected={task.id === selectedTaskId}
-                          onToggle={() => toggleComplete(task.id)}
-                          onSelect={() => setSelectedTask(task.id)}
-                          onDelete={() => {
-                            if (selectedTaskId === task.id)
-                              setSelectedTask(null)
-                            deleteTask(task.id)
-                          }}
-                        />
-                      ))}
-                    {activeTab === 'upcoming' &&
-                      tabFiltered.map(task => (
-                        <TaskRow
-                          key={task.id}
-                          task={task}
-                          isSelected={task.id === selectedTaskId}
-                          onToggle={() => toggleComplete(task.id)}
-                          onSelect={() => setSelectedTask(task.id)}
-                          onDelete={() => {
-                            if (selectedTaskId === task.id)
-                              setSelectedTask(null)
-                            deleteTask(task.id)
-                          }}
-                        />
-                      ))}
-                  </>
-                ) : (
-                  // Completed tab
-                  tabFiltered.map(task => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      isSelected={task.id === selectedTaskId}
-                      onToggle={() => toggleComplete(task.id)}
-                      onSelect={() => setSelectedTask(task.id)}
-                      onDelete={() => {
-                        if (selectedTaskId === task.id) setSelectedTask(null)
-                        deleteTask(task.id)
-                      }}
-                    />
-                  ))
-                )}
+                          <TaskSection
+                            label={t('tasks.sections.upcoming')}
+                            tasks={groups.upcoming}
+                            sectionKey="upcoming"
+                            selectedId={selectedTaskId}
+                            onSelect={setSelectedTask}
+                            onToggle={toggleComplete}
+                            onDelete={id => {
+                              if (selectedTaskId === id) setSelectedTask(null)
+                              deleteTask(id)
+                            }}
+                          />
+                          <TaskSection
+                            label={t('tasks.sections.waiting')}
+                            tasks={groups.inbox}
+                            sectionKey="inbox"
+                            selectedId={selectedTaskId}
+                            onSelect={setSelectedTask}
+                            onToggle={toggleComplete}
+                            onDelete={id => {
+                              if (selectedTaskId === id) setSelectedTask(null)
+                              deleteTask(id)
+                            }}
+                          />
+                          <TaskSection
+                            label={t('tasks.sections.someday')}
+                            tasks={groups.someday}
+                            sectionKey="someday"
+                            selectedId={selectedTaskId}
+                            onSelect={setSelectedTask}
+                            onToggle={toggleComplete}
+                            onDelete={id => {
+                              if (selectedTaskId === id) setSelectedTask(null)
+                              deleteTask(id)
+                            }}
+                          />
+                          {/* Completed section hidden by default */}
+                          {groups.completed.length > 0 && (
+                            <TaskSection
+                              label={t('tasks.sections.completed')}
+                              tasks={groups.completed}
+                              sectionKey="completed_all"
+                              selectedId={selectedTaskId}
+                              onSelect={setSelectedTask}
+                              onToggle={toggleComplete}
+                              onDelete={id => {
+                                if (selectedTaskId === id) setSelectedTask(null)
+                                deleteTask(id)
+                              }}
+                            />
+                          )}
+                        </>
+                      )}
+                      {activeTab === 'today' &&
+                        tabFiltered.map(task => (
+                          <TaskRow
+                            key={task.id}
+                            task={task}
+                            isSelected={task.id === selectedTaskId}
+                            onToggle={() => toggleComplete(task.id)}
+                            onSelect={() => setSelectedTask(task.id)}
+                            onDelete={() => {
+                              if (selectedTaskId === task.id)
+                                setSelectedTask(null)
+                              deleteTask(task.id)
+                            }}
+                          />
+                        ))}
+                      {activeTab === 'upcoming' &&
+                        tabFiltered.map(task => (
+                          <TaskRow
+                            key={task.id}
+                            task={task}
+                            isSelected={task.id === selectedTaskId}
+                            onToggle={() => toggleComplete(task.id)}
+                            onSelect={() => setSelectedTask(task.id)}
+                            onDelete={() => {
+                              if (selectedTaskId === task.id)
+                                setSelectedTask(null)
+                              deleteTask(task.id)
+                            }}
+                          />
+                        ))}
+                    </>
+                  ) : (
+                    // Completed tab
+                    tabFiltered.map(task => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        isSelected={task.id === selectedTaskId}
+                        onToggle={() => toggleComplete(task.id)}
+                        onSelect={() => setSelectedTask(task.id)}
+                        onDelete={() => {
+                          if (selectedTaskId === task.id) setSelectedTask(null)
+                          deleteTask(task.id)
+                        }}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
+
+              {/* Detail panel (slide-over style) */}
+              {selectedTask && (
+                <TaskDetailPanel
+                  key={selectedTask.id}
+                  task={selectedTask}
+                  onClose={() => setSelectedTask(null)}
+                  onUpdate={(id, updates) => updateTask(id, updates)}
+                  onDelete={id => deleteTask(id)}
+                />
+              )}
             </div>
+          </>
+        )}
 
-            {/* Detail panel (slide-over style) */}
-            {selectedTask && (
-              <TaskDetailPanel
-                key={selectedTask.id}
-                task={selectedTask}
-                onClose={() => setSelectedTask(null)}
-                onUpdate={(id, updates) => updateTask(id, updates)}
-                onDelete={id => deleteTask(id)}
-              />
-            )}
-          </div>
-        </>
-      )}
-
-      {/* ── New Task Modal ────────────────────────────────────────────────── */}
-      {newTaskOpen && (
-        <NewTaskModal
-          onAdd={handleAddTask}
-          onClose={() => setNewTaskOpen(false)}
-        />
-      )}
+        {/* ── New Task Modal ────────────────────────────────────────────────── */}
+        {newTaskOpen && (
+          <NewTaskModal
+            onAdd={handleAddTask}
+            onClose={() => setNewTaskOpen(false)}
+          />
+        )}
       </div>
     </LazyMotion>
   )

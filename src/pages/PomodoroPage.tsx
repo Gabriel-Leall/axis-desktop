@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Play,
@@ -13,6 +13,7 @@ import {
   Clock,
   Coffee,
   Zap,
+  Settings2,
 } from 'lucide-react'
 import { usePomodoroStore } from '@/store/pomodoro-store'
 import { useTasksStore, selectTodayTasks } from '@/store/tasks-store'
@@ -22,7 +23,6 @@ import type {
   SessionType,
 } from '@/store/pomodoro-types'
 import { cn } from '@/lib/utils'
-import { sendNotification } from '@tauri-apps/plugin-notification'
 import { LazyMotion, domAnimation, m } from 'motion/react'
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -58,10 +58,6 @@ function formatDuration(seconds: number): string {
 
 // ─── Auto-Start Badge ─────────────────────────────────────────────────────────
 
-/**
- * Shows a subtle indicator when the next session will start automatically.
- * Helps the user understand the timer behaviour without opening Settings.
- */
 function AutoStartBadge({
   currentType,
   autoStartBreaks,
@@ -82,8 +78,8 @@ function AutoStartBadge({
   if (!nextWillAutoStart) return null
 
   return (
-    <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-      <Zap className="size-3 shrink-0" strokeWidth={1.5} />
+    <div className="inline-flex items-center gap-1.5 rounded-full bg-accent/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+      <Zap className="size-3 shrink-0 text-amber-500" strokeWidth={2} />
       <span>{t('pomodoro.autoStart', { type: nextType })}</span>
     </div>
   )
@@ -106,48 +102,30 @@ function CycleDotsLarge({
   }))
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div className="flex flex-col items-center gap-2">
       <div
-        className="flex items-center gap-1.5"
+        className="flex items-center gap-2"
         aria-label={`${cyclePos || total} of ${total}`}
       >
         {dots.map(dot => (
-          <span
+          <m.div
             key={dot.id}
+            initial={false}
+            animate={{
+              scale: dot.filled ? 1 : 0.85,
+              opacity: dot.filled ? 1 : 0.3,
+            }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             className={cn(
-              'size-2.5 rounded-full transition-all',
-              dot.filled
-                ? 'bg-foreground opacity-80'
-                : 'border border-muted-foreground/30'
+              'size-2.5 rounded-full',
+              dot.filled ? 'bg-primary shadow-sm' : 'bg-muted-foreground'
             )}
           />
         ))}
       </div>
-      <span className="text-[11px] text-muted-foreground">
+      <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground/60">
         {t('pomodoro.cycleLabel', { current: cyclePos || total, total })}
       </span>
-    </div>
-  )
-}
-
-// ─── Progress Bar ─────────────────────────────────────────────────────────────
-
-function ProgressBarLarge({
-  progress,
-  type,
-}: {
-  progress: number
-  type: SessionType
-}) {
-  return (
-    <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
-      <div
-        className={cn(
-          'h-full rounded-full transition-all duration-1000 ease-linear',
-          type === 'focus' ? 'bg-foreground' : 'bg-muted-foreground/50'
-        )}
-        style={{ width: `${Math.max(0, Math.min(100, progress * 100))}%` }}
-      />
     </div>
   )
 }
@@ -163,7 +141,7 @@ function TaskLinkSection() {
   const tasks = useTasksStore(state => state.tasks)
   const todayTasks = selectTodayTasks(tasks)
   const linkedTask = linkedTaskId
-    ? tasks.find(t => t.id === linkedTaskId)
+    ? tasks.find(task => task.id === linkedTaskId)
     : null
 
   const [showPicker, setShowPicker] = useState(false)
@@ -171,7 +149,6 @@ function TaskLinkSection() {
   const pickerRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // Close picker on click outside
   useEffect(() => {
     if (!showPicker) return
     const handler = (e: MouseEvent) => {
@@ -184,38 +161,41 @@ function TaskLinkSection() {
     return () => document.removeEventListener('mousedown', handler)
   }, [showPicker])
 
-  const filtered = todayTasks.filter(
-    t =>
-      t.title.toLowerCase().includes(search.toLowerCase()) &&
-      t.id !== linkedTaskId
+  const filtered = useMemo(
+    () =>
+      todayTasks.filter(
+        task =>
+          task.title.toLowerCase().includes(search.toLowerCase()) &&
+          task.id !== linkedTaskId
+      ),
+    [todayTasks, search, linkedTaskId]
   )
 
   return (
-    <section className="space-y-2">
-      <h2 className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+    <section className="space-y-3">
+      <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
         {t('pomodoro.linkedTask.heading')}
       </h2>
 
       {linkedTask ? (
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
-          <CheckCircle2
-            className="size-4 shrink-0 text-muted-foreground/50"
-            strokeWidth={1.5}
-          />
-          <span className="flex-1 truncate text-[13px]">
+        <div className="group flex items-center gap-3 rounded-xl border border-border/50 bg-card/50 p-3 shadow-sm backdrop-blur transition-all hover:border-border hover:shadow-md">
+          <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <CheckCircle2 className="size-3.5" strokeWidth={2.5} />
+          </div>
+          <span className="flex-1 truncate text-sm font-medium">
             {linkedTask.title}
           </span>
           <button
             type="button"
             onClick={unlinkTask}
             aria-label="Unlink task"
-            className="rounded p-0.5 text-muted-foreground/50 transition-colors hover:text-foreground"
+            className="flex size-6 items-center justify-center rounded-full bg-muted text-muted-foreground opacity-0 transition-all hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
           >
             <X className="size-3.5" />
           </button>
         </div>
       ) : (
-        <div className="text-[13px] text-muted-foreground/50 italic px-1">
+        <div className="text-sm text-muted-foreground/50 italic px-1">
           {t('pomodoro.linkedTask.none')}
         </div>
       )}
@@ -233,27 +213,27 @@ function TaskLinkSection() {
               return next
             })
           }}
-          className="flex items-center gap-1.5 text-[12px] text-muted-foreground/70 transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         >
           <Plus className="size-3.5" />
           {t('pomodoro.linkedTask.linkButton')}
         </button>
 
         {showPicker && (
-          <div className="absolute top-full left-0 z-50 mt-1.5 w-72 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
-            <div className="border-b border-border px-3 py-2">
+          <div className="absolute left-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-border bg-popover shadow-xl animate-in fade-in zoom-in-95">
+            <div className="border-b border-border/50 bg-muted/20 px-3 py-2.5">
               <input
                 ref={searchInputRef}
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder={t('pomodoro.linkedTask.searchPlaceholder')}
-                className="w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/50"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
               />
             </div>
-            <div className="max-h-48 overflow-y-auto py-1">
+            <div className="max-h-56 overflow-y-auto py-1">
               {filtered.length === 0 ? (
-                <div className="px-3 py-2 text-[12px] text-muted-foreground/50">
+                <div className="px-4 py-3 text-sm text-muted-foreground/50">
                   {t('pomodoro.linkedTask.noResults')}
                 </div>
               ) : (
@@ -266,9 +246,9 @@ function TaskLinkSection() {
                       setShowPicker(false)
                       setSearch('')
                     }}
-                    className="w-full truncate px-3 py-2 text-start text-[13px] transition-colors hover:bg-accent"
+                    className="flex w-full items-center px-4 py-2.5 text-start text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
                   >
-                    {task.title}
+                    <span className="truncate">{task.title}</span>
                   </button>
                 ))
               )}
@@ -284,10 +264,8 @@ function TaskLinkSection() {
 
 function SessionIcon({ type }: { type: SessionType }) {
   if (type === 'focus')
-    return (
-      <Clock className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-    )
-  return <Coffee className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+    return <Clock className="size-4 text-primary" strokeWidth={2} />
+  return <Coffee className="size-4 text-blue-500" strokeWidth={2} />
 }
 
 function SessionHistorySection({ sessions }: { sessions: PomodoroSession[] }) {
@@ -298,57 +276,70 @@ function SessionHistorySection({ sessions }: { sessions: PomodoroSession[] }) {
   ).length
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+        <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
           {t('pomodoro.history.heading')}
         </h2>
         {completedFocus > 0 && (
-          <span className="text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">
             {t('pomodoro.history.pomosCount', { count: completedFocus })}
           </span>
         )}
       </div>
 
       {sessions.length === 0 ? (
-        <div className="py-4 text-center text-[12px] text-muted-foreground/50">
-          {t('pomodoro.history.empty')}
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/50 py-8 text-center">
+          <Clock className="mb-2 size-6 text-muted-foreground/30" />
+          <span className="text-sm text-muted-foreground/60">
+            {t('pomodoro.history.empty')}
+          </span>
         </div>
       ) : (
-        <div className="space-y-0.5">
+        <div className="grid gap-2">
           {sessions.map(session => {
             const task = session.task_id
-              ? tasks.find(t => t.id === session.task_id)
+              ? tasks.find(task => task.id === session.task_id)
               : null
 
             return (
               <div
                 key={session.id}
                 className={cn(
-                  'flex items-center gap-3 rounded-md px-2 py-1.5 text-[12px]',
-                  !session.completed && 'bg-muted/40'
+                  'flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors',
+                  session.completed
+                    ? 'border-border/50 bg-card/50 shadow-sm'
+                    : 'border-dashed border-border/40 bg-muted/20 opacity-80'
                 )}
               >
-                <SessionIcon type={session.session_type} />
-                <span className="font-mono text-muted-foreground w-11 shrink-0">
-                  {formatSessionTime(session.started_at)}
-                </span>
-                <span className="text-muted-foreground/70 shrink-0">
-                  {typeLabel(session.session_type, t)}
-                </span>
-                <span className="text-muted-foreground/50 shrink-0">
-                  {formatDuration(session.duration_seconds)}
-                </span>
-                {task && (
-                  <span className="flex-1 truncate text-muted-foreground/60">
-                    {task.title}
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent">
+                  <SessionIcon type={session.session_type} />
+                </div>
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-foreground">
+                      {typeLabel(session.session_type, t)}
+                    </span>
+                    <span className="text-xs text-muted-foreground/60">
+                      • {formatDuration(session.duration_seconds)}
+                    </span>
+                  </div>
+                  {task && (
+                    <span className="truncate text-xs text-muted-foreground">
+                      {task.title}
+                    </span>
+                  )}
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+                  <span className="font-mono text-xs font-medium text-muted-foreground/80">
+                    {formatSessionTime(session.started_at)}
                   </span>
-                )}
-                {!session.completed && (
-                  <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/50 italic">
-                    {t('pomodoro.history.inProgress')}
-                  </span>
-                )}
+                  {!session.completed && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-500">
+                      {t('pomodoro.history.inProgress')}
+                    </span>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -384,7 +375,7 @@ function NumberInput({
         const v = parseInt(e.target.value, 10)
         if (!isNaN(v) && v >= min && v <= max) onChange(v)
       }}
-      className="w-14 rounded-md border border-border bg-background px-2 py-1 text-center text-[13px] tabular-nums outline-none focus:ring-1 focus:ring-ring"
+      className="w-16 rounded-lg border border-border bg-background/50 px-2.5 py-1.5 text-center text-sm font-medium tabular-nums shadow-inner outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
     />
   )
 }
@@ -406,14 +397,14 @@ function Toggle({
       aria-label={label}
       onClick={() => onChange(!checked)}
       className={cn(
-        'relative h-5 w-9 shrink-0 rounded-full transition-colors',
-        checked ? 'bg-foreground' : 'bg-muted-foreground/30'
+        'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50',
+        checked ? 'bg-primary' : 'bg-muted-foreground/30'
       )}
     >
       <span
         className={cn(
-          'absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-transform',
-          checked ? 'translate-x-4' : 'translate-x-0.5'
+          'pointer-events-none inline-block size-5 rounded-full bg-background shadow-sm ring-0 transition-transform duration-200 ease-in-out',
+          checked ? 'translate-x-5' : 'translate-x-0'
         )}
       />
     </button>
@@ -469,8 +460,16 @@ function SettingsSection({
       min: 1,
       max: 12,
     },
-    { label: t('pomodoro.settings.autoStartBreaks'), type: 'toggle', key: 'auto_start_breaks' },
-    { label: t('pomodoro.settings.autoStartFocus'), type: 'toggle', key: 'auto_start_focus' },
+    {
+      label: t('pomodoro.settings.autoStartBreaks'),
+      type: 'toggle',
+      key: 'auto_start_breaks',
+    },
+    {
+      label: t('pomodoro.settings.autoStartFocus'),
+      type: 'toggle',
+      key: 'auto_start_focus',
+    },
     {
       label: t('pomodoro.settings.soundNotifications'),
       type: 'toggle',
@@ -479,31 +478,36 @@ function SettingsSection({
   ]
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="flex w-full items-center justify-between text-[11px] font-medium uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
+        className="group flex w-full items-center justify-between rounded-xl border border-transparent px-2 py-2 transition-colors hover:border-border/50 hover:bg-card/30"
       >
-        {t('pomodoro.settings.heading')}
-        {open ? (
-          <ChevronUp className="size-3.5" />
-        ) : (
-          <ChevronDown className="size-3.5" />
-        )}
+        <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 transition-colors group-hover:text-foreground">
+          <Settings2 className="size-4" />
+          {t('pomodoro.settings.heading')}
+        </span>
+        <div className="rounded-full bg-muted/50 p-1 transition-colors group-hover:bg-muted group-hover:text-foreground">
+          {open ? (
+            <ChevronUp className="size-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="size-4 text-muted-foreground" />
+          )}
+        </div>
       </button>
 
       {open && (
-        <div className="space-y-2 rounded-lg border border-border bg-card px-4 py-3">
+        <div className="grid gap-1 rounded-2xl border border-border/50 bg-card/30 p-2 shadow-sm animate-in fade-in slide-in-from-top-2">
           {rows.map(row => (
             <div
               key={row.key}
-              className="flex items-center justify-between gap-4"
+              className="flex items-center justify-between gap-4 rounded-xl px-4 py-3 transition-colors hover:bg-card/80"
             >
-              <label className="text-[13px] text-foreground/80">
+              <label className="text-sm font-medium text-foreground/80">
                 {row.label}
               </label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 {row.type === 'number' ? (
                   <>
                     <NumberInput
@@ -514,17 +518,19 @@ function SettingsSection({
                       label={row.label}
                     />
                     {row.unit && (
-                      <span className="text-[12px] text-muted-foreground">
+                      <span className="w-8 text-xs font-medium text-muted-foreground">
                         {row.unit}
                       </span>
                     )}
                   </>
                 ) : (
-                  <Toggle
-                    checked={settings[row.key] as boolean}
-                    onChange={v => onUpdate({ [row.key]: v })}
-                    label={row.label}
-                  />
+                  <div className="flex h-8 items-center pr-2">
+                    <Toggle
+                      checked={settings[row.key] as boolean}
+                      onChange={v => onUpdate({ [row.key]: v })}
+                      label={row.label}
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -556,9 +562,7 @@ export function PomodoroPage() {
 
   const loadTasks = useTasksStore(state => state.loadTasks)
 
-  // Track type changes for notification
-  const prevTimerState = useRef(timerState)
-  const prevType = useRef(currentType)
+  const { t } = useTranslation()
 
   useEffect(() => {
     loadSettings()
@@ -566,28 +570,23 @@ export function PomodoroPage() {
     loadTasks()
   }, [loadSettings, loadTodaySessions, loadTasks])
 
-  // Notifications on completion
+  // Request notification permissions on mount
   useEffect(() => {
-    const justCompleted =
-      prevTimerState.current === 'running' &&
-      timerState !== 'running' &&
-      prevType.current !== currentType
-
-    if (justCompleted && settings.sound_notifications) {
-      const wasBreak = prevType.current !== 'focus'
-      void Promise.resolve(
-        sendNotification({
-          title: wasBreak ? 'Break is over' : 'Focus session complete!',
-          body: wasBreak
-            ? 'Ready to focus again?'
-            : 'Time for a break. You earned it.',
-        })
-      ).catch(console.error)
+    const checkPermissions = async () => {
+      try {
+        const { isPermissionGranted, requestPermission } =
+          await import('@tauri-apps/plugin-notification')
+        let granted = await isPermissionGranted()
+        if (!granted) {
+          const permission = await requestPermission()
+          granted = permission === 'granted'
+        }
+      } catch (err) {
+        console.error('Failed to check notification permissions:', err)
+      }
     }
-
-    prevTimerState.current = timerState
-    prevType.current = currentType
-  }, [timerState, currentType, settings.sound_notifications])
+    void checkPermissions()
+  }, [])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -613,141 +612,198 @@ export function PomodoroPage() {
     else start()
   }, [isRunning, pause, start])
 
-  const { t } = useTranslation()
-
   return (
     <LazyMotion features={domAnimation}>
-      <div className="flex h-full flex-col overflow-y-auto">
-      {/* Page header */}
-      <div className="shrink-0 border-b border-border px-6 py-3">
-        <h1 className="text-[13px] font-medium text-foreground">{t('pomodoro.pageTitle')}</h1>
-      </div>
-
-      <div className="flex flex-col gap-8 px-6 py-6 max-w-lg mx-auto w-full">
-        {/* ── Timer card ──────────────────────────────────────────────────────── */}
-        <div className="flex flex-col items-center gap-5 rounded-2xl border border-border bg-card px-8 py-8">
-          {/* Type label */}
-          <div className="flex items-center justify-between w-full">
-            <span
-              className={cn(
-                'text-[11px] font-medium uppercase tracking-widest transition-colors',
-                currentType === 'focus'
-                  ? 'text-foreground/70'
-                  : 'text-muted-foreground'
-              )}
-            >
-              {typeLabel(currentType, t)}
-            </span>
-            <span className="text-[11px] text-muted-foreground">
-              {t('pomodoro.hint')}
-            </span>
-          </div>
-
-          {/* Time display */}
-          <div
-            className={cn(
-              'flex items-center justify-center transition-opacity',
-              timerState === 'idle' && 'opacity-50'
-            )}
-          >
-            <span
-              className={cn(
-                'font-mono tracking-tighter tabular-nums transition-colors',
-                currentType === 'focus'
-                  ? 'text-foreground'
-                  : 'text-muted-foreground'
-              )}
-              style={{ fontSize: '80px', fontWeight: 200, lineHeight: 1 }}
-              aria-label={t('pomodoro.controls.timeRemaining', { time: formatTime(timeRemaining) })}
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {formatTime(timeRemaining)}
-            </span>
-          </div>
-
-          {/* Progress bar */}
-          <ProgressBarLarge progress={progress} type={currentType} />
-
-          {/* Cycle dots */}
-          <CycleDotsLarge
-            completed={cyclesCompleted}
-            total={settings.pomos_until_long_break}
-          />
-
-          {/* Controls */}
-          <div className="flex items-center gap-4">
-            <m.button
-              type="button"
-              onClick={reset}
-              whileTap={{ scale: 0.9 }}
-              aria-label={t('pomodoro.controls.resetAria')}
-              className="rounded-lg p-2 text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <RotateCcw className="size-4" />
-            </m.button>
-
-            <m.button
-              type="button"
-              onClick={handlePlayPause}
-              whileTap={{ scale: 0.9 }}
-              aria-label={
-                isRunning ? t('pomodoro.controls.pauseAria') : t('pomodoro.controls.startAria')
-              }
-              className={cn(
-                'flex size-12 items-center justify-center rounded-full transition-all',
-                isRunning
-                  ? 'bg-foreground text-background shadow-md hover:bg-foreground/80'
-                  : 'bg-foreground/10 text-foreground hover:bg-foreground/20'
-              )}
-            >
-              {isRunning ? (
-                <Pause className="size-5" fill="currentColor" />
-              ) : (
-                <Play className="size-5 translate-x-px" fill="currentColor" />
-              )}
-            </m.button>
-
-            <m.button
-              type="button"
-              onClick={() => void skip()}
-              whileTap={{ scale: 0.9 }}
-              aria-label={t('pomodoro.controls.skipAria')}
-              className="rounded-lg p-2 text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <SkipForward className="size-4" />
-            </m.button>
-          </div>
-
-          {/* Auto-start indicator */}
-          <AutoStartBadge
-            currentType={currentType}
-            autoStartBreaks={settings.auto_start_breaks}
-            autoStartFocus={settings.auto_start_focus}
-          />
+      <div className="flex h-full flex-col overflow-y-auto bg-background/50">
+        {/* Page header */}
+        <div className="sticky top-0 z-10 shrink-0 border-b border-border/50 bg-background/80 px-8 py-4 backdrop-blur-md">
+          <h1 className="text-sm font-semibold tracking-wide text-foreground">
+            {t('pomodoro.pageTitle')}
+          </h1>
         </div>
 
-        {/* ── Divider ──────────────────────────────────────────────────────────── */}
-        <div className="h-px bg-border" />
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 px-6 py-10">
+          {/* ── Timer card ──────────────────────────────────────────────────────── */}
+          <div className="relative flex flex-col items-center justify-center overflow-hidden rounded-[2.5rem] border border-border/60 bg-card/60 p-10 shadow-2xl backdrop-blur-xl">
+            {/* Background glow when running */}
+            {isRunning && currentType === 'focus' && (
+              <m.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-background/0 to-background/0"
+              />
+            )}
 
-        {/* ── Task link ────────────────────────────────────────────────────────── */}
-        <TaskLinkSection />
+            {/* Top labels */}
+            <div className="mb-8 flex w-full items-center justify-between">
+              <span
+                className={cn(
+                  'inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-widest transition-colors',
+                  currentType === 'focus'
+                    ? 'bg-primary/10 text-primary'
+                    : 'bg-blue-500/10 text-blue-500'
+                )}
+              >
+                {typeLabel(currentType, t)}
+              </span>
+              <span className="text-[11px] font-medium text-muted-foreground/60">
+                {t('pomodoro.hint')}
+              </span>
+            </div>
 
-        {/* ── Divider ──────────────────────────────────────────────────────────── */}
-        <div className="h-px bg-border" />
+            {/* Time display */}
+            <div className="relative mb-10 flex w-full items-center justify-center">
+              <m.div
+                animate={
+                  isRunning && currentType === 'focus'
+                    ? { scale: [1, 1.01, 1] }
+                    : { scale: 1 }
+                }
+                transition={
+                  isRunning && currentType === 'focus'
+                    ? { duration: 4, ease: 'easeInOut', repeat: Infinity }
+                    : { duration: 0.3 }
+                }
+                className={cn(
+                  'font-mono tabular-nums tracking-tighter transition-all duration-500',
+                  currentType === 'focus'
+                    ? 'text-foreground'
+                    : 'text-muted-foreground/80',
+                  'text-[100px] leading-none sm:text-[130px] md:text-[150px]',
+                  !isRunning && 'opacity-70'
+                )}
+                style={{
+                  textShadow:
+                    isRunning && currentType === 'focus'
+                      ? '0 0 80px rgba(var(--foreground), 0.15)'
+                      : 'none',
+                }}
+              >
+                <span
+                  aria-label={t('pomodoro.controls.timeRemaining', {
+                    time: formatTime(timeRemaining),
+                  })}
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  {formatTime(timeRemaining)}
+                </span>
+              </m.div>
+            </div>
 
-        {/* ── Session history ───────────────────────────────────────────────────── */}
-        <SessionHistorySection sessions={todaySessions} />
+            {/* Cycle dots & Auto start indicator */}
+            <div className="mb-10 flex w-full flex-col items-center gap-4">
+              <CycleDotsLarge
+                completed={cyclesCompleted}
+                total={settings.pomos_until_long_break}
+              />
+              <AutoStartBadge
+                currentType={currentType}
+                autoStartBreaks={settings.auto_start_breaks}
+                autoStartFocus={settings.auto_start_focus}
+              />
+            </div>
 
-        {/* ── Divider ──────────────────────────────────────────────────────────── */}
-        <div className="h-px bg-border" />
+            {/* Controls */}
+            <div className="flex w-full items-center justify-center gap-8">
+              <m.button
+                type="button"
+                onClick={reset}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                aria-label={t('pomodoro.controls.resetAria')}
+                className="group flex size-12 items-center justify-center rounded-full bg-secondary/50 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <RotateCcw
+                  className="size-5 transition-transform group-hover:-rotate-45"
+                  strokeWidth={2}
+                />
+              </m.button>
 
-        {/* ── Settings ─────────────────────────────────────────────────────────── */}
-        <SettingsSection settings={settings} onUpdate={updateSettings} />
+              <m.button
+                type="button"
+                onClick={handlePlayPause}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label={
+                  isRunning
+                    ? t('pomodoro.controls.pauseAria', {
+                        defaultValue: 'Pause',
+                      })
+                    : t('pomodoro.controls.startAria', {
+                        defaultValue: 'Start',
+                      })
+                }
+                className={cn(
+                  'flex size-20 items-center justify-center rounded-full shadow-xl transition-all duration-300',
+                  isRunning
+                    ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-secondary/20'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-primary/30'
+                )}
+              >
+                {isRunning ? (
+                  <Pause className="ml-0.5 size-8" strokeWidth={2.5} />
+                ) : (
+                  <Play className="ml-1.5 size-8" strokeWidth={2.5} />
+                )}
+              </m.button>
 
-        {/* Bottom padding */}
-        <div className="h-4" />
-      </div>
+              <m.button
+                type="button"
+                onClick={() => void skip()}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                aria-label={t('pomodoro.controls.skipAria')}
+                className="group flex size-12 items-center justify-center rounded-full bg-secondary/50 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <SkipForward
+                  className="size-5 transition-transform group-hover:translate-x-0.5"
+                  strokeWidth={2}
+                />
+              </m.button>
+            </div>
+
+            {/* Progress bar positioned at bottom of card */}
+            <div className="absolute inset-x-0 bottom-0">
+              <div
+                className="h-1.5 w-full bg-border/40"
+                role="progressbar"
+                aria-valuenow={Math.round(progress * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className={cn(
+                    'h-full transition-all duration-1000 ease-linear',
+                    currentType === 'focus' ? 'bg-primary' : 'bg-blue-500'
+                  )}
+                  style={{
+                    width: `${Math.max(0, Math.min(100, progress * 100))}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-10 lg:grid-cols-2">
+            <div className="space-y-10">
+              {/* ── Task link ────────────────────────────────────────────────────────── */}
+              <TaskLinkSection />
+
+              {/* ── Settings ─────────────────────────────────────────────────────────── */}
+              <SettingsSection settings={settings} onUpdate={updateSettings} />
+            </div>
+
+            {/* ── Session history ───────────────────────────────────────────────────── */}
+            <div>
+              <SessionHistorySection sessions={todaySessions} />
+            </div>
+          </div>
+
+          {/* Bottom padding */}
+          <div className="h-10" />
+        </div>
       </div>
     </LazyMotion>
   )

@@ -284,705 +284,750 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
 
   return (
     <LazyMotion features={domAnimation}>
-      <div
-        className="relative flex h-full flex-col overflow-hidden bg-background text-foreground"
-      >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(120% 90% at 5% 0%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 58%), radial-gradient(90% 70% at 100% 100%, color-mix(in oklab, var(--primary) 14%, transparent), transparent 60%)',
-        }}
-      />
+      <div className="relative flex h-full flex-col overflow-hidden bg-background text-foreground">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(120% 90% at 5% 0%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 58%), radial-gradient(90% 70% at 100% 100%, color-mix(in oklab, var(--primary) 14%, transparent), transparent 60%)',
+          }}
+        />
 
-      <header className="relative border-b border-border/70 px-5 pb-5 pt-6 md:px-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <h1
-              className="text-2xl font-semibold leading-tight md:text-[2rem]"
-            >
-              {t('habits.pageTitle')}
-            </h1>
-            <p className="text-sm text-muted-foreground">{todayLabel()}</p>
+        <header className="relative border-b border-border/70 px-5 pb-5 pt-6 md:px-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold leading-tight md:text-[2rem]">
+                {t('habits.pageTitle')}
+              </h1>
+              <p className="text-sm text-muted-foreground">{todayLabel()}</p>
+            </div>
+
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="size-4" />
+              {t('habits.newHabit')}
+            </Button>
           </div>
 
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="size-4" />
-            {t('habits.newHabit')}
-          </Button>
+          <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+            <section className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur-[1px]">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {t('habits.dailyCompletion')}
+                </p>
+                <p className="text-sm font-medium">
+                  {t('habits.dailyCompletionDetail', {
+                    done: progress.done,
+                    total: progress.total,
+                  })}
+                </p>
+              </div>
+
+              <div className="mt-2 h-4 overflow-hidden rounded-full bg-muted/70">
+                <m.div
+                  className="h-full rounded-full bg-foreground/85"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={transition}
+                />
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur-[1px]">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {t('habits.monthlySignal')}
+                </p>
+                <p className="font-medium">
+                  {t('habits.monthlyConsistency', {
+                    percentage: stats.monthRate.percentage,
+                  })}
+                </p>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t('habits.monthlyDetail', {
+                  completed: stats.monthRate.completedDays,
+                  total: stats.monthRate.totalDays,
+                })}
+              </p>
+              <div className="mt-2 h-3 overflow-hidden rounded-full bg-muted/70">
+                <m.div
+                  className="h-full rounded-full bg-foreground/80"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${stats.monthRate.percentage}%` }}
+                  transition={transition}
+                />
+              </div>
+            </section>
+          </div>
+        </header>
+
+        <div className="relative border-b border-border/70 px-5 py-3 md:px-8">
+          <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/70 p-1">
+            <SegmentedTab
+              active={activeTab === 'today'}
+              label={t('habits.tabs.today')}
+              onClick={() => setActiveTab('today')}
+            />
+            <SegmentedTab
+              active={activeTab === 'overview'}
+              label={t('habits.tabs.overview')}
+              onClick={() => setActiveTab('overview')}
+            />
+            <SegmentedTab
+              active={activeTab === 'stats'}
+              label={t('habits.tabs.stats')}
+              onClick={() => setActiveTab('stats')}
+            />
+          </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-          <section className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur-[1px]">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                {t('habits.dailyCompletion')}
-              </p>
-              <p className="text-sm font-medium">
-                {t('habits.dailyCompletionDetail', { done: progress.done, total: progress.total })}
-              </p>
-            </div>
-
-            <div className="mt-2 h-4 overflow-hidden rounded-full bg-muted/70">
-              <m.div
-                className="h-full rounded-full bg-foreground/85"
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercent}%` }}
+        <div className="relative flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-6">
+          <AnimatePresence mode="wait">
+            {activeTab === 'today' ? (
+              <m.section
+                key="today"
+                initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
                 transition={transition}
-              />
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur-[1px]">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                {t('habits.monthlySignal')}
-              </p>
-              <p className="font-medium">
-                {t('habits.monthlyConsistency', { percentage: stats.monthRate.percentage })}
-              </p>
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {t('habits.monthlyDetail', { completed: stats.monthRate.completedDays, total: stats.monthRate.totalDays })}
-            </p>
-            <div className="mt-2 h-3 overflow-hidden rounded-full bg-muted/70">
-              <m.div
-                className="h-full rounded-full bg-foreground/80"
-                initial={{ width: 0 }}
-                animate={{ width: `${stats.monthRate.percentage}%` }}
-                transition={transition}
-              />
-            </div>
-          </section>
-        </div>
-      </header>
-
-      <div className="relative border-b border-border/70 px-5 py-3 md:px-8">
-        <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/70 p-1">
-          <SegmentedTab
-            active={activeTab === 'today'}
-            label={t('habits.tabs.today')}
-            onClick={() => setActiveTab('today')}
-          />
-          <SegmentedTab
-            active={activeTab === 'overview'}
-            label={t('habits.tabs.overview')}
-            onClick={() => setActiveTab('overview')}
-          />
-          <SegmentedTab
-            active={activeTab === 'stats'}
-            label={t('habits.tabs.stats')}
-            onClick={() => setActiveTab('stats')}
-          />
-        </div>
-      </div>
-
-      <div className="relative flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-6">
-        <AnimatePresence mode="wait">
-          {activeTab === 'today' ? (
-            <m.section
-              key="today"
-              initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
-              transition={transition}
-              className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(260px,1fr)]"
-            >
-              <section className="overflow-hidden rounded-2xl border border-border/70 bg-card/80 backdrop-blur-[1px]">
-                <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {t('habits.executionQueue')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t('habits.dueToday', { count: todayHabits.length })}
-                  </p>
-                </div>
-
-                {isLoading ? (
-                  <div className="space-y-3 px-4 py-4">
-                    <div className="h-14 animate-pulse rounded-xl bg-muted/60" />
-                    <div className="h-14 animate-pulse rounded-xl bg-muted/50" />
-                    <div className="h-14 animate-pulse rounded-xl bg-muted/40" />
-                  </div>
-                ) : todayHabits.length === 0 ? (
-                  <div className="space-y-3 px-4 py-8 text-center">
-                    <p className="text-sm font-medium">
-                      {t('habits.empty.title')}
+                className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(260px,1fr)]"
+              >
+                <section className="overflow-hidden rounded-2xl border border-border/70 bg-card/80 backdrop-blur-[1px]">
+                  <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                      {t('habits.executionQueue')}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {t('habits.empty.hint')}
+                      {t('habits.dueToday', { count: todayHabits.length })}
                     </p>
-                    <div>
-                      <Button size="sm" variant="outline" onClick={openCreate}>
-                        <Plus className="size-3.5" />
-                        {t('habits.empty.createButton')}
-                      </Button>
-                    </div>
                   </div>
+
+                  {isLoading ? (
+                    <div className="space-y-3 px-4 py-4">
+                      <div className="h-14 animate-pulse rounded-xl bg-muted/60" />
+                      <div className="h-14 animate-pulse rounded-xl bg-muted/50" />
+                      <div className="h-14 animate-pulse rounded-xl bg-muted/40" />
+                    </div>
+                  ) : todayHabits.length === 0 ? (
+                    <div className="space-y-3 px-4 py-8 text-center">
+                      <p className="text-sm font-medium">
+                        {t('habits.empty.title')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('habits.empty.hint')}
+                      </p>
+                      <div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={openCreate}
+                        >
+                          <Plus className="size-3.5" />
+                          {t('habits.empty.createButton')}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border/60">
+                      {todayHabits.map((habit, index) => {
+                        const doneToday = todayDoneSet.has(habit.id)
+                        const streak = selectStreakByHabit(monthLogs, habit.id)
+                        const completionDates = selectHabitCompletionDates(
+                          monthLogs,
+                          habit.id
+                        )
+
+                        return (
+                          <m.article
+                            key={habit.id}
+                            initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{
+                              ...transition,
+                              delay: reduceMotion ? 0 : index * 0.04,
+                            }}
+                            className="grid gap-3 px-4 py-4 transition-colors hover:bg-accent/15 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
+                            style={{
+                              backgroundColor: doneToday
+                                ? 'color-mix(in oklab, var(--card) 86%, transparent)'
+                                : `color-mix(in oklab, ${habit.color} 12%, var(--card))`,
+                            }}
+                          >
+                            <m.button
+                              type="button"
+                              aria-label={
+                                doneToday
+                                  ? t('habits.markUndoneAria', {
+                                      name: habit.name,
+                                    })
+                                  : t('habits.markDoneAria', {
+                                      name: habit.name,
+                                    })
+                              }
+                              onClick={() => void toggleHabit(habit.id)}
+                              whileTap={{ scale: 0.85 }}
+                              animate={{ scale: doneToday ? [1, 1.15, 1] : 1 }}
+                              transition={{
+                                duration: 0.24,
+                                ease: [0.16, 1, 0.3, 1],
+                              }}
+                              className={cn(
+                                'mt-0.5 flex size-8 items-center justify-center self-start rounded-full border transition-all',
+                                doneToday
+                                  ? 'border-transparent text-primary-foreground'
+                                  : 'border-muted-foreground/45 text-transparent hover:border-foreground/60'
+                              )}
+                              style={{
+                                backgroundColor: doneToday
+                                  ? habit.color
+                                  : 'transparent',
+                              }}
+                            >
+                              <Check className="size-3.5" strokeWidth={3} />
+                            </m.button>
+
+                            <div className="min-w-0">
+                              <div className="flex min-w-0 items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedHabit(habit.id)}
+                                  className={cn(
+                                    'min-w-0 truncate text-start text-sm font-semibold',
+                                    doneToday &&
+                                      'text-muted-foreground line-through'
+                                  )}
+                                >
+                                  {habit.icon ? `${habit.icon} ` : ''}
+                                  {habit.name}
+                                </button>
+
+                                <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                                  {formatHabitFrequency(habit)}
+                                </span>
+
+                                <div className="ml-1 shrink-0">
+                                  <HeatMap
+                                    logs={completionDates}
+                                    days={7}
+                                    color={habit.color}
+                                    size="md"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="md:justify-self-end">
+                              <div className="flex items-center gap-3">
+                                <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
+                                  <Flame className="size-3.5" />
+                                  {t('habits.streakRun', { count: streak })}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEdit(habit)}
+                                >
+                                  Edit
+                                </Button>
+                              </div>
+                            </div>
+                          </m.article>
+                        )
+                      })}
+                    </div>
+                  )}
+                </section>
+
+                <aside className="space-y-4">
+                  <section className="rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur-[1px]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                          {t('habits.focusHabit.heading')}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t('habits.focusHabit.hint')}
+                        </p>
+                      </div>
+                      {focusedHabit ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEdit(focusedHabit)}
+                        >
+                          {t('habits.focusHabit.manage')}
+                        </Button>
+                      ) : null}
+                    </div>
+
+                    {focusedHabit ? (
+                      <div className="mt-3 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-base font-semibold">
+                              {focusedHabit.icon ? `${focusedHabit.icon} ` : ''}
+                              {focusedHabit.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatHabitFrequency(focusedHabit)}
+                            </p>
+                          </div>
+                          <select
+                            value={selectedHabitId ?? focusedHabit.id}
+                            onChange={event =>
+                              setSelectedHabit(event.target.value || null)
+                            }
+                            className="h-8 max-w-47.5 rounded-md border border-border bg-background px-2 text-xs"
+                            aria-label={t('habits.focusHabit.switchAria')}
+                          >
+                            {habits.map(habit => (
+                              <option key={habit.id} value={habit.id}>
+                                {habit.icon ? `${habit.icon} ` : ''}
+                                {habit.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="grid grid-cols-10 gap-1.5">
+                          {focusMatrixDates.map(dateISO => {
+                            const completed = focusCompletionSet.has(dateISO)
+                            return (
+                              <div
+                                key={dateISO}
+                                title={`${dateISO} - ${completed ? 'Completed' : 'Missed'}`}
+                                className="size-3 rounded-lg border border-border/60"
+                                style={{
+                                  backgroundColor: completed
+                                    ? focusedHabit.color
+                                    : 'color-mix(in oklab, var(--muted) 72%, transparent)',
+                                  opacity: completed ? 0.9 : 0.6,
+                                }}
+                              />
+                            )
+                          })}
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                          {t('habits.focusHabit.currentStreak', {
+                            count: focusStreak,
+                          })}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        {t('habits.focusHabit.noneSelected')}
+                      </p>
+                    )}
+                  </section>
+
+                  <section className="rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur-[1px]">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                      {t('habits.quickSummary')}
+                    </p>
+                    <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+                      <p>
+                        {t('habits.quickSummary.topStreak')}{' '}
+                        {stats.topCurrentHabit
+                          ? `${stats.topCurrentHabit.name} (${stats.topCurrentHabit.streak}d)`
+                          : t('habits.quickSummary.noData')}
+                      </p>
+                      <p>
+                        {t('habits.quickSummary.topWeekday')}{' '}
+                        {stats.topWeekday === null
+                          ? t('habits.quickSummary.noData')
+                          : weekdayName(stats.topWeekday)}
+                      </p>
+                    </div>
+                  </section>
+                </aside>
+              </m.section>
+            ) : activeTab === 'overview' ? (
+              <m.section
+                key="overview"
+                initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
+                transition={transition}
+                className="space-y-4"
+              >
+                {habits.length === 0 ? (
+                  <section className="rounded-2xl border border-border/70 bg-card/80 px-4 py-8 text-center backdrop-blur-[1px]">
+                    <p className="text-sm font-medium">
+                      {t('habits.overview.empty.title')}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t('habits.overview.empty.hint')}
+                    </p>
+                  </section>
                 ) : (
-                  <div className="divide-y divide-border/60">
-                    {todayHabits.map((habit, index) => {
-                      const doneToday = todayDoneSet.has(habit.id)
-                      const streak = selectStreakByHabit(monthLogs, habit.id)
+                  <div
+                    className="grid gap-4"
+                    style={{
+                      gridTemplateColumns:
+                        'repeat(auto-fit, minmax(280px, 1fr))',
+                    }}
+                  >
+                    {habits.map(habit => {
                       const completionDates = selectHabitCompletionDates(
                         monthLogs,
                         habit.id
                       )
+                      const streak = selectStreakByHabit(monthLogs, habit.id)
+                      const doneToday = todayDoneSet.has(habit.id)
 
                       return (
-                        <m.article
+                        <article
                           key={habit.id}
-                          initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{
-                            ...transition,
-                            delay: reduceMotion ? 0 : index * 0.04,
-                          }}
-                          className="grid gap-3 px-4 py-4 transition-colors hover:bg-accent/15 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
+                          className="rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur-[1px] transition-colors hover:bg-accent/12"
                           style={{
-                            backgroundColor: doneToday
-                              ? 'color-mix(in oklab, var(--card) 86%, transparent)'
-                              : `color-mix(in oklab, ${habit.color} 12%, var(--card))`,
+                            borderColor: `color-mix(in oklab, ${habit.color} 46%, var(--border))`,
                           }}
                         >
-                          <m.button
-                            type="button"
-                            aria-label={
-                              doneToday
-                                ? t('habits.markUndoneAria', { name: habit.name })
-                                : t('habits.markDoneAria', { name: habit.name })
-                            }
-                            onClick={() => void toggleHabit(habit.id)}
-                            whileTap={{ scale: 0.85 }}
-                            animate={{ scale: doneToday ? [1, 1.15, 1] : 1 }}
-                            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-                            className={cn(
-                              'mt-0.5 flex size-8 items-center justify-center self-start rounded-full border transition-all',
-                              doneToday
-                                ? 'border-transparent text-primary-foreground'
-                                : 'border-muted-foreground/45 text-transparent hover:border-foreground/60'
-                            )}
-                            style={{
-                              backgroundColor: doneToday
-                                ? habit.color
-                                : 'transparent',
-                            }}
-                          >
-                            <Check className="size-3.5" strokeWidth={3} />
-                          </m.button>
-
-                          <div className="min-w-0">
-                            <div className="flex min-w-0 items-center gap-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
                               <button
                                 type="button"
-                                onClick={() => setSelectedHabit(habit.id)}
-                                className={cn(
-                                  'min-w-0 truncate text-start text-sm font-semibold',
-                                  doneToday &&
-                                    'text-muted-foreground line-through'
-                                )}
+                                onClick={() => openEdit(habit)}
+                                className="truncate text-start text-sm font-semibold"
                               >
                                 {habit.icon ? `${habit.icon} ` : ''}
                                 {habit.name}
                               </button>
-
-                              <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                              <p className="mt-1 text-xs text-muted-foreground">
                                 {formatHabitFrequency(habit)}
-                              </span>
-
-                              <div className="ml-1 shrink-0">
-                                <HeatMap
-                                  logs={completionDates}
-                                  days={7}
-                                  color={habit.color}
-                                  size="md"
-                                />
-                              </div>
+                              </p>
                             </div>
+                            <span className="text-xs text-muted-foreground">
+                              {streak}d run
+                            </span>
                           </div>
 
-                          <div className="md:justify-self-end">
-                            <div className="flex items-center gap-3">
-                              <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
-                                <Flame className="size-3.5" />
-                                {t('habits.streakRun', { count: streak })}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openEdit(habit)}
-                              >
-                                Edit
-                              </Button>
-                            </div>
+                          <div className="mt-3">
+                            <HeatMap
+                              logs={completionDates}
+                              days={30}
+                              color={habit.color}
+                              size="md"
+                            />
                           </div>
-                        </m.article>
+
+                          <p className="mt-3 text-xs text-muted-foreground">
+                            {doneToday
+                              ? t('habits.completedToday')
+                              : t('habits.pendingToday')}
+                          </p>
+                        </article>
                       )
                     })}
                   </div>
                 )}
-              </section>
-
-              <aside className="space-y-4">
+              </m.section>
+            ) : (
+              <m.section
+                key="stats"
+                initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
+                transition={transition}
+                className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]"
+              >
                 <section className="rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur-[1px]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                        {t('habits.focusHabit.heading')}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t('habits.focusHabit.hint')}
-                      </p>
-                    </div>
-                    {focusedHabit ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEdit(focusedHabit)}
-                      >
-                        {t('habits.focusHabit.manage')}
-                      </Button>
-                    ) : null}
-                  </div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {t('habits.stats.weekdayPressureMap')}
+                  </p>
 
-                  {focusedHabit ? (
-                    <div className="mt-3 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold">
-                            {focusedHabit.icon ? `${focusedHabit.icon} ` : ''}
-                            {focusedHabit.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatHabitFrequency(focusedHabit)}
-                          </p>
-                        </div>
-                        <select
-                          value={selectedHabitId ?? focusedHabit.id}
-                          onChange={event =>
-                            setSelectedHabit(event.target.value || null)
-                          }
-                          className="h-8 max-w-47.5 rounded-md border border-border bg-background px-2 text-xs"
-                          aria-label={t('habits.focusHabit.switchAria')}
+                  <div className="mt-3 space-y-2">
+                    {WEEKDAY_LABELS.map((label, day) => {
+                      const value = weekdayCounts[day] ?? 0
+                      const width = `${Math.round((value / weekdayPeak) * 100)}%`
+                      return (
+                        <div
+                          key={label}
+                          className="grid grid-cols-[32px_minmax(0,1fr)_30px] items-center gap-2 text-xs"
                         >
-                          {habits.map(habit => (
-                            <option key={habit.id} value={habit.id}>
-                              {habit.icon ? `${habit.icon} ` : ''}
-                              {habit.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="grid grid-cols-10 gap-1.5">
-                        {focusMatrixDates.map(dateISO => {
-                          const completed = focusCompletionSet.has(dateISO)
-                          return (
+                          <span className="text-muted-foreground">{label}</span>
+                          <div className="h-2 overflow-hidden rounded-full bg-muted/60">
                             <div
-                              key={dateISO}
-                              title={`${dateISO} - ${completed ? 'Completed' : 'Missed'}`}
-                              className="size-3 rounded-lg border border-border/60"
-                              style={{
-                                backgroundColor: completed
-                                  ? focusedHabit.color
-                                  : 'color-mix(in oklab, var(--muted) 72%, transparent)',
-                                opacity: completed ? 0.9 : 0.6,
-                              }}
+                              className="h-full rounded-full bg-foreground/80 transition-all duration-300"
+                              style={{ width }}
                             />
-                          )
-                        })}
-                      </div>
-
-                      <p className="text-xs text-muted-foreground">
-                        {t('habits.focusHabit.currentStreak', { count: focusStreak })}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      {t('habits.focusHabit.noneSelected')}
-                    </p>
-                  )}
+                          </div>
+                          <span className="text-end text-muted-foreground">
+                            {value}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </section>
 
                 <section className="rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur-[1px]">
                   <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                    {t('habits.quickSummary')}
+                    {t('habits.stats.historicalBoard')}
                   </p>
-                  <div className="mt-3 space-y-2 text-xs text-muted-foreground">
-                    <p>
-                      {t('habits.quickSummary.topStreak')}{' '}
-                      {stats.topCurrentHabit
-                        ? `${stats.topCurrentHabit.name} (${stats.topCurrentHabit.streak}d)`
-                        : t('habits.quickSummary.noData')}
+
+                  {stats.bestHistoricalByHabit.length === 0 ? (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      {t('habits.stats.noStreakData')}
                     </p>
-                    <p>
-                      {t('habits.quickSummary.topWeekday')}{' '}
-                      {stats.topWeekday === null
-                        ? t('habits.quickSummary.noData')
-                        : weekdayName(stats.topWeekday)}
-                    </p>
-                  </div>
-                </section>
-              </aside>
-            </m.section>
-          ) : activeTab === 'overview' ? (
-            <m.section
-              key="overview"
-              initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
-              transition={transition}
-              className="space-y-4"
-            >
-              {habits.length === 0 ? (
-                <section className="rounded-2xl border border-border/70 bg-card/80 px-4 py-8 text-center backdrop-blur-[1px]">
-                  <p className="text-sm font-medium">
-                    {t('habits.overview.empty.title')}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t('habits.overview.empty.hint')}
+                  ) : (
+                    <ol className="mt-3 space-y-2">
+                      {stats.bestHistoricalByHabit
+                        .slice(0, 5)
+                        .map((item, index) => (
+                          <li
+                            key={item.habitId}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-border/60 px-3 py-2 text-sm"
+                          >
+                            <span>
+                              {index + 1}. {item.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {item.streak} days
+                            </span>
+                          </li>
+                        ))}
+                    </ol>
+                  )}
+
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    {t('habits.stats.completionWindow', {
+                      completed: stats.monthRate.completedDays,
+                      total: stats.monthRate.totalDays,
+                    })}
                   </p>
                 </section>
-              ) : (
-                <div
-                  className="grid gap-4"
-                  style={{
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                  }}
-                >
-                  {habits.map(habit => {
-                    const completionDates = selectHabitCompletionDates(
-                      monthLogs,
-                      habit.id
-                    )
-                    const streak = selectStreakByHabit(monthLogs, habit.id)
-                    const doneToday = todayDoneSet.has(habit.id)
+              </m.section>
+            )}
+          </AnimatePresence>
+        </div>
 
-                    return (
-                      <article
-                        key={habit.id}
-                        className="rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur-[1px] transition-colors hover:bg-accent/12"
-                        style={{
-                          borderColor: `color-mix(in oklab, ${habit.color} 46%, var(--border))`,
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <button
-                              type="button"
-                              onClick={() => openEdit(habit)}
-                              className="truncate text-start text-sm font-semibold"
-                            >
-                              {habit.icon ? `${habit.icon} ` : ''}
-                              {habit.name}
-                            </button>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {formatHabitFrequency(habit)}
-                            </p>
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {streak}d run
-                          </span>
-                        </div>
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogContent className="sm:max-w-155">
+            <DialogHeader>
+              <DialogTitle>
+                {editingHabitId
+                  ? t('habits.modal.editTitle')
+                  : t('habits.modal.createTitle')}
+              </DialogTitle>
+              <DialogDescription>
+                {t('habits.modal.description')}
+              </DialogDescription>
+            </DialogHeader>
 
-                        <div className="mt-3">
-                          <HeatMap
-                            logs={completionDates}
-                            days={30}
-                            color={habit.color}
-                            size="md"
-                          />
-                        </div>
-
-                        <p className="mt-3 text-xs text-muted-foreground">
-                          {doneToday ? t('habits.completedToday') : t('habits.pendingToday')}
-                        </p>
-                      </article>
-                    )
-                  })}
-                </div>
-              )}
-            </m.section>
-          ) : (
-            <m.section
-              key="stats"
-              initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
-              transition={transition}
-              className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]"
+            <form
+              className="space-y-5"
+              onSubmit={event => {
+                event.preventDefault()
+                void submitForm()
+              }}
             >
-              <section className="rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur-[1px]">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  {t('habits.stats.weekdayPressureMap')}
-                </p>
-
-                <div className="mt-3 space-y-2">
-                  {WEEKDAY_LABELS.map((label, day) => {
-                    const value = weekdayCounts[day] ?? 0
-                    const width = `${Math.round((value / weekdayPeak) * 100)}%`
-                    return (
-                      <div
-                        key={label}
-                        className="grid grid-cols-[32px_minmax(0,1fr)_30px] items-center gap-2 text-xs"
-                      >
-                        <span className="text-muted-foreground">{label}</span>
-                        <div className="h-2 overflow-hidden rounded-full bg-muted/60">
-                          <div
-                            className="h-full rounded-full bg-foreground/80 transition-all duration-300"
-                            style={{ width }}
-                          />
-                        </div>
-                        <span className="text-end text-muted-foreground">
-                          {value}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </section>
-
-              <section className="rounded-2xl border border-border/70 bg-card/80 p-4 backdrop-blur-[1px]">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                  {t('habits.stats.historicalBoard')}
-                </p>
-
-                {stats.bestHistoricalByHabit.length === 0 ? (
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    {t('habits.stats.noStreakData')}
-                  </p>
-                ) : (
-                  <ol className="mt-3 space-y-2">
-                    {stats.bestHistoricalByHabit
-                      .slice(0, 5)
-                      .map((item, index) => (
-                        <li
-                          key={item.habitId}
-                          className="flex items-center justify-between gap-3 rounded-xl border border-border/60 px-3 py-2 text-sm"
-                        >
-                          <span>
-                            {index + 1}. {item.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {item.streak} days
-                          </span>
-                        </li>
-                      ))}
-                  </ol>
-                )}
-
-                <p className="mt-4 text-xs text-muted-foreground">
-                  {t('habits.stats.completionWindow', { completed: stats.monthRate.completedDays, total: stats.monthRate.totalDays })}
-                </p>
-              </section>
-            </m.section>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-155">
-          <DialogHeader>
-            <DialogTitle>
-              {editingHabitId ? t('habits.modal.editTitle') : t('habits.modal.createTitle')}
-            </DialogTitle>
-            <DialogDescription>
-              {t('habits.modal.description')}
-            </DialogDescription>
-          </DialogHeader>
-
-          <form
-            className="space-y-5"
-            onSubmit={event => {
-              event.preventDefault()
-              void submitForm()
-            }}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="habit-name">{t('habits.modal.habitName')}</Label>
-              <Input
-                id="habit-name"
-                value={form.name}
-                onChange={event =>
-                  setForm(current => ({ ...current, name: event.target.value }))
-                }
-                placeholder={t('habits.modal.namePlaceholder')}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="habit-icon">{t('habits.modal.iconLabel')}</Label>
-              <Input
-                id="habit-icon"
-                maxLength={2}
-                value={form.icon}
-                onChange={event =>
-                  setForm(current => ({ ...current, icon: event.target.value }))
-                }
-                placeholder={t('habits.modal.iconPlaceholder')}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="habit-frequency">{t('habits.modal.frequencyLabel')}</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {(Object.keys(FREQUENCY_LABELS) as HabitFrequency[]).map(
-                  frequency => (
-                    <button
-                      key={frequency}
-                      type="button"
-                      onClick={() =>
-                        setForm(current => ({
-                          ...current,
-                          frequency,
-                          frequencyDays:
-                            frequency === 'weekdays'
-                              ? [1, 2, 3, 4, 5]
-                              : frequency === 'weekends'
-                                ? [0, 6]
-                                : current.frequencyDays.length === 0
-                                  ? [1, 2, 3, 4, 5]
-                                  : current.frequencyDays,
-                        }))
-                      }
-                      className={cn(
-                        'rounded-xl border px-3 py-2 text-xs font-medium transition-colors',
-                        form.frequency === frequency
-                          ? 'border-foreground bg-accent/70'
-                          : 'border-border hover:bg-accent/30'
-                      )}
-                    >
-                      {FREQUENCY_LABELS[frequency]}
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-
-            {form.frequency === 'custom' && (
               <div className="space-y-2">
-                <Label htmlFor="habit-custom-days">{t('habits.modal.customDaysLabel')}</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {WEEKDAY_LABELS.map((label, day) => {
-                    const active = form.frequencyDays.includes(day)
-                    return (
+                <Label htmlFor="habit-name">
+                  {t('habits.modal.habitName')}
+                </Label>
+                <Input
+                  id="habit-name"
+                  value={form.name}
+                  onChange={event =>
+                    setForm(current => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                  placeholder={t('habits.modal.namePlaceholder')}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="habit-icon">
+                  {t('habits.modal.iconLabel')}
+                </Label>
+                <Input
+                  id="habit-icon"
+                  maxLength={2}
+                  value={form.icon}
+                  onChange={event =>
+                    setForm(current => ({
+                      ...current,
+                      icon: event.target.value,
+                    }))
+                  }
+                  placeholder={t('habits.modal.iconPlaceholder')}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="habit-frequency">
+                  {t('habits.modal.frequencyLabel')}
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(FREQUENCY_LABELS) as HabitFrequency[]).map(
+                    frequency => (
                       <button
-                        key={label}
+                        key={frequency}
                         type="button"
                         onClick={() =>
                           setForm(current => ({
                             ...current,
-                            frequencyDays: active
-                              ? current.frequencyDays.filter(
-                                  value => value !== day
-                                )
-                              : [...current.frequencyDays, day].sort(
-                                  (a, b) => a - b
-                                ),
+                            frequency,
+                            frequencyDays:
+                              frequency === 'weekdays'
+                                ? [1, 2, 3, 4, 5]
+                                : frequency === 'weekends'
+                                  ? [0, 6]
+                                  : current.frequencyDays.length === 0
+                                    ? [1, 2, 3, 4, 5]
+                                    : current.frequencyDays,
                           }))
                         }
                         className={cn(
-                          'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
-                          active
+                          'rounded-xl border px-3 py-2 text-xs font-medium transition-colors',
+                          form.frequency === frequency
                             ? 'border-foreground bg-accent/70'
                             : 'border-border hover:bg-accent/30'
                         )}
                       >
-                        {label}
+                        {FREQUENCY_LABELS[frequency]}
                       </button>
                     )
-                  })}
+                  )}
                 </div>
-                {form.frequencyDays.length === 0 && (
-                  <p className="text-xs text-destructive">
-                    {t('habits.modal.atLeastOneDay')}
-                  </p>
+              </div>
+
+              {form.frequency === 'custom' && (
+                <div className="space-y-2">
+                  <Label htmlFor="habit-custom-days">
+                    {t('habits.modal.customDaysLabel')}
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WEEKDAY_LABELS.map((label, day) => {
+                      const active = form.frequencyDays.includes(day)
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() =>
+                            setForm(current => ({
+                              ...current,
+                              frequencyDays: active
+                                ? current.frequencyDays.filter(
+                                    value => value !== day
+                                  )
+                                : [...current.frequencyDays, day].sort(
+                                    (a, b) => a - b
+                                  ),
+                            }))
+                          }
+                          className={cn(
+                            'rounded-full border px-2.5 py-1 text-[11px] transition-colors',
+                            active
+                              ? 'border-foreground bg-accent/70'
+                              : 'border-border hover:bg-accent/30'
+                          )}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {form.frequencyDays.length === 0 && (
+                    <p className="text-xs text-destructive">
+                      {t('habits.modal.atLeastOneDay')}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="habit-color">
+                  {t('habits.modal.colorLabel')}
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {HABIT_COLORS.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() =>
+                        setForm(current => ({ ...current, color }))
+                      }
+                      className={cn(
+                        'size-7 rounded-full border transition-transform hover:scale-105',
+                        form.color === color
+                          ? 'border-foreground ring-2 ring-ring/50'
+                          : 'border-transparent'
+                      )}
+                      style={{ backgroundColor: color }}
+                      aria-label={t('habits.modal.colorAria', { color })}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <DialogFooter className="justify-between sm:justify-between">
+                {editingHabitId ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        await archiveHabit(editingHabitId)
+                        setModalOpen(false)
+                      }}
+                    >
+                      <Archive className="size-3.5" />
+                      Archive
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={async () => {
+                        const confirmed = window.confirm(
+                          'Delete this habit permanently? This will remove all logs.'
+                        )
+                        if (!confirmed) return
+                        await deleteHabit(editingHabitId)
+                        setModalOpen(false)
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                      Delete
+                    </Button>
+                  </div>
+                ) : (
+                  <span />
                 )}
-              </div>
-            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="habit-color">{t('habits.modal.colorLabel')}</Label>
-              <div className="flex flex-wrap gap-2">
-                {HABIT_COLORS.map(color => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setForm(current => ({ ...current, color }))}
-                    className={cn(
-                      'size-7 rounded-full border transition-transform hover:scale-105',
-                      form.color === color
-                        ? 'border-foreground ring-2 ring-ring/50'
-                        : 'border-transparent'
-                    )}
-                    style={{ backgroundColor: color }}
-                    aria-label={t('habits.modal.colorAria', { color })}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <DialogFooter className="justify-between sm:justify-between">
-              {editingHabitId ? (
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={async () => {
-                      await archiveHabit(editingHabitId)
-                      setModalOpen(false)
-                    }}
+                    onClick={() => setModalOpen(false)}
                   >
-                    <Archive className="size-3.5" />
-                    Archive
+                    {t('habits.modal.cancel')}
                   </Button>
-
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={async () => {
-                      const confirmed = window.confirm(
-                        'Delete this habit permanently? This will remove all logs.'
-                      )
-                      if (!confirmed) return
-                      await deleteHabit(editingHabitId)
-                      setModalOpen(false)
-                    }}
-                  >
-                    <Trash2 className="size-3.5" />
-                    Delete
+                  <Button type="submit" size="sm" disabled={!canSubmit}>
+                    {editingHabitId
+                      ? t('habits.modal.saveChanges')
+                      : t('habits.modal.create')}
                   </Button>
                 </div>
-              ) : (
-                <span />
-              )}
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setModalOpen(false)}
-                >
-                  {t('habits.modal.cancel')}
-                </Button>
-                <Button type="submit" size="sm" disabled={!canSubmit}>
-                  {editingHabitId ? t('habits.modal.saveChanges') : t('habits.modal.create')}
-                </Button>
-              </div>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <div className="relative border-t border-border/70 px-5 py-2 text-[11px] text-muted-foreground md:px-8">
-        {focusedHabit
-          ? t('habits.focusLock', { name: focusedHabit.name })
-          : t('habits.focusLockNone')}
-      </div>
+        <div className="relative border-t border-border/70 px-5 py-2 text-[11px] text-muted-foreground md:px-8">
+          {focusedHabit
+            ? t('habits.focusLock', { name: focusedHabit.name })
+            : t('habits.focusLockNone')}
+        </div>
       </div>
     </LazyMotion>
   )

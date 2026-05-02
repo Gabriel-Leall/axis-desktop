@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useUIStore } from './ui-store'
+import { DEFAULT_BON_CHAN_MOOD } from '@/lib/bon-chan'
 
 describe('UIStore', () => {
   beforeEach(() => {
@@ -12,6 +13,8 @@ describe('UIStore', () => {
       lastQuickPaneEntry: null,
       activePage: 'grid',
       activePageData: {},
+      activePreferencesPane: 'general',
+      bonChanMood: DEFAULT_BON_CHAN_MOOD,
     })
   })
 
@@ -21,6 +24,7 @@ describe('UIStore', () => {
     expect(state.rightSidebarVisible).toBe(false)
     expect(state.commandPaletteOpen).toBe(false)
     expect(state.preferencesOpen).toBe(false)
+    expect(state.bonChanMood).toBe(DEFAULT_BON_CHAN_MOOD)
   })
 
   it('toggles left sidebar visibility', () => {
@@ -72,5 +76,15 @@ describe('UIStore', () => {
     expect(useUIStore.getState().activePageData['selectedHabitId']).toBe(
       'habit-1'
     )
+  })
+
+  it('sets Bon-chan mood', () => {
+    const { setBonChanMood } = useUIStore.getState()
+
+    setBonChanMood('alegre')
+    expect(useUIStore.getState().bonChanMood).toBe('alegre')
+
+    setBonChanMood('triste')
+    expect(useUIStore.getState().bonChanMood).toBe('triste')
   })
 })

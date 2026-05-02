@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+import { DEFAULT_BON_CHAN_MOOD, type BonChanMood } from '@/lib/bon-chan'
 
 export type AppPage =
   | 'grid'
@@ -22,6 +23,7 @@ interface UIState {
   activePage: AppPage
   activePageData: Record<string, string>
   activePreferencesPane: string
+  bonChanMood: BonChanMood
 
   toggleLeftSidebar: () => void
   setLeftSidebarVisible: (visible: boolean) => void
@@ -34,6 +36,7 @@ interface UIState {
   setActivePreferencesPane: (pane: string) => void
   setLastQuickPaneEntry: (text: string) => void
   setSquareCorners: (enabled: boolean) => void
+  setBonChanMood: (mood: BonChanMood) => void
   navigateTo: (page: AppPage, data?: Record<string, string>) => void
 }
 
@@ -48,6 +51,7 @@ export const useUIStore = create<UIState>()(
       activePage: 'grid' as AppPage,
       activePageData: {},
       activePreferencesPane: 'general',
+      bonChanMood: DEFAULT_BON_CHAN_MOOD,
 
       toggleLeftSidebar: () =>
         set(
@@ -117,6 +121,9 @@ export const useUIStore = create<UIState>()(
       setSquareCorners: (enabled: boolean) => {
         document.documentElement.classList.toggle('square-corners', enabled)
       },
+
+      setBonChanMood: mood =>
+        set({ bonChanMood: mood }, undefined, 'setBonChanMood'),
 
       navigateTo: (page, data = {}) =>
         set(
