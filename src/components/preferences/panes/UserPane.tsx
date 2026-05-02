@@ -4,6 +4,10 @@ import { LogOut, User as UserIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SettingsSection } from '../shared/SettingsComponents'
 import { Badge } from '@/components/ui/badge'
+import { useOnboardingStore } from '@/store/onboarding-store'
+import { useUIStore } from '@/store/ui-store'
+import { toast } from 'sonner'
+import { SettingsField } from '../shared/SettingsComponents'
 
 const GithubIcon = ({ className }: { className?: string }) => (
   <svg
@@ -29,6 +33,14 @@ export function UserPane() {
   const isAuthenticated = useGitHubStore(state => state.isAuthenticated)
   const logout = useGitHubStore(state => state.logout)
   const startOAuthFlow = useGitHubStore(state => state.startOAuthFlow)
+  const resetOnboarding = useOnboardingStore(state => state.resetOnboarding)
+  const setPreferencesOpen = useUIStore(state => state.setPreferencesOpen)
+
+  const handleResetOnboarding = () => {
+    resetOnboarding()
+    setPreferencesOpen(false)
+    toast.success(t('toast.success.preferencesSaved'))
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -36,7 +48,11 @@ export function UserPane() {
         <div className="flex items-center gap-4 p-5 rounded-xl border border-border bg-card/50 shadow-sm">
           <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/10 bg-muted shrink-0 shadow-inner">
             {user?.avatar_url ? (
-              <img src={user.avatar_url} alt={user.login} className="w-full h-full object-cover" />
+              <img
+                src={user.avatar_url}
+                alt={user.login}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-accent/20">
                 <UserIcon className="w-8 h-8 text-muted-foreground/30" />
@@ -48,7 +64,9 @@ export function UserPane() {
               {user?.name || user?.login || t('preferences.user.guest')}
             </h4>
             <p className="text-sm text-muted-foreground truncate font-mono opacity-70">
-              {user?.login ? `@${user.login}` : t('preferences.user.notLoggedIn')}
+              {user?.login
+                ? `@${user.login}`
+                : t('preferences.user.notLoggedIn')}
             </p>
           </div>
           {isAuthenticated && (
@@ -74,20 +92,30 @@ export function UserPane() {
                 <GithubIcon className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-semibold text-foreground">GitHub</span>
+                <span className="text-sm font-semibold text-foreground">
+                  GitHub
+                </span>
                 <span className="text-xs text-muted-foreground">
-                  {isAuthenticated 
-                    ? t('preferences.user.connectedAs', { name: user?.login }) 
+                  {isAuthenticated
+                    ? t('preferences.user.connectedAs', { name: user?.login })
                     : t('preferences.user.notConnected')}
                 </span>
               </div>
             </div>
             {isAuthenticated ? (
-              <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20 transition-colors">
+              <Badge
+                variant="secondary"
+                className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20 transition-colors"
+              >
                 {t('preferences.user.active')}
               </Badge>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => startOAuthFlow()} className="h-8 px-3 text-xs">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => startOAuthFlow()}
+                className="h-8 px-3 text-xs"
+              >
                 {t('preferences.user.connect')}
               </Button>
             )}
@@ -97,17 +125,58 @@ export function UserPane() {
           <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card/10 opacity-60">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-background border border-border flex items-center justify-center shadow-sm">
-                 <GoogleIcon className="w-5 h-5" />
+                <GoogleIcon className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-semibold text-foreground">Google</span>
-                <span className="text-xs text-muted-foreground">{t('preferences.user.notConnected')}</span>
+                <span className="text-sm font-semibold text-foreground">
+                  Google
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {t('preferences.user.notConnected')}
+                </span>
               </div>
             </div>
-            <Button size="sm" variant="ghost" disabled className="h-8 px-3 text-xs opacity-50">
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled
+              className="h-8 px-3 text-xs opacity-50"
+            >
               {t('preferences.user.connect')}
             </Button>
           </div>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection title={t('preferences.advanced.title')}>
+        <div className="space-y-4">
+          <SettingsField
+            label={t('preferences.advanced.resetOnboarding')}
+            description={t('preferences.advanced.resetOnboardingDescription')}
+          >
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleResetOnboarding}
+              className="h-8"
+            >
+              {t('preferences.advanced.resetOnboarding')}
+            </Button>
+          </SettingsField>
+
+          <SettingsField
+            label={t('preferences.advanced.githubLogout')}
+            description={t('preferences.advanced.githubLogoutDescription')}
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => logout()}
+              className="h-8"
+            >
+              {t('preferences.advanced.githubLogout')}
+            </Button>
+          </SettingsField>
         </div>
       </SettingsSection>
 
@@ -121,16 +190,28 @@ export function UserPane() {
 }
 
 const GoogleIcon = ({ className }: { className?: string }) => (
-  <svg 
-    viewBox="0 0 24 24" 
-    width="24" 
-    height="24" 
+  <svg
+    viewBox="0 0 24 24"
+    width="24"
+    height="24"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
   >
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1 .67-2.28 1.07-3.71 1.07-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-    <path d="M5.84 14.11c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l3.66-2.8z" fill="#FBBC05"/>
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.84c.87-2.6 3.3-4.55 6.16-4.55z" fill="#EA4335"/>
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1 .67-2.28 1.07-3.71 1.07-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.11c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l3.66-2.8z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.84c.87-2.6 3.3-4.55 6.16-4.55z"
+      fill="#EA4335"
+    />
   </svg>
 )

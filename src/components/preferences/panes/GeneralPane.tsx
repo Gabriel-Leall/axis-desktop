@@ -1,92 +1,263 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
+import { locale } from '@tauri-apps/plugin-os'
+import {
+  disable as disableAutostart,
+  enable as enableAutostart,
+  isEnabled as isAutostartEnabled,
+} from '@tauri-apps/plugin-autostart'
 import { toast } from 'sonner'
 import { Switch } from '@/components/ui/switch'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ShortcutPicker } from '../ShortcutPicker'
 import { SettingsField, SettingsSection } from '../shared/SettingsComponents'
 import { usePreferences, useSavePreferences } from '@/services/preferences'
 import { commands } from '@/lib/tauri-bindings'
+import { availableLanguages } from '@/i18n'
 import { logger } from '@/lib/logger'
+import { useTheme } from '@/hooks/use-theme'
+import type { Theme } from '@/lib/theme-context'
+
+// Language display names (native names)
+const languageNames: Record<string, string> = {
+  en: 'English',
+  'pt-BR': 'Português (Brasil)',
+}
 
 export function GeneralPane() {
-  const { t } = useTranslation()
-  // Example local state - these are NOT persisted to disk
-  // To add persistent preferences:
-  // 1. Add the field to AppPreferences in both Rust and TypeScript
-  // 2. Use usePreferencesManager() and updatePreferences()
-  const [exampleText, setExampleText] = useState('Example value')
-  const [exampleToggle, setExampleToggle] = useState(true)
-
-  // Load preferences for keyboard shortcuts
+  const { t, i18n } = useTranslation()
+  const { theme, setTheme } = useTheme()
   const { data: preferences } = usePreferences()
   const savePreferences = useSavePreferences()
 
-  // Get the default shortcut from the backend
+  const [autostartState, setAutostartState] = useState({
+    enabled: false,
+    loading: true,
+  })
+
+  // Load preferences for keyboard shortcuts
   const { data: defaultShortcut } = useQuery({
     queryKey: ['default-quick-pane-shortcut'],
     queryFn: async () => {
       return await commands.getDefaultQuickPaneShortcut()
     },
-    staleTime: Infinity, // Never refetch - this is a constant
+    staleTime: Infinity,
   })
+
+  useEffect(() => {
+    const loadAutostartState = async () => {
+      try {
+        const enabled = await isAutostartEnabled()
+        setAutostartState({ enabled, loading: false })
+      } catch (error) {
+        logger.warn('Failed to load autostart state', { error })
+        setAutostartState(prev => ({ ...prev, loading: false }))
+      }
+    }
+
+    void loadAutostartState()
+  }, [])
 
   const handleShortcutChange = async (newShortcut: string | null) => {
     if (!preferences) return
-
-    // Capture old shortcut for rollback if save fails
     const oldShortcut = preferences.quick_pane_shortcut
 
-    logger.info('Updating quick pane shortcut', { oldShortcut, newShortcut })
-
-    // First, try to register the new shortcut
     const result = await commands.updateQuickPaneShortcut(newShortcut)
-
     if (result.status === 'error') {
-      logger.error('Failed to register shortcut', { error: result.error })
       toast.error(t('toast.error.shortcutFailed'), {
         description: result.error,
       })
       return
     }
 
-    // If registration succeeded, try to save the preference
     try {
       await savePreferences.mutateAsync({
         ...preferences,
         quick_pane_shortcut: newShortcut,
       })
     } catch {
-      // Save failed - roll back the backend registration
-      logger.warn('Save failed, rolling back shortcut registration', {
-        oldShortcut,
-        newShortcut,
-      })
+      await commands.updateQuickPaneShortcut(oldShortcut)
+    }
+  }
 
-      const rollbackResult = await commands.updateQuickPaneShortcut(oldShortcut)
-
-      if (rollbackResult.status === 'error') {
-        logger.error(
-          'Rollback failed - backend and preferences are out of sync',
-          {
-            error: rollbackResult.error,
-            attemptedShortcut: newShortcut,
-            originalShortcut: oldShortcut,
-          }
-        )
-        toast.error(t('toast.error.shortcutRestoreFailed'), {
-          description: t('toast.error.shortcutRestoreDescription'),
-        })
+  const handleLanguageChange = async (value: string) => {
+    const language = value === 'system' ? null : value
+    try {
+      if (language) {
+        await i18n.changeLanguage(language)
       } else {
-        logger.info('Successfully rolled back shortcut registration')
+        const systemLocale = await locale()
+        const langCode = systemLocale?.split('-')[0]?.toLowerCase() ?? 'en'
+        const targetLang = langCode === 'pt' ? 'pt-BR' : langCode
+        const resolvedLang = availableLanguages.includes(targetLang)
+          ? targetLang
+          : 'en'
+        await i18n.changeLanguage(resolvedLang)
       }
+    } catch (error) {
+      logger.error('Failed to change language', { error })
+      toast.error(t('toast.error.generic'))
+      return
+    }
+
+    if (preferences) {
+      savePreferences.mutate({ ...preferences, language })
+    }
+  }
+
+  const handleThemeChange = (value: Theme) => {
+    // Update the theme provider immediately for instant UI feedback
+    setTheme(value)
+
+    // Persist the theme preference to disk, preserving other preferences
+    if (preferences) {
+      savePreferences.mutate({ ...preferences, theme: value })
+    }
+  }
+
+  const handleAutostartChange = async (enabled: boolean) => {
+    setAutostartState(prev => ({ ...prev, loading: true }))
+    try {
+      if (enabled) {
+        await enableAutostart()
+      } else {
+        await disableAutostart()
+      }
+      setAutostartState({ enabled, loading: false })
+      toast.success(
+        enabled
+          ? t('toast.success.autostartEnabled')
+          : t('toast.success.autostartDisabled')
+      )
+    } catch (error) {
+      logger.error('Failed to update autostart state', { error, enabled })
+      toast.error(t('toast.error.autostartFailed'))
+      setAutostartState(prev => ({ ...prev, loading: false }))
     }
   }
 
   return (
     <div className="space-y-6">
+      <SettingsSection title={t('preferences.appearance')}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SettingsField
+            label={t('preferences.appearance.theme')}
+            description={t('preferences.appearance.colorThemeDescription')}
+          >
+            <Select
+              value={theme}
+              onValueChange={handleThemeChange}
+              disabled={savePreferences.isPending}
+            >
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={t('preferences.appearance.selectTheme')}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="light">
+                  {t('preferences.appearance.theme.light')}
+                </SelectItem>
+                <SelectItem value="dark">
+                  {t('preferences.appearance.theme.dark')}
+                </SelectItem>
+                <SelectItem value="entardecer">
+                  {t('preferences.appearance.theme.entardecer')}
+                </SelectItem>
+                <SelectItem value="cream">
+                  {t('preferences.appearance.theme.cream')}
+                </SelectItem>
+                <SelectItem value="system">
+                  {t('preferences.appearance.theme.system')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </SettingsField>
+
+          <SettingsField
+            label={t('preferences.appearance.language')}
+            description={t('preferences.appearance.languageDescription')}
+          >
+            <Select
+              value={preferences?.language ?? 'system'}
+              onValueChange={handleLanguageChange}
+              disabled={savePreferences.isPending}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="system">
+                  {t('preferences.appearance.language.system')}
+                </SelectItem>
+                {availableLanguages.map(lang => (
+                  <SelectItem key={lang} value={lang}>
+                    {languageNames[lang] ?? lang}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SettingsField>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection title={t('preferences.advanced.startup')}>
+        <SettingsField
+          label={t('preferences.advanced.launchAtStartup')}
+          description={t('preferences.advanced.launchAtStartupDescription')}
+        >
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="launch-at-startup"
+              checked={autostartState.enabled}
+              onCheckedChange={handleAutostartChange}
+              disabled={autostartState.loading}
+            />
+            <Label htmlFor="launch-at-startup" className="text-sm">
+              {autostartState.enabled
+                ? t('common.enabled')
+                : t('common.disabled')}
+            </Label>
+          </div>
+        </SettingsField>
+      </SettingsSection>
+
+      <SettingsSection title={t('preferences.general.systemBehavior')}>
+        <SettingsField
+          label={t('preferences.general.minimizeToTray')}
+          description={t('preferences.general.minimizeToTrayDescription')}
+        >
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="minimize-to-tray"
+              checked={preferences?.minimize_to_tray ?? false}
+              onCheckedChange={checked => {
+                if (preferences) {
+                  savePreferences.mutate({
+                    ...preferences,
+                    minimize_to_tray: checked,
+                  })
+                }
+              }}
+              disabled={savePreferences.isPending}
+            />
+            <Label htmlFor="minimize-to-tray" className="text-sm">
+              {(preferences?.minimize_to_tray ?? false)
+                ? t('common.enabled')
+                : t('common.disabled')}
+            </Label>
+          </div>
+        </SettingsField>
+      </SettingsSection>
+
       <SettingsSection title={t('preferences.general.keyboardShortcuts')}>
         <SettingsField
           label={t('preferences.general.quickPaneShortcut')}
@@ -94,40 +265,10 @@ export function GeneralPane() {
         >
           <ShortcutPicker
             value={preferences?.quick_pane_shortcut ?? null}
-            // Fallback matches DEFAULT_QUICK_PANE_SHORTCUT in src-tauri/src/lib.rs
             defaultValue={defaultShortcut ?? 'CommandOrControl+Shift+.'}
             onChange={handleShortcutChange}
             disabled={!preferences || savePreferences.isPending}
           />
-        </SettingsField>
-      </SettingsSection>
-
-      <SettingsSection title={t('preferences.general.exampleSettings')}>
-        <SettingsField
-          label={t('preferences.general.exampleText')}
-          description={t('preferences.general.exampleTextDescription')}
-        >
-          <Input
-            value={exampleText}
-            onChange={e => setExampleText(e.target.value)}
-            placeholder={t('preferences.general.exampleTextPlaceholder')}
-          />
-        </SettingsField>
-
-        <SettingsField
-          label={t('preferences.general.exampleToggle')}
-          description={t('preferences.general.exampleToggleDescription')}
-        >
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="example-toggle"
-              checked={exampleToggle}
-              onCheckedChange={setExampleToggle}
-            />
-            <Label htmlFor="example-toggle" className="text-sm">
-              {exampleToggle ? t('common.enabled') : t('common.disabled')}
-            </Label>
-          </div>
         </SettingsField>
       </SettingsSection>
     </div>

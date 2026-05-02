@@ -1,6 +1,4 @@
 import { useTranslation } from 'react-i18next'
-import { locale } from '@tauri-apps/plugin-os'
-import { toast } from 'sonner'
 import {
   Select,
   SelectContent,
@@ -12,17 +10,9 @@ import { useTheme } from '@/hooks/use-theme'
 import type { Theme } from '@/lib/theme-context'
 import { SettingsField, SettingsSection } from '../shared/SettingsComponents'
 import { usePreferences, useSavePreferences } from '@/services/preferences'
-import { availableLanguages } from '@/i18n'
-import { logger } from '@/lib/logger'
-
-// Language display names (native names)
-const languageNames: Record<string, string> = {
-  en: 'English',
-  'pt-BR': 'Português (Brasil)',
-}
 
 export function AppearancePane() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
   const { data: preferences } = usePreferences()
   const savePreferences = useSavePreferences()
@@ -37,67 +27,8 @@ export function AppearancePane() {
     }
   }
 
-  const handleLanguageChange = async (value: string) => {
-    const language = value === 'system' ? null : value
-
-    try {
-      // Change the language immediately for instant UI feedback
-      if (language) {
-        await i18n.changeLanguage(language)
-      } else {
-        // System language selected - detect and apply system locale
-        const systemLocale = await locale()
-        const langCode = systemLocale?.split('-')[0]?.toLowerCase() ?? 'en'
-        const targetLang = langCode === 'pt' ? 'pt-BR' : langCode
-        const resolvedLang = availableLanguages.includes(targetLang)
-          ? targetLang
-          : 'en'
-        await i18n.changeLanguage(resolvedLang)
-      }
-    } catch (error) {
-      logger.error('Failed to change language', { error })
-      toast.error(t('toast.error.generic'))
-      return
-    }
-
-    // Persist the language preference to disk
-    if (preferences) {
-      savePreferences.mutate({ ...preferences, language })
-    }
-  }
-
-  // Determine the current language value for the select
-  const currentLanguageValue = preferences?.language ?? 'system'
-
   return (
     <div className="space-y-6">
-      <SettingsSection title={t('preferences.appearance.language')}>
-        <SettingsField
-          label={t('preferences.appearance.language')}
-          description={t('preferences.appearance.languageDescription')}
-        >
-          <Select
-            value={currentLanguageValue}
-            onValueChange={handleLanguageChange}
-            disabled={savePreferences.isPending}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="system">
-                {t('preferences.appearance.language.system')}
-              </SelectItem>
-              {availableLanguages.map(lang => (
-                <SelectItem key={lang} value={lang}>
-                  {languageNames[lang] ?? lang}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </SettingsField>
-      </SettingsSection>
-
       <SettingsSection title={t('preferences.appearance.theme')}>
         <SettingsField
           label={t('preferences.appearance.colorTheme')}

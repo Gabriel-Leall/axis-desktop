@@ -203,9 +203,9 @@ export function ShortcutPicker({
           }
         }}
         className={cn(
-          'border-input h-9 min-w-[120px] rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none select-none',
+          'h-9 min-w-[120px] rounded-md border border-neutral-300 bg-white px-3 py-1 text-sm shadow-sm transition-[color,box-shadow] outline-none select-none font-mono',
           'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-          'flex items-center justify-center font-mono',
+          'flex items-center justify-center',
           isCapturing && 'border-ring ring-ring/50 ring-[3px] bg-muted/50',
           disabled && 'pointer-events-none cursor-not-allowed opacity-50',
           className

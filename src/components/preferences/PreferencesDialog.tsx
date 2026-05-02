@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Settings, Palette, Zap, User as UserIcon } from 'lucide-react'
+import { Settings, User as UserIcon, Timer, CalendarCheck2 } from 'lucide-react'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,11 +26,11 @@ import {
 } from '@/components/ui/sidebar'
 import { useUIStore } from '@/store/ui-store'
 import { GeneralPane } from './panes/GeneralPane'
-import { AppearancePane } from './panes/AppearancePane'
-import { AdvancedPane } from './panes/AdvancedPane'
+import { FocusTimerPane } from './panes/FocusTimerPane'
+import { HabitsPane } from './panes/HabitsPane'
 import { UserPane } from './panes/UserPane'
 
-type PreferencePane = 'general' | 'appearance' | 'advanced' | 'user'
+type PreferencePane = 'general' | 'focusTimer' | 'habits' | 'user'
 
 const navigationItems = [
   {
@@ -39,14 +39,14 @@ const navigationItems = [
     icon: Settings,
   },
   {
-    id: 'appearance' as const,
-    labelKey: 'preferences.appearance',
-    icon: Palette,
+    id: 'focusTimer' as const,
+    labelKey: 'preferences.focusTimer',
+    icon: Timer,
   },
   {
-    id: 'advanced' as const,
-    labelKey: 'preferences.advanced',
-    icon: Zap,
+    id: 'habits' as const,
+    labelKey: 'preferences.habits',
+    icon: CalendarCheck2,
   },
   {
     id: 'user' as const,
@@ -59,7 +59,9 @@ export function PreferencesDialog() {
   const { t } = useTranslation()
   const preferencesOpen = useUIStore(state => state.preferencesOpen)
   const setPreferencesOpen = useUIStore(state => state.setPreferencesOpen)
-  const activePane = useUIStore(state => state.activePreferencesPane) as PreferencePane
+  const activePane = useUIStore(
+    state => state.activePreferencesPane
+  ) as PreferencePane
   const setActivePane = useUIStore(state => state.setActivePreferencesPane)
 
   const getPaneTitle = (pane: PreferencePane): string => {
@@ -123,10 +125,10 @@ export function PreferencesDialog() {
               </div>
             </header>
 
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pt-0 max-h-134">
+            <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-10 pt-0 max-h-134">
               {activePane === 'general' && <GeneralPane />}
-              {activePane === 'appearance' && <AppearancePane />}
-              {activePane === 'advanced' && <AdvancedPane />}
+              {activePane === 'focusTimer' && <FocusTimerPane />}
+              {activePane === 'habits' && <HabitsPane />}
               {activePane === 'user' && <UserPane />}
             </div>
           </main>

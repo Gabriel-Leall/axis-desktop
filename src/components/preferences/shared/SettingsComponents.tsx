@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 
 interface SettingsFieldProps {
   label: string
@@ -23,7 +22,7 @@ export function SettingsField({
       <Label className="text-sm font-medium text-foreground">{label}</Label>
       {children}
       {description && (
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="text-sm text-neutral-500 mt-1.5">{description}</p>
       )}
     </div>
   )
@@ -31,12 +30,11 @@ export function SettingsField({
 
 export function SettingsSection({ title, children }: SettingsSectionProps) {
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-medium text-foreground">{title}</h3>
-        <Separator className="mt-2" />
-      </div>
-      <div className="space-y-4">{children}</div>
+    <div className="mt-8 mb-4">
+      <h3 className="text-xs font-bold tracking-wider text-neutral-500 uppercase">
+        {title}
+      </h3>
+      <div className="space-y-4 mt-4">{children}</div>
     </div>
   )
 }
