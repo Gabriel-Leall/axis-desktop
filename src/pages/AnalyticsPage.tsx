@@ -25,7 +25,10 @@ function toISODate(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-function comparisonLabel(period: AnalyticsPeriod, t: (k: string) => string): string {
+function comparisonLabel(
+  period: AnalyticsPeriod,
+  t: (k: string) => string
+): string {
   switch (period) {
     case 'this_week':
       return t('analytics.comparison.vsLastWeek')
@@ -558,7 +561,9 @@ export default function AnalyticsPage() {
             <StatBox
               title={t('analytics.stat.tasksCompleted')}
               value={summary?.tasks_completed ?? 0}
-              subtitle={t('analytics.stat.itemsCreated', { count: summary?.tasks_created ?? 0 })}
+              subtitle={t('analytics.stat.itemsCreated', {
+                count: summary?.tasks_created ?? 0,
+              })}
               delta={taskDelta}
               deltaLabel={compLabel}
               sparklineData={taskSparkline}
@@ -569,7 +574,9 @@ export default function AnalyticsPage() {
               value={summary?.pomodoros_completed ?? 0}
               subtitle={
                 avgSessionMinutes > 0
-                  ? t('analytics.stat.avgSession', { minutes: avgSessionMinutes })
+                  ? t('analytics.stat.avgSession', {
+                      minutes: avgSessionMinutes,
+                    })
                   : undefined
               }
               delta={pomodoroDelta}
@@ -705,7 +712,9 @@ export default function AnalyticsPage() {
               </h2>
               <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                 <span>
-                  {t('analytics.consistency.contributions', { count: contribution.totalContributions })}
+                  {t('analytics.consistency.contributions', {
+                    count: contribution.totalContributions,
+                  })}
                 </span>
                 <div className="flex items-center gap-1">
                   <span>{t('analytics.consistency.less')}</span>
@@ -800,7 +809,7 @@ export default function AnalyticsPage() {
                 </div>
               </div>
 
-                {hoveredContribution && (
+              {hoveredContribution && (
                 <div
                   className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-2 rounded-md border border-border/70 bg-popover/95 px-2.5 py-1.5 text-[11px] font-medium text-foreground shadow-lg backdrop-blur-sm"
                   style={{
