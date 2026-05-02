@@ -207,7 +207,10 @@ const parseDateInput = (input: string) => {
   return null
 }
 
-const filterPresets = (obj: Record<string, { text: string; start: Date; end: Date }>, search: string) => {
+const filterPresets = (
+  obj: Record<string, { text: string; start: Date; end: Date }>,
+  search: string
+) => {
   if (!search) {
     return obj
   }
@@ -375,11 +378,14 @@ interface CalendarComboboxProps {
   compact: boolean
   value: RangeValue | null
   onChange: (date: RangeValue | null) => void
-  presets: Record<string, {
-    text: string
-    start: Date
-    end: Date
-  }>
+  presets: Record<
+    string,
+    {
+      text: string
+      start: Date
+      end: Date
+    }
+  >
   presetIndex?: number
 }
 
@@ -583,11 +589,14 @@ interface CalendarProps {
   popoverAlignment?: 'start' | 'center' | 'end'
   value: RangeValue | null
   onChange: (date: RangeValue | null) => void
-  presets?: Record<string, {
-    text: string
-    start: Date
-    end: Date
-  }>
+  presets?: Record<
+    string,
+    {
+      text: string
+      start: Date
+      end: Date
+    }
+  >
   presetIndex?: number
   minValue?: Date
   maxValue?: Date
@@ -749,7 +758,11 @@ export const Calendar = ({
     }
   }
 
-  const [prevValueSync, setPrevValueSync] = useState({ value, selectedTimezone, isOpen })
+  const [prevValueSync, setPrevValueSync] = useState({
+    value,
+    selectedTimezone,
+    isOpen,
+  })
   if (
     value?.start?.getTime() !== prevValueSync.value?.start?.getTime() ||
     value?.end?.getTime() !== prevValueSync.value?.end?.getTime() ||
