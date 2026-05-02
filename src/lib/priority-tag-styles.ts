@@ -9,7 +9,6 @@ export function getPriorityTagClass(priority: PriorityLevel): string {
       'bg-destructive/15 text-destructive ring-destructive/30',
     priority === 'medium' &&
       'bg-accent/20 text-accent-foreground ring-accent/35',
-    priority === 'low' &&
-      'bg-muted text-muted-foreground ring-border'
+    priority === 'low' && 'bg-muted text-muted-foreground ring-border'
   )
 }

@@ -673,7 +673,19 @@ quick_pane_shortcut: string | null;
  * User's preferred language (e.g., "en", "es", "de")
  * If None, uses system locale detection
  */
-language: string | null }
+language: string | null; 
+/**
+ * Whether to minimize the application to the system tray instead of exiting
+ */
+minimize_to_tray: boolean | null; 
+/**
+ * The start day of the week (e.g., "monday", "sunday")
+ */
+start_of_week: string | null; 
+/**
+ * The time when daily habits and stats reset (e.g., "00:00", "03:00")
+ */
+daily_reset_time: string | null }
 export type CalendarEvent = { id: string; title: string; description: string | null; start_date: string; end_date: string; all_day: boolean; color: string | null; created_at: string; updated_at: string }
 export type CardOrderUpdate = { id: string; column_id: string; sort_order: number; updated_at: string }
 export type ColumnOrderUpdate = { id: string; sort_order: number; updated_at: string }

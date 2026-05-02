@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
 
-export const useClickOutside = (ref: RefObject<HTMLElement | null>, callback: () => void) => {
+export const useClickOutside = (
+  ref: RefObject<HTMLElement | null>,
+  callback: () => void
+) => {
   const savedCallback = useRef(callback)
 
   useEffect(() => {
