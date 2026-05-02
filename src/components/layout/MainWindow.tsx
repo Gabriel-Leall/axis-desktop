@@ -14,6 +14,7 @@ import { useTheme } from '@/hooks/use-theme'
 import { useUIStore } from '@/store/ui-store'
 import { useMainWindowEventListeners } from '@/hooks/useMainWindowEventListeners'
 import { cn } from '@/lib/utils'
+import { BonChanPet } from '@/components/bon-chan/BonChanPet'
 
 /**
  * Layout sizing configuration for resizable panels.
@@ -39,7 +40,7 @@ export function MainWindow() {
   useMainWindowEventListeners()
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
+    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-background">
       <TitleBar />
 
       <div className="flex flex-1 overflow-hidden">
@@ -76,6 +77,7 @@ export function MainWindow() {
       </div>
 
       {/* Global UI Components (hidden until triggered) */}
+      <BonChanPet />
       <CommandPalette />
       <PreferencesDialog />
       <Toaster

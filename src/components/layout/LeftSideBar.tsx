@@ -52,7 +52,11 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
         aria-label="Main navigation"
       >
         <div className="mb-6 mt-1 flex items-center justify-center">
-          <img src="/Axis-Logo.png" alt="Axis Logo" className="size-8 object-contain drop-shadow-sm" />
+          <img
+            src="/Axis-Logo.png"
+            alt="Axis Logo"
+            className="size-8 object-contain drop-shadow-sm"
+          />
         </div>
         {NAV_ITEMS.map(item => {
           const isActive = activePage === item.id
@@ -106,7 +110,11 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
               className="group relative flex size-9 items-center justify-center rounded-full border border-border bg-sidebar-accent/50 shadow-sm transition-all hover:border-primary/30 hover:ring-2 hover:ring-primary/10 overflow-hidden"
             >
               {user?.avatar_url ? (
-                <img src={user.avatar_url} alt={user.login} className="h-full w-full object-cover" />
+                <img
+                  src={user.avatar_url}
+                  alt={user.login}
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <UserIcon className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
               )}
