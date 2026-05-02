@@ -59,7 +59,8 @@ export const Error = ({
           <a
             className="font-medium flex items-center gap-0.5 -ml-1 hover:no-underline hover:opacity-60 duration-150 relative after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-full after:h-px after:bg-red-900"
             href={error.link}
-            target="_blank" rel="noreferrer noopener"
+            target="_blank"
+            rel="noreferrer noopener"
           >
             {error.action}
             <ErrorLinkIcon />
