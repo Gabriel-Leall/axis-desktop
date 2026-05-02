@@ -329,7 +329,9 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
 
                       {hiddenCount > 0 && (
                         <span className="mt-1 text-[10px] text-muted-foreground/70">
-                          {t('widgets.kanban.moreCount', { count: hiddenCount })}
+                          {t('widgets.kanban.moreCount', {
+                            count: hiddenCount,
+                          })}
                         </span>
                       )}
 
@@ -362,7 +364,8 @@ export function KanbanWidget({ onOpenKanban }: KanbanWidgetProps) {
                             }
                             className="flex w-full items-center gap-1 rounded px-1 py-1 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground"
                           >
-                            <Plus className="size-3" /> {t('widgets.kanban.addCard')}
+                            <Plus className="size-3" />{' '}
+                            {t('widgets.kanban.addCard')}
                           </button>
                         )}
                       </div>

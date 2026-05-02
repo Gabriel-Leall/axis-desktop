@@ -160,7 +160,9 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
         >
           <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="max-w-[140px] truncate text-sm text-muted-foreground transition-colors hover:text-foreground">
-            {linkedTask ? linkedTask.title : t('widgets.pomodoro.noTaskSelected')}
+            {linkedTask
+              ? linkedTask.title
+              : t('widgets.pomodoro.noTaskSelected')}
           </span>
         </button>
 

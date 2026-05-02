@@ -14,7 +14,13 @@ import type { PullRequest } from '@/types/github'
 
 // ─── CI Status Badge ──────────────────────────────────────────────────────────
 
-function CIBadge({ status, t }: { status: PullRequest['ci_status']; t: TFunction }) {
+function CIBadge({
+  status,
+  t,
+}: {
+  status: PullRequest['ci_status']
+  t: TFunction
+}) {
   if (status === 'success') {
     return (
       <span

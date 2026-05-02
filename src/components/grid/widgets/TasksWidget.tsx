@@ -3,11 +3,7 @@ import { CheckSquare, ChevronRight, Plus } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { WidgetCard } from '../WidgetCard'
-import {
-  useTasksStore,
-  selectTodayTasks,
-  type Task,
-} from '@/store/tasks-store'
+import { useTasksStore, selectTodayTasks, type Task } from '@/store/tasks-store'
 import { cn } from '@/lib/utils'
 import { getPriorityTagClass } from '@/lib/priority-tag-styles'
 
@@ -151,9 +147,7 @@ function TaskRow({
       <span
         className={cn(
           'flex-1 truncate font-sans text-sm',
-          isDone
-            ? 'text-muted-foreground line-through'
-            : 'text-foreground'
+          isDone ? 'text-muted-foreground line-through' : 'text-foreground'
         )}
       >
         {task.title}
@@ -184,7 +178,9 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
 
   const todayTasks = selectTodayTasks(tasks)
   const fallbackTasks = tasks.filter(t => t.status !== 'done')
-  const visibleTasks = (todayTasks.length > 0 ? todayTasks : fallbackTasks).slice(0, 4)
+  const visibleTasks = (
+    todayTasks.length > 0 ? todayTasks : fallbackTasks
+  ).slice(0, 4)
   const totalCount = todayTasks.length
   const pendingCount = todayTasks.filter(t => t.status !== 'done').length
 
@@ -249,7 +245,7 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
             </motion.div>
           ) : (
             <AnimatePresence mode="popLayout" initial={false}>
-              {visibleTasks.map((task) => (
+              {visibleTasks.map(task => (
                 <TaskRow
                   key={task.id}
                   task={task}

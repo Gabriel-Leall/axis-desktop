@@ -114,7 +114,10 @@ function DMRow({
   teamId: string | null
 }) {
   const { t } = useTranslation()
-  const displayName = resolvedUser?.real_name ?? resolvedUser?.name ?? t('widgets.slack.dmFallback')
+  const displayName =
+    resolvedUser?.real_name ??
+    resolvedUser?.name ??
+    t('widgets.slack.dmFallback')
   const avatarUrl = resolvedUser?.profile.image_48
 
   const handleClick = async () => {

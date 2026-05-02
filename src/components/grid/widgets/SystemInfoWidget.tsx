@@ -64,8 +64,14 @@ export function SystemInfoWidget() {
   return (
     <WidgetCard title={t('widgets.systemInfo.title')} icon={Monitor}>
       <div className="flex h-full flex-col justify-center gap-3">
-        <InfoRow label={t('widgets.systemInfo.platformLabel')} value={data.platform} />
-        <InfoRow label={t('widgets.systemInfo.sessionLabel')} value={data.uptime} />
+        <InfoRow
+          label={t('widgets.systemInfo.platformLabel')}
+          value={data.platform}
+        />
+        <InfoRow
+          label={t('widgets.systemInfo.sessionLabel')}
+          value={data.uptime}
+        />
         <InfoRow label={t('widgets.systemInfo.cpuLabel')} value={data.memory} />
       </div>
     </WidgetCard>
