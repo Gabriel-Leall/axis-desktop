@@ -412,7 +412,9 @@ function CardDetailPanel() {
                 className="h-8 w-full rounded border border-border bg-background px-2 text-[12px]"
               >
                 <option value="low">{t('kanban.detail.priority.low')}</option>
-                <option value="medium">{t('kanban.detail.priority.medium')}</option>
+                <option value="medium">
+                  {t('kanban.detail.priority.medium')}
+                </option>
                 <option value="high">{t('kanban.detail.priority.high')}</option>
               </select>
             </div>
@@ -494,7 +496,9 @@ function CardDetailPanel() {
           <button
             type="button"
             onClick={() => {
-              const shouldDelete = window.confirm(t('kanban.detail.deleteConfirm'))
+              const shouldDelete = window.confirm(
+                t('kanban.detail.deleteConfirm')
+              )
               if (!shouldDelete) return
               void deleteCard(card.id)
               selectCard(null)
