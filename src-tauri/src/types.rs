@@ -33,6 +33,12 @@ pub struct AppPreferences {
     /// User's preferred language (e.g., "en", "es", "de")
     /// If None, uses system locale detection
     pub language: Option<String>,
+    /// Whether to minimize the application to the system tray instead of exiting
+    pub minimize_to_tray: Option<bool>,
+    /// The start day of the week (e.g., "monday", "sunday")
+    pub start_of_week: Option<String>,
+    /// The time when daily habits and stats reset (e.g., "00:00", "03:00")
+    pub daily_reset_time: Option<String>,
 }
 
 impl Default for AppPreferences {
@@ -41,6 +47,9 @@ impl Default for AppPreferences {
             theme: "system".to_string(),
             quick_pane_shortcut: None, // None means use default
             language: None,            // None means use system locale
+            minimize_to_tray: Some(false),
+            start_of_week: Some("monday".to_string()),
+            daily_reset_time: Some("00:00".to_string()),
         }
     }
 }
@@ -116,7 +125,10 @@ pub fn validate_string_input(input: &str, max_len: usize, field_name: &str) -> R
 /// Validates theme value.
 pub fn validate_theme(theme: &str) -> Result<(), String> {
     match theme {
-        "light" | "dark" | "system" => Ok(()),
-        _ => Err("Invalid theme: must be 'light', 'dark', or 'system'".to_string()),
+        "light" | "dark" | "system" | "entardecer" | "cream" => Ok(()),
+        _ => Err(
+            "Invalid theme: must be 'light', 'dark', 'system', 'entardecer', or 'cream'"
+                .to_string(),
+        ),
     }
 }

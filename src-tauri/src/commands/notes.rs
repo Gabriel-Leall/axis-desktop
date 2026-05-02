@@ -16,16 +16,19 @@ const SEARCH_MAX_RESULTS: usize = 80;
 
 static TAG_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?:^|\s)#([A-Za-z][\w\-/]*)").expect("invalid tag regex"));
-static WIKILINK_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\[\[([^\]|]+?)(?:\|[^\]]+)?\]\]").expect("invalid wikilink regex"));
+static WIKILINK_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[\[([^\]|]+?)(?:\|[^\]]+)?\]\]").expect("invalid wikilink regex")
+});
 static FRONTMATTER_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^---\n[\s\S]*?\n---\n?").expect("invalid frontmatter regex"));
-static FENCED_CODE_BLOCK_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)(^|\n)```[^\n]*\n[\s\S]*?\n```[ \t]*").expect("invalid fenced block regex"));
+static FENCED_CODE_BLOCK_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?m)(^|\n)```[^\n]*\n[\s\S]*?\n```[ \t]*").expect("invalid fenced block regex")
+});
 static INLINE_CODE_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"`[^`\n]*`").expect("invalid inline code regex"));
 static MD_LINK_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"\[[^\]]+\]\((<[^>]+>|[^)\s]+)(?:\s+"[^"]*")?\)"#).expect("invalid markdown link regex")
+    Regex::new(r#"\[[^\]]+\]\((<[^>]+>|[^)\s]+)(?:\s+"[^"]*")?\)"#)
+        .expect("invalid markdown link regex")
 });
 static URI_SCHEME_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z\d+.-]*:").expect("invalid uri scheme regex"));
@@ -102,9 +105,12 @@ fn is_safe_relative_path(path: &str) -> bool {
     }
 
     let path_obj = Path::new(path);
-    !path_obj
-        .components()
-        .any(|component| matches!(component, Component::ParentDir | Component::RootDir | Component::Prefix(_)))
+    !path_obj.components().any(|component| {
+        matches!(
+            component,
+            Component::ParentDir | Component::RootDir | Component::Prefix(_)
+        )
+    })
 }
 
 fn resolve_note_path(root: &Path, rel_path: &str) -> Result<PathBuf, String> {
@@ -114,9 +120,7 @@ fn resolve_note_path(root: &Path, rel_path: &str) -> Result<PathBuf, String> {
     }
 
     let abs = root.join(&normalized);
-    let canonical_root = root
-        .canonicalize()
-        .unwrap_or_else(|_| root.to_path_buf());
+    let canonical_root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
     let canonical_parent = abs
         .parent()
         .unwrap_or(root)
@@ -174,8 +178,8 @@ fn extract_wikilinks(body: &str) -> Vec<String> {
 fn has_attachments(body: &str) -> bool {
     let stripped = strip_code_content(body);
     let asset_exts = [
-        ".apng", ".avif", ".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp", ".pdf", ".aac", ".flac",
-        ".m4a", ".mp3", ".ogg", ".wav", ".m4v", ".mov", ".mp4", ".ogv", ".webm",
+        ".apng", ".avif", ".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp", ".pdf", ".aac",
+        ".flac", ".m4a", ".mp3", ".ogg", ".wav", ".m4v", ".mov", ".mp4", ".ogv", ".webm",
     ];
 
     for caps in MD_LINK_PATTERN.captures_iter(&stripped) {
@@ -286,8 +290,8 @@ fn note_from_file(root: &Path, abs_path: &Path) -> Result<Note, String> {
         .to_string_lossy()
         .replace('\\', "/");
 
-    let metadata = std::fs::metadata(abs_path)
-        .map_err(|e| format!("Failed to read note metadata: {e}"))?;
+    let metadata =
+        std::fs::metadata(abs_path).map_err(|e| format!("Failed to read note metadata: {e}"))?;
     let content = std::fs::read_to_string(abs_path)
         .map_err(|e| format!("Failed to read note content: {e}"))?;
 
@@ -364,7 +368,8 @@ fn read_all_notes(root: &Path) -> Result<Vec<Note>, String> {
     let mut notes = Vec::new();
 
     fn walk(root: &Path, dir: &Path, out: &mut Vec<Note>) -> Result<(), String> {
-        let entries = std::fs::read_dir(dir).map_err(|e| format!("Failed to list notes directory: {e}"))?;
+        let entries =
+            std::fs::read_dir(dir).map_err(|e| format!("Failed to list notes directory: {e}"))?;
         for entry in entries {
             let entry = entry.map_err(|e| format!("Failed to read directory entry: {e}"))?;
             let path = entry.path();
@@ -401,7 +406,8 @@ fn read_all_notes(root: &Path) -> Result<Vec<Note>, String> {
 
 fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
     let temp_path = path.with_extension("tmp");
-    std::fs::write(&temp_path, content).map_err(|e| format!("Failed to write temp note file: {e}"))?;
+    std::fs::write(&temp_path, content)
+        .map_err(|e| format!("Failed to write temp note file: {e}"))?;
 
     if let Err(rename_err) = std::fs::rename(&temp_path, path) {
         if let Err(remove_err) = std::fs::remove_file(&temp_path) {
@@ -416,7 +422,8 @@ fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
 fn next_unique_path(root: &Path, folder: &str, base_file_name: &str) -> Result<PathBuf, String> {
     let mut idx = 1;
     let folder_path = resolve_note_path(root, folder)?;
-    std::fs::create_dir_all(&folder_path).map_err(|e| format!("Failed to create note folder: {e}"))?;
+    std::fs::create_dir_all(&folder_path)
+        .map_err(|e| format!("Failed to create note folder: {e}"))?;
 
     let base = Path::new(base_file_name)
         .file_stem()
@@ -460,7 +467,10 @@ fn merge_title_body(title: &str, body: &str) -> String {
 pub async fn get_notes(app: AppHandle) -> Result<Vec<NoteSummary>, String> {
     let root = notes_root(&app)?;
     let notes = read_all_notes(&root)?;
-    let summaries: Vec<NoteSummary> = notes.into_iter().map(|note| summary_from_note(&note)).collect();
+    let summaries: Vec<NoteSummary> = notes
+        .into_iter()
+        .map(|note| summary_from_note(&note))
+        .collect();
     Ok(summaries)
 }
 
@@ -499,7 +509,8 @@ pub async fn create_note(app: AppHandle, input: CreateNoteInput) -> Result<NoteS
     let abs = next_unique_path(&root, INBOX_DIR, &base_name)?;
 
     if let Some(parent) = abs.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create note parent folder: {e}"))?;
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create note parent folder: {e}"))?;
     }
 
     write_atomic(&abs, &content)?;
@@ -540,7 +551,8 @@ pub async fn rename_note(app: AppHandle, input: RenameNoteInput) -> Result<Note,
         if target_abs.exists() {
             return Err("A note with this name already exists".to_string());
         }
-        std::fs::rename(&src_abs, &target_abs).map_err(|e| format!("Failed to rename note: {e}"))?;
+        std::fs::rename(&src_abs, &target_abs)
+            .map_err(|e| format!("Failed to rename note: {e}"))?;
     }
 
     let note = note_from_file(&root, &target_abs)?;
@@ -578,7 +590,11 @@ pub async fn search_notes(app: AppHandle, query: String) -> Result<Vec<Note>, St
         if note.content.to_lowercase().contains(&trimmed) {
             return true;
         }
-        if note.tags.iter().any(|tag| tag.to_lowercase().contains(&trimmed)) {
+        if note
+            .tags
+            .iter()
+            .any(|tag| tag.to_lowercase().contains(&trimmed))
+        {
             return true;
         }
         note.wiki_links
@@ -608,7 +624,10 @@ mod tests {
     fn extracts_wikilinks_with_alias() {
         let body = "See [[Roadmap]] and [[Project Plan|plan]].";
         let links = extract_wikilinks(body);
-        assert_eq!(links, vec!["Project Plan".to_string(), "Roadmap".to_string()]);
+        assert_eq!(
+            links,
+            vec!["Project Plan".to_string(), "Roadmap".to_string()]
+        );
     }
 
     #[test]
