@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import bonChanManifestRaw from '../../../assets/bon-chan.json'
-import bonChanSpritesheetUrl from '../../../assets/bon-chan-spritesheet.png'
+import bonChanManifestRaw from '@/assets/bon-chan.json'
+import bonChanSpritesheetUrl from '@/assets/bon-ele-neves.webp'
 import {
   getNextAnimationCursor,
   getSpriteOffset,
@@ -10,10 +10,73 @@ import {
 import { useUIStore } from '@/store/ui-store'
 
 const bonChanManifest = normalizeBonChanManifest(bonChanManifestRaw)
-const DISPLAY_SCALE = 2
+const DISPLAY_SCALE = 0.58
 
 export function BonChanPet() {
   const bonChanMood = useUIStore(state => state.bonChanMood)
+  const setBonChanMood = useUIStore(state => state.setBonChanMood)
+
+  useEffect(() => {
+    let calmTimeout: ReturnType<typeof setTimeout> | null = null
+    let activityTimeout: ReturnType<typeof setTimeout> | null = null
+
+    const clearCalmTimeout = () => {
+      if (calmTimeout) {
+        clearTimeout(calmTimeout)
+        calmTimeout = null
+      }
+    }
+
+    const clearActivityTimeout = () => {
+      if (activityTimeout) {
+        clearTimeout(activityTimeout)
+        activityTimeout = null
+      }
+    }
+
+    const transitionToCalm = (delayMs: number) => {
+      clearCalmTimeout()
+      calmTimeout = setTimeout(() => {
+        if (document.hidden) return
+        setBonChanMood('calmo')
+      }, delayMs)
+    }
+
+    const handleVisibleState = () => {
+      if (document.hidden) {
+        clearCalmTimeout()
+        clearActivityTimeout()
+        setBonChanMood('triste')
+        return
+      }
+
+      setBonChanMood('alegre')
+      transitionToCalm(1400)
+    }
+
+    const handleActivity = () => {
+      if (document.hidden) return
+      setBonChanMood('chateado')
+      clearActivityTimeout()
+      activityTimeout = setTimeout(() => {
+        setBonChanMood('calmo')
+      }, 1800)
+    }
+
+    handleVisibleState()
+
+    document.addEventListener('visibilitychange', handleVisibleState)
+    window.addEventListener('pointerdown', handleActivity)
+    window.addEventListener('keydown', handleActivity)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibleState)
+      window.removeEventListener('pointerdown', handleActivity)
+      window.removeEventListener('keydown', handleActivity)
+      clearCalmTimeout()
+      clearActivityTimeout()
+    }
+  }, [setBonChanMood])
 
   return <BonChanPetSprite key={bonChanMood} bonChanMood={bonChanMood} />
 }
@@ -58,10 +121,7 @@ function BonChanPetSprite({ bonChanMood }: BonChanPetSpriteProps) {
     }
 
     animationFrameId = requestAnimationFrame(tick)
-
-    return () => {
-      cancelAnimationFrame(animationFrameId)
-    }
+    return () => cancelAnimationFrame(animationFrameId)
   }, [animation.fps, animation.frames.length, animation.loop])
 
   const frameIndex = animation.frames[frameCursor] ?? animation.frames[0] ?? 0
@@ -91,7 +151,7 @@ function BonChanPetSprite({ bonChanMood }: BonChanPetSpriteProps) {
           backgroundPosition: `-${frameOffset.x * DISPLAY_SCALE}px -${frameOffset.y * DISPLAY_SCALE}px`,
           backgroundSize: `${scaledSheetWidth}px ${scaledSheetHeight}px`,
           backgroundColor: 'transparent',
-          imageRendering: 'pixelated',
+          imageRendering: 'auto',
         }}
       />
     </div>
