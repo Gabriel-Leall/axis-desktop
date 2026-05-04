@@ -25,11 +25,37 @@ export default defineConfig(async () => ({
     },
   },
   build: {
-    chunkSizeWarningLimit: 600, // Prevent warnings for template's bundled components
+    // @toast-ui/editor is a large monolithic dependency loaded lazily with Notes page.
+    chunkSizeWarningLimit: 1000,
     rolldownOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
         'quick-pane': resolve(__dirname, 'quick-pane.html'),
+      },
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return
+
+          const normalized = id.replace(/\\/g, '/')
+          const modulePath = normalized.split('node_modules/')[1]
+          if (!modulePath) return
+
+          const parts = modulePath.split('/')
+          const packageName =
+            parts[0].startsWith('@') && parts.length > 1
+              ? `${parts[0]}/${parts[1]}`
+              : parts[0]
+
+          if (
+            packageName === 'react' ||
+            packageName === 'react-dom' ||
+            packageName === 'scheduler'
+          ) {
+            return 'vendor-react-core'
+          }
+
+          return `vendor-${packageName.replace(/[@/]/g, '-')}`
+        },
       },
     },
   },
