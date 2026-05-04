@@ -18,6 +18,8 @@
  */
 
 import { logger } from './logger'
+import { useGitHubStore } from '@/store/github-store'
+import { useSlackStore } from '@/store/slack-store'
 
 export async function registerDeepLinkHandler(): Promise<void> {
   try {
@@ -32,8 +34,6 @@ export async function registerDeepLinkHandler(): Promise<void> {
             const code = parsed.searchParams.get('code')
             const state = parsed.searchParams.get('state')
             if (code) {
-              // Lazy import to avoid circular deps
-              const { useGitHubStore } = await import('@/store/github-store')
               await useGitHubStore.getState().handleOAuthCallback(code, state)
             }
           }
@@ -42,7 +42,6 @@ export async function registerDeepLinkHandler(): Promise<void> {
             const code = parsed.searchParams.get('code')
             const state = parsed.searchParams.get('state')
             if (code) {
-              const { useSlackStore } = await import('@/store/slack-store')
               await useSlackStore.getState().handleOAuthCallback(code, state)
             }
           }

@@ -24,6 +24,10 @@ import type {
 } from '@/store/pomodoro-types'
 import { cn } from '@/lib/utils'
 import { LazyMotion, domAnimation, m } from 'motion/react'
+import {
+  isPermissionGranted,
+  requestPermission,
+} from '@tauri-apps/plugin-notification'
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -574,8 +578,6 @@ export function PomodoroPage() {
   useEffect(() => {
     const checkPermissions = async () => {
       try {
-        const { isPermissionGranted, requestPermission } =
-          await import('@tauri-apps/plugin-notification')
         let granted = await isPermissionGranted()
         if (!granted) {
           const permission = await requestPermission()
