@@ -192,6 +192,52 @@ svg {
   align-items: center;
 }
 
+.header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.language-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 46px;
+  border: 1px solid rgba(187, 170, 145, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 251, 245, 0.82);
+  padding: 4px;
+}
+
+.language-switcher button {
+  min-width: 62px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #6a5c4b;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 170ms ease,
+    color 170ms ease,
+    transform 170ms ease;
+}
+
+.language-switcher button:hover {
+  color: #221910;
+}
+
+.language-switcher button.is-active {
+  background: #18130d;
+  color: #fff9f0;
+}
+
 .brand-mark {
   gap: 10px;
 }
@@ -2755,6 +2801,10 @@ svg {
     row-gap: 10px;
   }
 
+  .header-actions {
+    grid-column: 2 / 3;
+  }
+
   .site-header nav {
     grid-column: 1 / -1;
     justify-content: start;
@@ -2880,10 +2930,24 @@ svg {
 
   .hero-actions,
   .hero-actions a,
+  .header-actions,
   .header-download,
   .primary-action,
   .secondary-action {
     width: 100%;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .language-switcher {
+    width: 100%;
+  }
+
+  .language-switcher button {
+    flex: 1 1 0;
   }
 
   .hero-preview {

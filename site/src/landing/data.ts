@@ -8,6 +8,7 @@ import {
   Timer,
   TriangleAlert,
 } from 'lucide-react'
+import type { TFunction } from 'i18next'
 import type { WidgetCard } from './types'
 
 export const downloadUrl =
@@ -19,80 +20,113 @@ export const navLinks = [
   { href: '#analysis', labelKey: 'landing.nav.analysis' },
 ]
 
-export const widgetCards: WidgetCard[] = [
-  {
-    slug: 'tasks',
-    kicker: 'Tasks',
-    title: 'Close tasks before they become noise',
-    description:
-      'Capture, prioritize, and finish daily tasks in one place with clear status and fast completion flow.',
-    badge: '3 completed',
-    icon: CheckSquare,
-  },
-  {
-    slug: 'habit-tracker',
-    kicker: 'Habit Tracker',
-    title: 'Build consistency with visible streaks',
-    description:
-      'Track routines with streak history and quick daily check-ins so habits stay active instead of forgotten.',
-    badge: '+1 streak',
-    icon: Flame,
-  },
-  {
-    slug: 'pomodoro',
-    kicker: 'Pomodoro',
-    title: 'Protect deep work with focused cycles',
-    description:
-      'Start focus sessions, pause when needed, and reset instantly to keep momentum through real work blocks.',
-    badge: 'Focus live',
-    icon: Timer,
-  },
-  {
-    slug: 'kanban',
-    kicker: 'Kanban',
-    title: 'See execution flow at a glance',
-    description:
-      'Move cards across stages and spot blockers quickly with a board designed for continuous delivery.',
-    badge: 'Flow update',
-    icon: Columns3,
-  },
-  {
-    slug: 'calendar',
-    kicker: 'Calendar',
-    title: 'Plan your week with real context',
-    description:
-      'Keep deadlines, meetings, and planned work aligned so the week stays realistic and under control.',
-    badge: 'Week synced',
-    icon: CalendarDays,
-  },
-]
+export function getWidgetCards(t: TFunction): WidgetCard[] {
+  return [
+    {
+      slug: 'tasks',
+      kicker: t('landing.widgets.cards.tasks.kicker'),
+      title: t('landing.widgets.cards.tasks.title'),
+      description: t('landing.widgets.cards.tasks.description'),
+      badge: t('landing.widgets.cards.tasks.badge'),
+      icon: CheckSquare,
+    },
+    {
+      slug: 'habit-tracker',
+      kicker: t('landing.widgets.cards.habitTracker.kicker'),
+      title: t('landing.widgets.cards.habitTracker.title'),
+      description: t('landing.widgets.cards.habitTracker.description'),
+      badge: t('landing.widgets.cards.habitTracker.badge'),
+      icon: Flame,
+    },
+    {
+      slug: 'pomodoro',
+      kicker: t('landing.widgets.cards.pomodoro.kicker'),
+      title: t('landing.widgets.cards.pomodoro.title'),
+      description: t('landing.widgets.cards.pomodoro.description'),
+      badge: t('landing.widgets.cards.pomodoro.badge'),
+      icon: Timer,
+    },
+    {
+      slug: 'kanban',
+      kicker: t('landing.widgets.cards.kanban.kicker'),
+      title: t('landing.widgets.cards.kanban.title'),
+      description: t('landing.widgets.cards.kanban.description'),
+      badge: t('landing.widgets.cards.kanban.badge'),
+      icon: Columns3,
+    },
+    {
+      slug: 'calendar',
+      kicker: t('landing.widgets.cards.calendar.kicker'),
+      title: t('landing.widgets.cards.calendar.title'),
+      description: t('landing.widgets.cards.calendar.description'),
+      badge: t('landing.widgets.cards.calendar.badge'),
+      icon: CalendarDays,
+    },
+  ]
+}
 
-export const taskShowcaseRows = [
-  { title: 'Ship landing update', level: 'High', completed: false },
-  { title: 'Polish pricing copy', level: 'Medium', completed: false },
-  { title: 'Review onboarding flow', level: 'High', completed: false },
-]
+export function getTaskShowcaseRows(t: TFunction) {
+  return [
+    {
+      title: t('landing.preview.tasks.rows.shipLandingUpdate'),
+      level: t('landing.preview.levels.high'),
+      completed: false,
+    },
+    {
+      title: t('landing.preview.tasks.rows.polishPricingCopy'),
+      level: t('landing.preview.levels.medium'),
+      completed: false,
+    },
+    {
+      title: t('landing.preview.tasks.rows.reviewOnboardingFlow'),
+      level: t('landing.preview.levels.high'),
+      completed: false,
+    },
+  ]
+}
 
-export const habitShowcaseRows = [
-  { title: 'Morning review', streak: 12, completed: true },
-  { title: 'Hydration reset', streak: 7, completed: true },
-  { title: 'Read 10 pages', streak: 4, completed: false },
-]
+export function getHabitShowcaseRows(t: TFunction) {
+  return [
+    {
+      title: t('landing.preview.habits.rows.morningReview'),
+      streak: 12,
+      completed: true,
+    },
+    {
+      title: t('landing.preview.habits.rows.hydrationReset'),
+      streak: 7,
+      completed: true,
+    },
+    {
+      title: t('landing.preview.habits.rows.readTenPages'),
+      streak: 4,
+      completed: false,
+    },
+  ]
+}
 
-export const kanbanColumns = [
-  { label: 'Backlog', cards: ['Rewrite CTA'] },
-  { label: 'In Progress', cards: ['Sync widget story'] },
-  { label: 'Done', cards: ['Update hero preview'] },
-]
+export function getKanbanColumns(t: TFunction) {
+  return [
+    {
+      label: t('landing.preview.kanban.columns.backlog'),
+      cards: [t('landing.preview.kanban.cards.rewriteCta')],
+    },
+    {
+      label: t('landing.preview.kanban.columns.inProgress'),
+      cards: [t('landing.preview.kanban.cards.syncWidgetStory')],
+    },
+    {
+      label: t('landing.preview.kanban.columns.done'),
+      cards: [t('landing.preview.kanban.cards.updateHeroPreview')],
+    },
+  ]
+}
 
-export const pomodoroMetricCountdown = [
-  '25:00 left',
-  '24:59 left',
-  '24:58 left',
-  '24:57 left',
-  '24:56 left',
-  '24:55 left',
-]
+export function getPomodoroMetricCountdown(t: TFunction) {
+  return ['25:00', '24:59', '24:58', '24:57', '24:56', '24:55'].map(time =>
+    t('landing.preview.pomodoro.timeLeft', { time })
+  )
+}
 
 export const pomodoroCoreCountdown = [
   '25:00',
@@ -120,46 +154,71 @@ export const calendarShowcaseDays = [
   ['25', true],
 ] as const
 
-export const chaosList = [
-  'Too many tabs and no single command center.',
-  'Daily planning breaks when meetings and tasks are disconnected.',
-  'Hard to know if progress is real or just busy work.',
-]
+export function getChaosList(t: TFunction) {
+  return [
+    t('landing.clarity.chaos.items.tabs'),
+    t('landing.clarity.chaos.items.disconnectedPlanning'),
+    t('landing.clarity.chaos.items.busyWork'),
+  ]
+}
 
-export const axisList = [
-  'Widgets keep all critical signals on one board.',
-  'Time, tasks, habits, and focus cycles live in the same view.',
-  'The analysis panel compares last month vs this month automatically.',
-]
+export function getAxisList(t: TFunction) {
+  return [
+    t('landing.clarity.axis.items.widgets'),
+    t('landing.clarity.axis.items.sharedView'),
+    t('landing.clarity.axis.items.analysis'),
+  ]
+}
 
-export const chaosPainStat = {
-  label: 'Context switching cost',
-  value: '2h/day',
-  description:
-    'The average professional loses around 2 hours a day just switching context between tabs, chats, and scattered tools.',
+export function getChaosPainStat(t: TFunction) {
+  return {
+    label: t('landing.clarity.chaos.stat.label'),
+    value: t('landing.clarity.chaos.stat.value'),
+    description: t('landing.clarity.chaos.stat.description'),
+  }
 }
 
 export const heroSidebarItems = [
-  { icon: Columns3, active: true, label: 'Board' },
-  { icon: CheckSquare, active: false, label: 'Tasks' },
-  { icon: FolderOpen, active: false, label: 'Notes' },
-  { icon: CalendarDays, active: false, label: 'Calendar' },
-  { icon: Timer, active: false, label: 'Focus' },
+  { icon: Columns3, active: true, labelKey: 'landing.hero.preview.sidebar.board' },
+  { icon: CheckSquare, active: false, labelKey: 'landing.hero.preview.sidebar.tasks' },
+  { icon: FolderOpen, active: false, labelKey: 'landing.hero.preview.sidebar.notes' },
+  {
+    icon: CalendarDays,
+    active: false,
+    labelKey: 'landing.hero.preview.sidebar.calendar',
+  },
+  { icon: Timer, active: false, labelKey: 'landing.hero.preview.sidebar.focus' },
 ]
 
-export const heroPreviewTasks = [
-  { title: 'Plan the day', level: 'High' },
-  { title: 'Review weekly goals', level: 'High' },
-  { title: 'Deep work block (90m)', level: 'High' },
-  { title: 'Triage GitHub and Slack', level: 'Medium' },
-]
+export function getHeroPreviewTasks(t: TFunction) {
+  return [
+    {
+      title: t('landing.hero.preview.tasks.planTheDay'),
+      level: t('landing.preview.levels.high'),
+    },
+    {
+      title: t('landing.hero.preview.tasks.reviewWeeklyGoals'),
+      level: t('landing.preview.levels.high'),
+    },
+    {
+      title: t('landing.hero.preview.tasks.deepWorkBlock'),
+      level: t('landing.preview.levels.high'),
+    },
+    {
+      title: t('landing.hero.preview.tasks.triageGithubAndSlack'),
+      level: t('landing.preview.levels.medium'),
+    },
+  ]
+}
 
-export const heroPreviewHabits = [
-  'No phone for 1 hour',
-  'Daily review',
-  'Drink water',
-  'Read 10 pages',
-]
+export function getHeroPreviewHabits(t: TFunction) {
+  return [
+    t('landing.hero.preview.habits.noPhone'),
+    t('landing.hero.preview.habits.dailyReview'),
+    t('landing.hero.preview.habits.drinkWater'),
+    t('landing.hero.preview.habits.readTenPages'),
+  ]
+}
 
 export const heroCalendarDays = [
   '29',
@@ -198,9 +257,6 @@ export const heroCalendarDays = [
   '1',
   '2',
 ]
-
-export const previousScore = 62
-export const currentScore = 86
 
 export const momentumComparisonTargetData = [
   { point: 'S1', pastMonth: 18, currentMonth: 27 },

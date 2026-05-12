@@ -1,0 +1,14 @@
+{
+  "name": "axis-desktop-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 3000",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 3000"
+  },
+  "dependencies": {
+    "motion": "^12.38.0",
+    "recharts": "^3.8.1"
+  }
+}

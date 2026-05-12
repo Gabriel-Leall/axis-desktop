@@ -1,5 +1,6 @@
 import { Download, LifeBuoy } from 'lucide-react'
 import type { ComponentType, SVGProps } from 'react'
+import { useTranslation } from 'react-i18next'
 import { downloadUrl } from '../data'
 
 function GitHubIcon(props: SVGProps<SVGSVGElement>) {
@@ -41,20 +42,22 @@ const footerLinks = [
 }[]
 
 export function LandingFooter() {
+  const { t } = useTranslation()
+
   return (
     <>
       <footer className="footer-cta" data-reveal={true} data-delay="6">
-        <p>Execute with ruthless focus. Zero friction.</p>
+        <p>{t('landing.footer.cta')}</p>
         <a className="footer-download" href={downloadUrl}>
           <Download />
-          Download for desktop
+          {t('landing.footer.download')}
         </a>
       </footer>
 
       <section className="footer-meta" data-reveal={true} data-delay="6">
         <div>
-          <span>Built for focused work.</span>
-          <span>Local-first. Free. Open source.</span>
+          <span>{t('landing.footer.metaLineOne')}</span>
+          <span>{t('landing.footer.metaLineTwo')}</span>
         </div>
         <div className="footer-links">
           {footerLinks.map(link => (

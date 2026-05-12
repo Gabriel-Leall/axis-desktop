@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { momentumComparisonTargetData, widgetCards } from './landing/data'
+import { getWidgetCards, momentumComparisonTargetData } from './landing/data'
 import { useDocumentLanguage } from './landing/hooks/useDocumentLanguage'
 import { useHeaderAutoHide } from './landing/hooks/useHeaderAutoHide'
 import { useRevealOnIntersect } from './landing/hooks/useRevealOnIntersect'
@@ -15,7 +15,7 @@ import { LandingHeader } from './landing/sections/LandingHeader'
 import { WidgetsSection } from './landing/sections/WidgetsSection'
 
 export function App() {
-  const { i18n } = useTranslation()
+  const { i18n, t } = useTranslation()
   const siteShellRef = useRef<HTMLElement | null>(null)
   const analysisSectionRef = useRef<HTMLElement | null>(null)
   const widgetsSectionRef = useRef<HTMLElement | null>(null)
@@ -28,6 +28,7 @@ export function App() {
   const { activeWidgetIndex, previousWidgetIndex, isWidgetTransitioning } =
     useWidgetStoryTransition(targetWidgetIndex)
 
+  const widgetCards = getWidgetCards(t)
   const activeWidget = widgetCards[activeWidgetIndex] ?? widgetCards[0]
   const previousWidget =
     previousWidgetIndex !== null ? widgetCards[previousWidgetIndex] : null

@@ -1,0 +1,219 @@
+{
+  "landing": {
+    "nav": {
+      "ariaLabel": "Landing navigation",
+      "widgets": "Widgets",
+      "clarity": "Clarity",
+      "analysis": "Analysis",
+      "download": "Download"
+    },
+    "languageSwitcher": {
+      "ariaLabel": "Select site language",
+      "toggleLabel": "Current language: {{language}}. Click to switch language.",
+      "english": "EN",
+      "portuguese": "PT-BR"
+    },
+    "hero": {
+      "kicker": "Axis Desktop",
+      "title": "Turn your daily chaos into ruthless focus.",
+      "subtitle": "No more scattered tools. Tasks, habits, and calendar flow perfectly in one local-first command center.",
+      "primaryCta": "Download Axis Desktop",
+      "preview": {
+        "ariaLabel": "Axis Desktop board preview",
+        "clock": "Wed, May 06 01:44 AM",
+        "sidebar": {
+          "board": "Board",
+          "tasks": "Tasks",
+          "notes": "Notes",
+          "calendar": "Calendar",
+          "focus": "Focus"
+        },
+        "notes": {
+          "title": "Brain Dump",
+          "placeholder": "Dump it here...",
+          "count": "2 notes"
+        },
+        "focus": {
+          "title": "Focus",
+          "emptyTask": "No task selected",
+          "reset": "Reset focus timer",
+          "start": "Start focus timer",
+          "skip": "Skip focus timer"
+        },
+        "calendar": {
+          "title": "Calendar",
+          "month": "May 2026"
+        },
+        "tasks": {
+          "title": "Today",
+          "planTheDay": "Plan the day",
+          "reviewWeeklyGoals": "Review weekly goals",
+          "deepWorkBlock": "Deep work block (90m)",
+          "triageGithubAndSlack": "Triage GitHub and Slack"
+        },
+        "habits": {
+          "noPhone": "No phone for 1 hour",
+          "dailyReview": "Daily review",
+          "drinkWater": "Drink water",
+          "readTenPages": "Read 10 pages"
+        },
+        "protocol": {
+          "title": "Protocol",
+          "meta": "2/13 ACTIVE",
+          "streak": "STREAK: 0"
+        }
+      }
+    },
+    "clarity": {
+      "chaos": {
+        "label": "Chaos scan",
+        "titleLineOne": "Work feels",
+        "titleLineTwo": "chaotic without Axis",
+        "ariaLabel": "Chaos impact",
+        "items": {
+          "tabs": "Too many tabs and no single command center.",
+          "disconnectedPlanning": "Daily planning breaks when meetings and tasks are disconnected.",
+          "busyWork": "Hard to know if progress is real or just busy work."
+        },
+        "stat": {
+          "label": "Context switching cost",
+          "value": "2h/day",
+          "description": "The average professional loses around 2 hours a day just switching context between tabs, chats, and scattered tools."
+        }
+      },
+      "axis": {
+        "label": "Axis signal",
+        "titleLineOne": "Axis turns chaos",
+        "titleLineTwoPrefix": "into",
+        "titleEmphasis": "clarity",
+        "items": {
+          "widgets": "Widgets keep all critical signals on one board.",
+          "sharedView": "Time, tasks, habits, and focus cycles live in the same view.",
+          "analysis": "The analysis panel compares last month vs this month automatically."
+        },
+        "testimonialAriaLabel": "Axis testimonial",
+        "testimonial": "I use Axis every day to track priorities and finish the day with less friction.",
+        "author": "Gabriel Leal"
+      }
+    },
+    "widgets": {
+      "progressAriaLabel": "Widget progress",
+      "cards": {
+        "tasks": {
+          "kicker": "Tasks",
+          "title": "Close tasks before they become noise",
+          "description": "Capture, prioritize, and finish daily tasks in one place with clear status and fast completion flow.",
+          "badge": "3 completed"
+        },
+        "habitTracker": {
+          "kicker": "Habit Tracker",
+          "title": "Build consistency with visible streaks",
+          "description": "Track routines with streak history and quick daily check-ins so habits stay active instead of forgotten.",
+          "badge": "+1 streak"
+        },
+        "pomodoro": {
+          "kicker": "Pomodoro",
+          "title": "Protect deep work with focused cycles",
+          "description": "Start focus sessions, pause when needed, and reset instantly to keep momentum through real work blocks.",
+          "badge": "Focus live"
+        },
+        "kanban": {
+          "kicker": "Kanban",
+          "title": "See execution flow at a glance",
+          "description": "Move cards across stages and spot blockers quickly with a board designed for continuous delivery.",
+          "badge": "Flow update"
+        },
+        "calendar": {
+          "kicker": "Calendar",
+          "title": "Plan your week with real context",
+          "description": "Keep deadlines, meetings, and planned work aligned so the week stays realistic and under control.",
+          "badge": "Week synced"
+        }
+      }
+    },
+    "preview": {
+      "levels": {
+        "high": "High",
+        "medium": "Medium"
+      },
+      "tasks": {
+        "metricLabel": "Today",
+        "metricValue": "3/4 cleared",
+        "done": "Done",
+        "activeNote": "Task completed and cleared from the queue.",
+        "idleNote": "Ready to close.",
+        "rows": {
+          "shipLandingUpdate": "Ship landing update",
+          "polishPricingCopy": "Polish pricing copy",
+          "reviewOnboardingFlow": "Review onboarding flow"
+        }
+      },
+      "habits": {
+        "metricLabel": "Daily check-ins",
+        "metricValue": "4/5 done",
+        "streak": "Streak {{count}}",
+        "rows": {
+          "morningReview": "Morning review",
+          "hydrationReset": "Hydration reset",
+          "readTenPages": "Read 10 pages"
+        }
+      },
+      "pomodoro": {
+        "metricLabel": "Focus session",
+        "task": "Landing page polish",
+        "timeLeft": "{{time}} left"
+      },
+      "kanban": {
+        "metricLabel": "Delivery board",
+        "metricValue": "1 card moving",
+        "columns": {
+          "backlog": "Backlog",
+          "inProgress": "In Progress",
+          "done": "Done"
+        },
+        "cards": {
+          "rewriteCta": "Rewrite CTA",
+          "syncWidgetStory": "Sync widget story",
+          "updateHeroPreview": "Update hero preview"
+        }
+      },
+      "calendar": {
+        "metricLabel": "Week overview",
+        "metricValue": "4 blocks protected",
+        "month": "May 2026",
+        "review": "Daily review",
+        "note": "+1 check-in logged"
+      }
+    },
+    "analysis": {
+      "chartAriaLabel": "Momentum comparison chart",
+      "headline": "Track. Compare. Compound.",
+      "subtitle": "See exactly how much your focus and habits are growing week over week. Your baseline is constantly evolving.",
+      "pastMonth": "Last Month",
+      "thisMonth": "This Month",
+      "pastPin": "Past"
+    },
+    "bridge": {
+      "pillars": {
+        "zeroLag": {
+          "title": "Zero-Lag Speed",
+          "description": "No cloud, no slowdown. Your tasks, timers, and habits respond instantly on your machine."
+        },
+        "focus": {
+          "title": "Unbreakable Focus",
+          "description": "No browser tabs pulling you away. A closed environment designed exclusively for execution and deep work."
+        },
+        "openSource": {
+          "title": "Open Source and Transparent",
+          "description": "Your control panel, your rules. Fully open source and built to respect your privacy from day one."
+        }
+      }
+    },
+    "footer": {
+      "cta": "Execute with ruthless focus. Zero friction.",
+      "download": "Download for desktop",
+      "metaLineOne": "Built for focused work.",
+      "metaLineTwo": "Local-first. Free. Open source."
+    }
+  }
+}

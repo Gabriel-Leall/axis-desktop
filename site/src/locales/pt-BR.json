@@ -1,0 +1,219 @@
+{
+  "landing": {
+    "nav": {
+      "ariaLabel": "Navegação da landing page",
+      "widgets": "Widgets",
+      "clarity": "Clareza",
+      "analysis": "Análise",
+      "download": "Baixar"
+    },
+    "languageSwitcher": {
+      "ariaLabel": "Selecionar idioma do site",
+      "toggleLabel": "Idioma atual: {{language}}. Clique para trocar o idioma.",
+      "english": "EN",
+      "portuguese": "PT-BR"
+    },
+    "hero": {
+      "kicker": "Axis Desktop",
+      "title": "Transforme o caos do seu dia em foco implacável.",
+      "subtitle": "Chega de ferramentas espalhadas. Tarefas, hábitos e calendário fluem juntos em um centro de comando local-first.",
+      "primaryCta": "Baixar Axis Desktop",
+      "preview": {
+        "ariaLabel": "Prévia do painel do Axis Desktop",
+        "clock": "Qua, 06 de maio 01:44",
+        "sidebar": {
+          "board": "Painel",
+          "tasks": "Tarefas",
+          "notes": "Notas",
+          "calendar": "Calendário",
+          "focus": "Foco"
+        },
+        "notes": {
+          "title": "Brain Dump",
+          "placeholder": "Jogue tudo aqui...",
+          "count": "2 notas"
+        },
+        "focus": {
+          "title": "Foco",
+          "emptyTask": "Nenhuma tarefa selecionada",
+          "reset": "Resetar timer de foco",
+          "start": "Iniciar timer de foco",
+          "skip": "Pular timer de foco"
+        },
+        "calendar": {
+          "title": "Calendário",
+          "month": "Maio 2026"
+        },
+        "tasks": {
+          "title": "Hoje",
+          "planTheDay": "Planejar o dia",
+          "reviewWeeklyGoals": "Revisar metas da semana",
+          "deepWorkBlock": "Bloco de trabalho profundo (90m)",
+          "triageGithubAndSlack": "Triar GitHub e Slack"
+        },
+        "habits": {
+          "noPhone": "Sem celular por 1 hora",
+          "dailyReview": "Revisão diária",
+          "drinkWater": "Beber água",
+          "readTenPages": "Ler 10 páginas"
+        },
+        "protocol": {
+          "title": "Protocolo",
+          "meta": "2/13 ATIVOS",
+          "streak": "SEQUÊNCIA: 0"
+        }
+      }
+    },
+    "clarity": {
+      "chaos": {
+        "label": "Varredura do caos",
+        "titleLineOne": "O trabalho parece",
+        "titleLineTwo": "caótico sem o Axis",
+        "ariaLabel": "Impacto do caos",
+        "items": {
+          "tabs": "Abas demais e nenhum centro de comando único.",
+          "disconnectedPlanning": "O planejamento diário quebra quando reuniões e tarefas ficam desconectadas.",
+          "busyWork": "Fica difícil saber se o progresso é real ou só trabalho ocupado."
+        },
+        "stat": {
+          "label": "Custo de troca de contexto",
+          "value": "2h/dia",
+          "description": "O profissional médio perde cerca de 2 horas por dia apenas alternando contexto entre abas, chats e ferramentas espalhadas."
+        }
+      },
+      "axis": {
+        "label": "Sinal do Axis",
+        "titleLineOne": "O Axis transforma o caos",
+        "titleLineTwoPrefix": "em",
+        "titleEmphasis": "clareza",
+        "items": {
+          "widgets": "Os widgets mantêm todos os sinais críticos em um único painel.",
+          "sharedView": "Tempo, tarefas, hábitos e ciclos de foco vivem na mesma visão.",
+          "analysis": "O painel de análise compara automaticamente o mês passado com o atual."
+        },
+        "testimonialAriaLabel": "Depoimento sobre o Axis",
+        "testimonial": "Eu uso o Axis todos os dias para acompanhar prioridades e terminar o dia com menos atrito.",
+        "author": "Gabriel Leal"
+      }
+    },
+    "widgets": {
+      "progressAriaLabel": "Progresso dos widgets",
+      "cards": {
+        "tasks": {
+          "kicker": "Tarefas",
+          "title": "Feche tarefas antes que elas virem ruído",
+          "description": "Capture, priorize e conclua tarefas diárias em um só lugar com status claro e fluxo rápido de execução.",
+          "badge": "3 concluídas"
+        },
+        "habitTracker": {
+          "kicker": "Hábitos",
+          "title": "Construa consistência com sequências visíveis",
+          "description": "Acompanhe rotinas com histórico de sequência e check-ins diários rápidos para que hábitos não sejam esquecidos.",
+          "badge": "+1 sequência"
+        },
+        "pomodoro": {
+          "kicker": "Pomodoro",
+          "title": "Proteja o trabalho profundo com ciclos focados",
+          "description": "Inicie sessões de foco, pause quando precisar e reinicie instantaneamente para manter o ritmo durante blocos reais de trabalho.",
+          "badge": "Foco ao vivo"
+        },
+        "kanban": {
+          "kicker": "Kanban",
+          "title": "Veja o fluxo de execução de relance",
+          "description": "Mova cartões entre etapas e identifique bloqueios rapidamente com um quadro feito para entrega contínua.",
+          "badge": "Fluxo atualizado"
+        },
+        "calendar": {
+          "kicker": "Calendário",
+          "title": "Planeje sua semana com contexto real",
+          "description": "Mantenha prazos, reuniões e trabalho planejado alinhados para que a semana continue realista e sob controle.",
+          "badge": "Semana sincronizada"
+        }
+      }
+    },
+    "preview": {
+      "levels": {
+        "high": "Alta",
+        "medium": "Média"
+      },
+      "tasks": {
+        "metricLabel": "Hoje",
+        "metricValue": "3/4 limpas",
+        "done": "Feita",
+        "activeNote": "Tarefa concluída e removida da fila.",
+        "idleNote": "Pronta para fechar.",
+        "rows": {
+          "shipLandingUpdate": "Publicar atualização da landing",
+          "polishPricingCopy": "Refinar copy de pricing",
+          "reviewOnboardingFlow": "Revisar fluxo de onboarding"
+        }
+      },
+      "habits": {
+        "metricLabel": "Check-ins diários",
+        "metricValue": "4/5 feitos",
+        "streak": "Sequência {{count}}",
+        "rows": {
+          "morningReview": "Revisão matinal",
+          "hydrationReset": "Reset de hidratação",
+          "readTenPages": "Ler 10 páginas"
+        }
+      },
+      "pomodoro": {
+        "metricLabel": "Sessão de foco",
+        "task": "Polimento da landing page",
+        "timeLeft": "faltam {{time}}"
+      },
+      "kanban": {
+        "metricLabel": "Quadro de entrega",
+        "metricValue": "1 cartão em movimento",
+        "columns": {
+          "backlog": "Backlog",
+          "inProgress": "Em progresso",
+          "done": "Concluído"
+        },
+        "cards": {
+          "rewriteCta": "Reescrever CTA",
+          "syncWidgetStory": "Sincronizar história do widget",
+          "updateHeroPreview": "Atualizar prévia do hero"
+        }
+      },
+      "calendar": {
+        "metricLabel": "Visão da semana",
+        "metricValue": "4 blocos protegidos",
+        "month": "Maio 2026",
+        "review": "Revisão diária",
+        "note": "+1 check-in registrado"
+      }
+    },
+    "analysis": {
+      "chartAriaLabel": "Gráfico de comparação de evolução",
+      "headline": "Acompanhe. Compare. Multiplique.",
+      "subtitle": "Veja exatamente o quanto seu foco e hábitos estão crescendo semana após semana. Sua linha de base está em constante evolução.",
+      "pastMonth": "Mês passado",
+      "thisMonth": "Este mês",
+      "pastPin": "Passado"
+    },
+    "bridge": {
+      "pillars": {
+        "zeroLag": {
+          "title": "Velocidade sem atraso",
+          "description": "Sem nuvem, sem lentidão. Suas tarefas, timers e hábitos respondem instantaneamente na sua máquina."
+        },
+        "focus": {
+          "title": "Foco inquebrável",
+          "description": "Sem abas de navegador puxando sua atenção. Um ambiente fechado e desenhado exclusivamente para execução e trabalho profundo."
+        },
+        "openSource": {
+          "title": "Open source e transparente",
+          "description": "Seu painel de controle, suas regras. Totalmente open source e construído para respeitar sua privacidade desde o primeiro dia."
+        }
+      }
+    },
+    "footer": {
+      "cta": "Execute com foco implacável. Atrito zero.",
+      "download": "Baixar para desktop",
+      "metaLineOne": "Construído para trabalho focado.",
+      "metaLineTwo": "Local-first. Gratuito. Open source."
+    }
+  }
+}

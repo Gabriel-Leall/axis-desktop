@@ -1,0 +1,44 @@
+<svg width="2400" height="1200" viewBox="0 0 2400 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="1200" y1="0" x2="1200" y2="1200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DFF0FF"/>
+      <stop offset="0.5" stop-color="#CFE6FF"/>
+      <stop offset="1" stop-color="#B8D7F3"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(420 220) rotate(17.4) scale(680 360)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1810 260) rotate(-14.5) scale(620 340)">
+      <stop stop-color="#F4FBFF" stop-opacity="0.64"/>
+      <stop offset="1" stop-color="#F4FBFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mountainA" x1="760" y1="180" x2="930" y2="1040" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A1C2E3"/>
+      <stop offset="1" stop-color="#6D93BD"/>
+    </linearGradient>
+    <linearGradient id="mountainB" x1="1520" y1="220" x2="1470" y2="1080" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8DB2D5"/>
+      <stop offset="1" stop-color="#5E82AB"/>
+    </linearGradient>
+    <linearGradient id="ridge" x1="1200" y1="360" x2="1210" y2="1140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BED8F0"/>
+      <stop offset="1" stop-color="#7CA4CA"/>
+    </linearGradient>
+    <linearGradient id="fog" x1="1200" y1="620" x2="1200" y2="1180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAF6FF" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#EAF6FF" stop-opacity="0.66"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="2400" height="1200" fill="url(#sky)"/>
+  <ellipse cx="420" cy="220" rx="680" ry="360" fill="url(#glow1)"/>
+  <ellipse cx="1810" cy="260" rx="620" ry="340" fill="url(#glow2)"/>
+
+  <path d="M0 980L520 500L940 980H0Z" fill="url(#mountainA)" opacity="0.92"/>
+  <path d="M530 980L930 350L1360 980H530Z" fill="url(#ridge)" opacity="0.9"/>
+  <path d="M1040 980L1600 390L2160 980H1040Z" fill="url(#mountainB)" opacity="0.95"/>
+  <path d="M1540 980L1960 540L2400 980H1540Z" fill="#7EA6CB" opacity="0.82"/>
+
+  <path d="M0 760C320 700 480 860 760 820C1020 780 1280 650 1580 700C1840 744 2100 902 2400 860V1200H0V760Z" fill="url(#fog)"/>
+</svg>
