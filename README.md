@@ -1,118 +1,103 @@
 # Axis Desktop
 
-Axis Desktop is a production-ready desktop application built with **Tauri v2**, **React**, and **TypeScript**. Designed with opinionated patterns that help both human developers and AI coding agents build well-architected apps from the start.
+Axis Desktop is a cross-platform personal productivity desktop app built with **Tauri v2**, **React 19**, **TypeScript**, and **Rust**. The project combines tasks, habits, Pomodoro, notes, calendar, and analytics into a native-feeling workspace with a strong emphasis on architecture, performance, and type safety.
 
-## Features
+## Overview
 
-This application comes with key patterns already established:
+- Dashboard-oriented productivity app with modular widgets and dedicated pages
+- Native desktop shell via Tauri with platform-aware menus, shortcuts, notifications, and updates
+- SQLite-backed local data for productivity domains such as habits, Pomodoro, and layout state
+- Architecture and tooling designed for maintainable long-term development, including AI-assisted workflows
 
-- **Type-safe Rust-TypeScript bridge** via tauri-specta.
-- **Performance patterns enforced by tooling** - all the usual linting plus ast-grep for common anti-patterns
-- **Multi-window architecture** already working (quick pane with global shortcut as a demo)
-- **Cross-platform ready** with platform-specific title bars, window controls, and native menu integration
-- **i18n built-in** with RTL support
+## Dashboard Preview
 
-## Stack
+![Axis Desktop dashboard preview](./dashboard-ladingpage.png)
 
-| Layer    | Technologies                                    |
-| -------- | ----------------------------------------------- |
-| Frontend | React 19, TypeScript, Vite 7                    |
-| UI       | shadcn/ui v4, Tailwind CSS v4, Lucide React     |
-| State    | Zustand v5, TanStack Query v5                   |
-| Backend  | Tauri v2, Rust                                  |
-| Testing  | Vitest v4, Testing Library                      |
-| Quality  | ESLint, Prettier, ast-grep, knip, jscpd, clippy |
+## Product Areas
 
-## What's Already Built
+- **Dashboard**: customizable grid with widget visibility and persisted layout
+- **Habits**: creation, completion logging, streak tracking, and overview analytics
+- **Pomodoro**: focus session tracking and persisted timer settings
+- **Analytics**: summary cards and historical productivity signals
+- **Notes and planning surfaces**: app structure already includes notes, kanban, calendar, and related commands/pages
+- **Quick Pane**: floating window accessible by global shortcut for fast interaction outside the main window
 
-The template includes a working application with these features implemented:
+## Architecture
 
-### Core Features
+- **Frontend**: React 19, TypeScript, Vite 8, Tailwind CSS 4, shadcn/ui 4
+- **Desktop layer**: Tauri v2 with a typed Rust <-> TypeScript bridge generated through `tauri-specta`
+- **State model**: `useState` for local UI, Zustand for global UI state, TanStack Query for persistent/server-like data
+- **Persistence**: Rust commands plus local SQLite and app storage
+- **Quality gates**: ESLint, Prettier, ast-grep, Vitest, `cargo fmt`, and `cargo clippy`
 
-- **Command Palette** (`Cmd+K`) - Searchable command launcher with keyboard navigation
-- **Quick Pane** - Global shortcut (`Cmd+Shift+.`) opens a floating window from any app, even fullscreen. Uses native NSPanel on macOS for proper fullscreen overlay behavior.
-- **Keyboard Shortcuts** - Platform-aware shortcuts with automatic menu integration
-- **Native Menus** - File, Edit, View menus built from JavaScript with full i18n support
-- **Preferences System** - Settings dialog with Rust-side persistence, React hooks, and type-safe access throughout
-- **Collapsible Sidebars** - Empty left and right sidebars with state persistence via resizable panels
-- **Theme System** - Light/dark mode with system preference detection, synced across windows
-- **Notifications** - Toast notifications for in-app feedback, plus native system notifications
-- **Auto-updates** - Tauri updater plugin configured with GitHub Releases integration and update checking on launch
-- **Logging** - Structured logging utilities for both Rust and TypeScript with consistent formatting
-- **Crash Recovery** - Emergency data persistence for recovering unsaved work after unexpected exits
+## Tech Stack
 
-### Architecture Patterns
+| Layer | Technologies |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite 8 |
+| UI | Tailwind CSS 4, shadcn/ui 4, Radix UI, Lucide |
+| State | Zustand 5, TanStack Query 5 |
+| Motion and visuals | Motion, GSAP, Recharts, React Grid Layout |
+| Desktop and backend | Tauri v2, Rust, SQLx, SQLite |
+| Tooling | Bun, ESLint, Prettier, ast-grep, Vitest |
 
-- **Three-layer state management** - Clear decision tree: `useState` (component) → `Zustand` (global UI) → `TanStack Query` (persistent data "not owned by the app)
-- **Event-driven Rust-React bridge** - Menus, shortcuts, and command palette all route through the same command system
-- **React Compiler** - Automatic memoization means no manual `useMemo`/`useCallback` needed
+## Development
 
-### Cross-Platform
+### Prerequisites
 
-| Platform | Title Bar            | Window Controls | Bundle Format |
-| -------- | -------------------- | --------------- | ------------- |
-| macOS    | Custom with vibrancy | Traffic lights  | `.dmg`        |
-| Windows  | Custom               | Right side      | `.msi`        |
-| Linux    | Native + toolbar     | Native          | `.AppImage`   |
+- [Bun](https://bun.sh/)
+- [Rust](https://rustup.rs/)
+- Platform-specific Tauri system dependencies
+  See [Tauri prerequisites](https://tauri.app/start/prerequisites/)
 
-Platform detection utilities, platform-specific UI strings ("Reveal in Finder" vs "Show in Explorer"), and separate Tauri configs per platform are all set up.
-
-### Developer Experience
-
-- **Type-safe Tauri commands** - tauri-specta generates TypeScript bindings from Rust, with full autocomplete and compile-time checking
-- **Static analysis** - ESLint, Prettier, ast-grep (architecture enforcement), knip (unused code), jscpd (duplication)
-- **Single quality gate** - `npm run check:all` runs TypeScript, ESLint, Prettier, ast-grep, clippy, and all tests
-- **Testing patterns** - Vitest setup with Tauri command mocking
-
-## Tauri Plugins Included
-
-| Plugin            | Purpose                          |
-| ----------------- | -------------------------------- |
-| single-instance   | Prevent multiple app instances   |
-| window-state      | Remember window position/size    |
-| fs                | File system access               |
-| dialog            | Native open/save dialogs         |
-| notification      | System notifications             |
-| clipboard-manager | Clipboard access                 |
-| global-shortcut   | System-wide keyboard shortcuts   |
-| updater           | In-app auto-updates              |
-| opener            | Open URLs/files with default app |
-| tauri-nspanel     | macOS floating panel behavior    |
-
-## AI-Ready Development
-
-This template is designed to work well with AI coding agents like Claude Code:
-
-- **Comprehensive documentation** in `docs/developer/` covering all patterns. Human readable but really designed to explain the "why" of certain patterns to AI agents. Not slop.
-- **Claude Code integration** - Custom commands (`/check`, `/cleanup`) and a couple of specialized agents
-- **Sensible file organization** - React code in `src/` with clear separation (components, hooks, stores, services), Rust in `src-tauri/src/` with modular command organization. Predictable structure for both humans and AI.
-
-## Getting Started
-
-See **[Using This Template](docs/USING_THIS_TEMPLATE.md)** for setup instructions and workflow guidance.
-
-### Quick Start
+### Setup
 
 ```bash
-# Prerequisites: Node.js 18+, Rust (latest stable)
-# See https://tauri.app/start/prerequisites/ for platform-specific deps
-
-git clone <your-repo>
-cd your-app
-npm install
-npm run dev
+git clone https://github.com/Gabriel-Leall/axis-desktop.git
+cd axis-desktop
+bun install
 ```
+
+### Common Commands
+
+```bash
+bun run dev           # Frontend dev server
+bun run tauri:dev     # Desktop app in development
+bun run test:run      # Run tests once
+bun run check:all     # Full quality gate
+bun run tauri:build   # Production desktop build
+```
+
+## Project Conventions
+
+- Use **`bun` only** for package management and scripts
+- Prefer typed commands from `@/lib/tauri-bindings` over raw `invoke`
+- Follow the state-management onion:
+  `useState` -> `Zustand` -> `TanStack Query`
+- Use Zustand selectors instead of destructuring store objects
+- Run `bun run check:all` after significant changes
 
 ## Documentation
 
-- **[Developer Docs](docs/developer/)** - Architecture, patterns, and detailed guides
-- **[User Guide](docs/userguide/)** - End-user documentation template
-- **[Using This Template](docs/USING_THIS_TEMPLATE.md)** - Setup and workflow guide
+- [Developer documentation](./docs/developer/README.md): architecture, state, commands, UI patterns, testing, and release workflows
+- [Architecture guide](./docs/developer/architecture-guide.md): high-level mental model for the app
+- [Task management](./docs/tasks.md): how work is organized in `tasks-todo/` and `tasks-done/`
+- [Contributing guide](./docs/CONTRIBUTING.md): contribution workflow
+- [Security policy](./docs/SECURITY.md): vulnerability reporting and security guidance
+- [User guide](./docs/userguide/userguide.md): end-user documentation
+
+## Repository Structure
+
+```text
+docs/                 Documentation and process guides
+graphify-out/         Generated knowledge graph artifacts
+locales/              Translation files
+site/                 Marketing or companion site
+src/                  React application
+src-tauri/            Rust/Tauri application shell and commands
+scripts/              Project scripts and automation
+```
 
 ## License
 
-[MIT](LICENSE.md)
-
----
-
-Built with [Tauri](https://tauri.app) | [shadcn/ui](https://ui.shadcn.com) | [React](https://react.dev)
+[MIT](./LICENSE.md)
