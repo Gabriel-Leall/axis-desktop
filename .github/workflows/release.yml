@@ -32,6 +32,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -60,17 +62,36 @@ jobs:
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
 
+      - name: Normalize updater signing key
+        shell: bash
+        run: |
+          key_content='${{ secrets.TAURI_PRIVATE_KEY }}'
+
+          if printf '%s' "$key_content" | grep -q '^untrusted comment:'; then
+            normalized_key="$key_content"
+          else
+            normalized_key=$(printf '%s' "$key_content" | tr -d '\r\n')
+          fi
+
+          {
+            echo 'TAURI_SIGNING_PRIVATE_KEY<<EOF'
+            printf '%s\n' "$normalized_key"
+            echo 'EOF'
+            echo 'TAURI_PRIVATE_KEY<<EOF'
+            printf '%s\n' "$normalized_key"
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
+
       - name: Build and release
         uses: tauri-apps/tauri-action@dev
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name || inputs.version }}
-          releaseName: 'Axis Desktop ${{ github.ref_name || inputs.version }}'
+          tagName: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          releaseName: 'Axis Desktop ${{ github.event_name == "workflow_dispatch" && inputs.version || github.ref_name }}'
           releaseBody: |
-            ## Axis Desktop ${{ github.ref_name || inputs.version }}
+            ## Axis Desktop ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
 
             ### Installation Instructions
             - **macOS**: Download the `.dmg` file and drag to Applications folder
@@ -80,8 +101,8 @@ jobs:
             ### Auto-Updates
             Existing users will receive automatic update notifications.
 
-            **Full Changelog**: https://github.com/${{ github.repository }}/commits/${{ github.ref_name || inputs.version }}
+            **Full Changelog**: https://github.com/${{ github.repository }}/commits/${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
           releaseDraft: false
           prerelease: false
-          includeUpdaterJson: true
+          uploadUpdaterJson: true
           args: ${{ matrix.args }}
