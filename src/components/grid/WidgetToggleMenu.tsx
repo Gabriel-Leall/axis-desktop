@@ -20,12 +20,16 @@ export function WidgetToggleMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-7">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-lg border border-border/70 text-muted-foreground hover:border-border hover:bg-accent/60 hover:text-foreground"
+        >
           <LayoutGrid className="size-4" />
           <span className="sr-only">Toggle widgets</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuLabel className="text-xs">Widgets</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {WIDGET_REGISTRY.map(widget => (

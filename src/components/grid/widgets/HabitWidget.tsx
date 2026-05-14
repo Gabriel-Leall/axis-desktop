@@ -39,7 +39,7 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
     () => selectSortedTodayHabits(habits, todayLogs),
     [habits, todayLogs]
   )
-  const visibleHabits = todayHabits.slice(0, 6)
+  const visibleHabits = todayHabits.slice(0, 4)
   const progress = selectTodayProgress(habits, todayLogs)
   const skeletonKeys = [
     'habit-skeleton-1',
@@ -60,7 +60,7 @@ export function HabitWidget({ onNavigateToHabits }: HabitWidgetProps) {
             </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto overflow-x-hidden pr-1">
+          <div className="flex-1 overflow-hidden">
             <AnimatePresence mode="popLayout" initial={false}>
               {isLoading ? (
                 <m.div

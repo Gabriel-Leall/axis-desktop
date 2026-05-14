@@ -14,7 +14,7 @@ class ResizeObserverMock {
   }
 }
 
-global.ResizeObserver = ResizeObserverMock
+globalThis.ResizeObserver = ResizeObserverMock
 
 // Mock matchMedia for tests
 Object.defineProperty(window, 'matchMedia', {

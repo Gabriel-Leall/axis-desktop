@@ -1,71 +1,144 @@
 /*
- * Bento Grid & Widget Styles
+ * Bento Grid and Widget Surface Styles
  *
- * CSS variables for widget theming so that
- * the shadow/border system adapts to light/dark mode.
+ * Shared visual system for dashboard widgets.
  */
 
-/* ============================================================
- * Widget shadow tokens — light & dark
- *
- * Light: Mistral-inspired warm golden shadow (amber-tinted)
- * Dark:  Resend-inspired frost blue ring-shadow
- * ============================================================ */
 :root {
-  /* Cal.com multi-layer ring + diffuse + contact shadow — warm tinted */
   --widget-shadow:
-    rgba(127, 99, 21, 0.08) 0px 1px 5px -4px,
-    rgba(127, 99, 21, 0.08) 0px 0px 0px 1px,
-    rgba(34, 42, 53, 0.04) 0px 4px 12px 0px;
+    0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 1px 6px rgba(20, 41, 66, 0.08),
+    0 20px 32px -26px rgba(20, 41, 66, 0.28);
+  --widget-bg: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.94),
+    rgba(247, 251, 255, 0.9)
+  );
+  --widget-rail-bg: linear-gradient(
+    90deg,
+    rgba(245, 249, 255, 0.96),
+    rgba(235, 244, 255, 0.82)
+  );
 }
 
 .dark {
-  /* Resend frost: blue-tinted ring shadow — no traditional box-shadow on void */
   --widget-shadow:
-    rgba(176, 199, 217, 0.145) 0px 0px 0px 1px,
-    rgba(0, 0, 0, 0.3) 0px 2px 8px 0px;
+    0 0 0 1px rgba(162, 190, 224, 0.22), 0 18px 38px -24px rgba(0, 0, 0, 0.75);
+  --widget-bg: linear-gradient(
+    180deg,
+    rgba(19, 27, 39, 0.96),
+    rgba(15, 23, 34, 0.92)
+  );
+  --widget-rail-bg: linear-gradient(
+    90deg,
+    rgba(24, 35, 49, 0.92),
+    rgba(19, 29, 43, 0.84)
+  );
 }
 
-/* Apply the token to widget cards */
 .widget-card {
+  position: relative;
+  border-radius: 16px;
+  background: var(--widget-bg);
   box-shadow: var(--widget-shadow);
-  transition: box-shadow 0.2s ease;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+  isolation: isolate;
+}
+
+.widget-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid color-mix(in oklab, var(--border) 82%, white);
+  pointer-events: none;
+}
+
+.dark .widget-card::after {
+  border-color: color-mix(in oklab, var(--border) 76%, #9db7d8);
+}
+
+.widget-card-content {
+  position: relative;
+  z-index: 1;
+}
+
+.widget-drag-handle {
+  position: relative;
+  z-index: 2;
+  background: var(--widget-rail-bg);
+}
+
+.widget-drag-handle::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: color-mix(in oklab, var(--border) 86%, white);
+  pointer-events: none;
+}
+
+/* Hover elevation for desktop pointers only. */
+@media (hover: hover) {
+  .react-grid-layout .react-grid-item:hover .widget-card {
+    transform: translateY(-2px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 4px 14px rgba(20, 41, 66, 0.13),
+      0 28px 40px -30px rgba(20, 41, 66, 0.34);
+  }
+
+  .dark .react-grid-layout .react-grid-item:hover .widget-card {
+    box-shadow:
+      0 0 0 1px rgba(173, 200, 229, 0.25),
+      0 24px 40px -26px rgba(0, 0, 0, 0.8);
+  }
 }
 
 /* ============================================================
  * react-grid-layout overrides
  * ============================================================ */
 
-/* Placeholder shown while dragging */
 .react-grid-layout .react-grid-placeholder {
-  background-color: var(--accent);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  opacity: 0.4;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--accent) 22%, transparent),
+      transparent 72%
+    ),
+    color-mix(in oklab, var(--background) 85%, var(--accent) 15%);
+  border: 1px dashed color-mix(in oklab, var(--accent) 55%, var(--border));
+  border-radius: 16px;
+  opacity: 0.65;
 }
 
-/* Grid item transition */
 .react-grid-layout .react-grid-item {
   transition: all 200ms ease;
   transition-property: left, top, width, height;
 }
 
-/* Remove transition during drag/resize to avoid jank */
 .react-grid-layout .react-grid-item.cssTransforms {
   transition-property: transform, width, height;
 }
 
-.react-grid-layout .react-grid-item.react-draggable-dragging {
-  transition: none;
-  z-index: 100;
-}
-
+.react-grid-layout .react-grid-item.react-draggable-dragging,
 .react-grid-layout .react-grid-item.resizing {
   transition: none;
   z-index: 100;
 }
 
-/* Resize handle */
+.react-grid-layout .react-grid-item.react-draggable-dragging .widget-card,
+.react-grid-layout .react-grid-item.resizing .widget-card {
+  transform: scale(1.01);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent) 50%, var(--border)),
+    0 18px 34px -24px rgba(20, 41, 66, 0.45);
+}
+
 .react-grid-layout .react-grid-item > .react-resizable-handle {
   position: absolute;
   width: 20px;
@@ -77,19 +150,20 @@
   position: absolute;
   right: 3px;
   bottom: 3px;
-  width: 6px;
-  height: 6px;
-  border-right: 2px solid var(--muted-foreground);
-  border-bottom: 2px solid var(--muted-foreground);
-  opacity: 0.4;
-  transition: opacity 0.15s ease;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid
+    color-mix(in oklab, var(--muted-foreground) 80%, white);
+  border-bottom: 2px solid
+    color-mix(in oklab, var(--muted-foreground) 80%, white);
+  opacity: 0.45;
+  transition: opacity 150ms ease;
 }
 
 .react-grid-layout .react-grid-item:hover > .react-resizable-handle::after {
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
-/* Handle positions */
 .react-grid-layout .react-grid-item > .react-resizable-handle-se {
   bottom: 0;
   right: 0;

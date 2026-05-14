@@ -11,12 +11,12 @@ interface WidgetCardProps {
 }
 
 /**
- * Widget card wrapper with themed borders.
+ * Widget card shell shared by all dashboard widgets.
  *
- * Design system:
- * - Light: Mistral warm golden shadow, cream card surface
- * - Dark:  Resend frost border ring, near-void surface
- * - Both:  Cal.com multi-layer shadow approach via --widget-shadow
+ * Visual language:
+ * - High-contrast title rail for quick scanning
+ * - Soft, layered card body for hierarchy
+ * - Unified drag handle area to signal movability
  */
 export function WidgetCard({
   title,
@@ -27,32 +27,36 @@ export function WidgetCard({
   onClick,
 }: WidgetCardProps) {
   return (
-    <div
+    <section
       className={cn(
-        'widget-card flex h-full w-full flex-col overflow-hidden rounded-lg border bg-card text-card-foreground',
-        /* Dark mode gets frost border, light mode gets warm tinted border */
-        'border-border',
+        'widget-card flex h-full w-full flex-col overflow-hidden border border-border bg-card text-card-foreground',
         onClick && 'cursor-pointer',
         className
       )}
       onClick={onClick}
     >
-      {/* Header — drag handle */}
       <div
-        className="widget-drag-handle flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5"
+        className="widget-drag-handle flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2"
         style={{ cursor: 'grab' }}
       >
-        {Icon && (
-          <Icon className="size-3.5 text-muted-foreground" strokeWidth={2} />
-        )}
-        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70 select-none">
-          {title}
-        </span>
+        <div className="flex min-w-0 items-center gap-2">
+          {Icon && (
+            <Icon className="size-3.5 text-muted-foreground" strokeWidth={2} />
+          )}
+          <span className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80 select-none">
+            {title}
+          </span>
+        </div>
       </div>
-      {/* Content */}
-      <div className={cn('flex-1 overflow-auto p-3', contentClassName)}>
+
+      <div
+        className={cn(
+          'widget-card-content flex-1 overflow-auto p-3',
+          contentClassName
+        )}
+      >
         {children}
       </div>
-    </div>
+    </section>
   )
 }

@@ -67,7 +67,7 @@
         "https://github.com/Gabriel-Leall/axis-desktop/releases/latest/download/latest.json"
       ],
       "dialog": true,
-      "pubkey": "YOUR_UPDATER_PUBLIC_KEY_HERE"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMzOEQwNjM5ODYwNjMwQzIKUldUQ01BYUdPUWFOd3pwb0cySjYyd0xPTEpGSFVkYzVUSXQyaHF1UHkyYzUxQitnNmtLajI3MzYK"
     },
     "deep-link": {
       "mobile": [],

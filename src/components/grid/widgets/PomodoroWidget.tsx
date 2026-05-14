@@ -202,7 +202,7 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
                 ? t('widgets.pomodoro.pauseAria')
                 : t('widgets.pomodoro.startAria')
             }
-            className="bg-primary text-primary-foreground hover:bg-primary/90 flex size-16 items-center justify-center rounded-full shadow-lg transition-all"
+            className="flex size-16 items-center justify-center rounded-full bg-accent text-foreground shadow-lg transition-all hover:bg-accent/90"
           >
             {isRunning ? (
               <Pause className="size-7" fill="currentColor" />

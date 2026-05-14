@@ -112,7 +112,6 @@ export function MainWindowContent({
             ) : (
               <PageWrapper key="dashboard">
                 <div className="flex h-full flex-col">
-                  {/* Header with widget toggle + fullscreen */}
                   <div className="flex shrink-0 items-center justify-end gap-1 border-b border-border px-4 py-1.5">
                     <button
                       type="button"
@@ -130,8 +129,8 @@ export function MainWindowContent({
                     </button>
                     <WidgetToggleMenu />
                   </div>
-                  {/* Bento Grid Dashboard */}
-                  <div className="flex-1 min-w-0 overflow-hidden">
+
+                  <div className="min-w-0 flex-1 overflow-hidden">
                     <BentoGrid />
                   </div>
                 </div>

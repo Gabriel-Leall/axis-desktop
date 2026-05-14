@@ -12,7 +12,7 @@ import type { TFunction } from 'i18next'
 import type { WidgetCard } from './types'
 
 export const downloadUrl =
-  'https://github.com/Gabriel-Leall/axis-desktop/releases'
+  'https://github.com/Gabriel-Leall/axis-desktop/releases/latest'
 
 export const navLinks = [
   { href: '#widgets', labelKey: 'landing.nav.widgets' },
@@ -179,15 +179,31 @@ export function getChaosPainStat(t: TFunction) {
 }
 
 export const heroSidebarItems = [
-  { icon: Columns3, active: true, labelKey: 'landing.hero.preview.sidebar.board' },
-  { icon: CheckSquare, active: false, labelKey: 'landing.hero.preview.sidebar.tasks' },
-  { icon: FolderOpen, active: false, labelKey: 'landing.hero.preview.sidebar.notes' },
+  {
+    icon: Columns3,
+    active: true,
+    labelKey: 'landing.hero.preview.sidebar.board',
+  },
+  {
+    icon: CheckSquare,
+    active: false,
+    labelKey: 'landing.hero.preview.sidebar.tasks',
+  },
+  {
+    icon: FolderOpen,
+    active: false,
+    labelKey: 'landing.hero.preview.sidebar.notes',
+  },
   {
     icon: CalendarDays,
     active: false,
     labelKey: 'landing.hero.preview.sidebar.calendar',
   },
-  { icon: Timer, active: false, labelKey: 'landing.hero.preview.sidebar.focus' },
+  {
+    icon: Timer,
+    active: false,
+    labelKey: 'landing.hero.preview.sidebar.focus',
+  },
 ]
 
 export function getHeroPreviewTasks(t: TFunction) {
@@ -276,8 +292,8 @@ export const momentumComparisonZeroData = momentumComparisonTargetData.map(
 )
 
 export const lastComparisonPoint =
-  momentumComparisonTargetData[momentumComparisonTargetData.length - 1]?.point ??
-  'S6'
+  momentumComparisonTargetData[momentumComparisonTargetData.length - 1]
+    ?.point ?? 'S6'
 
 export const clarityHeaderIcons = {
   chaos: TriangleAlert,
