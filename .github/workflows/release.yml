@@ -69,7 +69,10 @@ jobs:
           cat > "$signing_key_path" <<'EOF'
           ${{ secrets.TAURI_PRIVATE_KEY }}
           EOF
+          encoded_signing_key="$(base64 < "$signing_key_path" | tr -d '\r\n')"
           {
+            echo "TAURI_SIGNING_PRIVATE_KEY=$encoded_signing_key"
+            echo "TAURI_PRIVATE_KEY=$encoded_signing_key"
             echo "TAURI_SIGNING_PRIVATE_KEY_PATH=$signing_key_path"
             echo "TAURI_PRIVATE_KEY_PATH=$signing_key_path"
           } >> "$GITHUB_ENV"
@@ -96,5 +99,5 @@ jobs:
             **Full Changelog**: https://github.com/${{ github.repository }}/commits/${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
           releaseDraft: false
           prerelease: false
-          uploadUpdaterJson: true
+          includeUpdaterJson: true
           args: ${{ matrix.args }}
