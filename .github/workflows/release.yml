@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -69,12 +69,9 @@ jobs:
           cat > "$signing_key_path" <<'EOF'
           ${{ secrets.TAURI_PRIVATE_KEY }}
           EOF
-          encoded_signing_key="$(base64 < "$signing_key_path" | tr -d '\r\n')"
           {
-            echo "TAURI_SIGNING_PRIVATE_KEY=$encoded_signing_key"
-            echo "TAURI_PRIVATE_KEY=$encoded_signing_key"
-            echo "TAURI_SIGNING_PRIVATE_KEY_PATH=$signing_key_path"
-            echo "TAURI_PRIVATE_KEY_PATH=$signing_key_path"
+            echo "TAURI_SIGNING_PRIVATE_KEY=$signing_key_path"
+            echo "TAURI_PRIVATE_KEY=$signing_key_path"
           } >> "$GITHUB_ENV"
 
       - name: Build and release
