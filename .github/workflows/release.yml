@@ -22,8 +22,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'
-            args: '--bundles app,dmg'
           - platform: 'windows-latest'
             args: '--bundles msi'
           - platform: 'ubuntu-22.04'
@@ -86,7 +84,6 @@ jobs:
             ## Axis Desktop ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
 
             ### Installation Instructions
-            - **macOS**: Download the `.dmg` file and drag to Applications folder
             - **Windows**: Download the `.msi` file and run the installer
             - **Linux**: Download the `.AppImage` file, make it executable (`chmod +x`), and run
 
