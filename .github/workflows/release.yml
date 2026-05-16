@@ -63,13 +63,14 @@ jobs:
       - name: Configure updater signing key
         shell: bash
         run: |
+          decoded_key="$(echo '${{ secrets.TAURI_PRIVATE_KEY }}' | base64 --decode)"
           {
-            echo "TAURI_SIGNING_PRIVATE_KEY<<EOF"
-            echo '${{ secrets.TAURI_PRIVATE_KEY }}' | base64 --decode
-            echo "EOF"
-            echo "TAURI_PRIVATE_KEY<<EOF"
-            echo '${{ secrets.TAURI_PRIVATE_KEY }}' | base64 --decode
-            echo "EOF"
+            echo "TAURI_SIGNING_PRIVATE_KEY<<__TAURI_PRIVATE_KEY__"
+            printf '%s\n' "$decoded_key"
+            echo "__TAURI_PRIVATE_KEY__"
+            echo "TAURI_PRIVATE_KEY<<__TAURI_PRIVATE_KEY__"
+            printf '%s\n' "$decoded_key"
+            echo "__TAURI_PRIVATE_KEY__"
           } >> "$GITHUB_ENV"
 
       - name: Build and release
