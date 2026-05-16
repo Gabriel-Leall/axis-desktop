@@ -63,19 +63,21 @@ jobs:
       - name: Configure updater signing key
         shell: bash
         run: |
-          signing_key_path="$RUNNER_TEMP/tauri-updater.key"
-          echo '${{ secrets.TAURI_PRIVATE_KEY }}' | base64 --decode > "$signing_key_path"
           {
-            echo "TAURI_SIGNING_PRIVATE_KEY_PATH=$signing_key_path"
-            echo "TAURI_PRIVATE_KEY_PATH=$signing_key_path"
+            echo "TAURI_SIGNING_PRIVATE_KEY<<EOF"
+            echo '${{ secrets.TAURI_PRIVATE_KEY }}' | base64 --decode
+            echo "EOF"
+            echo "TAURI_PRIVATE_KEY<<EOF"
+            echo '${{ secrets.TAURI_PRIVATE_KEY }}' | base64 --decode
+            echo "EOF"
           } >> "$GITHUB_ENV"
 
       - name: Build and release
         uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY_PATH: ${{ env.TAURI_SIGNING_PRIVATE_KEY_PATH }}
-          TAURI_PRIVATE_KEY_PATH: ${{ env.TAURI_PRIVATE_KEY_PATH }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ env.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_PRIVATE_KEY: ${{ env.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
