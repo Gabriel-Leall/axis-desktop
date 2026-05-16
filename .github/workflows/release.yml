@@ -1,4 +1,4 @@
-name: 'Release Axis Desktop'
+name: 'Release Axis'
 
 on:
   push:
@@ -79,9 +79,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
-          releaseName: 'Axis Desktop ${{ github.event_name == ''workflow_dispatch'' && inputs.version || github.ref_name }}'
+          releaseName: 'Axis ${{ github.event_name == ''workflow_dispatch'' && inputs.version || github.ref_name }}'
           releaseBody: |
-            ## Axis Desktop ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+            ## Axis ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
 
             ### Installation Instructions
             - **Windows**: Download the `.msi` file and run the installer

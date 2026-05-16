@@ -1,7 +1,7 @@
 [package]
 name = "axis-desktop"
-version = "0.1.1"
-description = "Axis Desktop application"
+version = "0.1.2"
+description = "Axis application"
 authors = ["Gabriel Leall"]
 edition = "2021"
 rust-version = "1.82"

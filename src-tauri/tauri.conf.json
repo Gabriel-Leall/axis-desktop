@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Axis Desktop",
-  "version": "0.1.1",
+  "productName": "Axis",
+  "version": "0.1.2",
   "identifier": "com.gabrielleall.axis-desktop",
   "build": {
     "removeUnusedCommands": true,
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Axis Desktop",
+        "title": "Axis",
         "width": 1200,
         "height": 800,
         "minWidth": 1000,
@@ -48,8 +48,8 @@
     ],
     "publisher": "Gabriel Leall",
     "category": "DeveloperTool",
-    "shortDescription": "Axis Desktop application",
-    "longDescription": "Axis Desktop application built with Tauri and React.",
+    "shortDescription": "Axis application",
+    "longDescription": "Axis application built with Tauri and React.",
     "copyright": "Copyright © 2026 Gabriel Leall. All rights reserved.",
     "macOS": {
       "frameworks": [],
@@ -67,7 +67,7 @@
         "https://github.com/Gabriel-Leall/axis-desktop/releases/latest/download/latest.json"
       ],
       "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZDNjA5Q0FBRTQxQ0Y3OEQKUldTTjl4emtxcHhnL0lXNDk3eHZQcDdlclpIZ21sZ24zS05TNkRrNXNiamNmLzRnbHY3c291d3QK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZCRDc2RkFDODExMDYwNApSV1FFQmhISStuYTlEN0pERFVIYUpVRDhBNEE4bFpPemJhZGZhdVJMNWkzSlBEL0VneGY1N0ZRVwo="
     },
     "deep-link": {
       "mobile": [],
