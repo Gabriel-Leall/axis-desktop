@@ -34,3 +34,6 @@ ui-changes.md
 # Graphify knowledge graph output
 graphify-out/
 src/graphify-out/
+*.codex-pet-runs
+.opencode
+
