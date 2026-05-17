@@ -178,6 +178,12 @@ export function BentoGrid() {
       const { layout: currentLayout } = useGridStore.getState()
       saveGridLayout(currentLayout, widgetVisibility)
     }, 300)
+
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+      }
+    }
   }, [widgetVisibility, loaded])
 
   // Filter layout to only visible widgets

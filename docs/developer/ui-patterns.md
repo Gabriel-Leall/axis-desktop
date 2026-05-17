@@ -362,3 +362,16 @@ This preserves scroll position, form state, and resize dimensions.
 - Override shadcn components in place (copy and modify instead)
 - Add `cursor-pointer` everywhere (only for actual clickable elements)
 - Use viewport-based responsive design (this is a fixed-size desktop app)
+
+## Dashboard Widget Surface Pattern
+
+The dashboard widgets follow a shared shell style in `src/components/grid/WidgetCard.tsx` and `src/components/grid/grid.css`.
+
+Pattern goals:
+
+- **Fast scan header**: compact uppercase title rail with icon and status chip.
+- **Unified drag affordance**: dragging always starts from `.widget-drag-handle`.
+- **Layered surfaces**: card body uses theme-aware gradients and ring shadows.
+- **Interaction consistency**: hover lift, resize handle, and drag placeholder use the same token system.
+
+When adding new widgets, compose content inside `WidgetCard` and avoid re-implementing card chrome per widget.

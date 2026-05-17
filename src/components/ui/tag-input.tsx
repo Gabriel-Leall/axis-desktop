@@ -100,6 +100,13 @@ const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
           className
         )}
         onClick={handleContainerClick}
+        onKeyDown={e => {
+          if (e.key !== 'Enter' && e.key !== ' ') return
+          e.preventDefault()
+          handleContainerClick()
+        }}
+        role="group"
+        tabIndex={disabled ? undefined : 0}
         {...props}
       >
         <div className="flex flex-1 flex-wrap items-center gap-1 py-1">

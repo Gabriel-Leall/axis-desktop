@@ -1,4 +1,10 @@
-import { startTransition, useEffect, type Dispatch, type RefObject, type SetStateAction } from 'react'
+import {
+  startTransition,
+  useEffect,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 

@@ -7,7 +7,7 @@ import { useTasksStore, selectTodayTasks, type Task } from '@/store/tasks-store'
 import { cn } from '@/lib/utils'
 import { getPriorityTagClass } from '@/lib/priority-tag-styles'
 
-import { motion, AnimatePresence } from 'motion/react'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'motion/react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { listItemVariants } from '@/lib/motion-tokens'
 
@@ -85,7 +85,7 @@ function TaskRow({
   const isDone = task.status === 'done'
 
   return (
-    <motion.div
+    <m.div
       layout
       variants={listItemVariants}
       initial="hidden"
@@ -94,7 +94,7 @@ function TaskRow({
       onClick={onSelect}
       className="group flex cursor-pointer items-center gap-3 border-b border-border py-2.5 last:border-b-0"
     >
-      <motion.button
+      <m.button
         type="button"
         aria-label={
           isDone
@@ -117,7 +117,7 @@ function TaskRow({
       >
         <AnimatePresence>
           {isDone && (
-            <motion.span
+            <m.span
               className="pointer-events-none absolute inset-0 rounded border border-primary/70"
               initial={{ opacity: 0.6, scale: 1 }}
               animate={{ opacity: 0, scale: 1.7 }}
@@ -128,7 +128,7 @@ function TaskRow({
         </AnimatePresence>
         <AnimatePresence mode="wait" initial={false}>
           {isDone && (
-            <motion.span
+            <m.span
               key="check"
               initial={{ scale: 0.2, opacity: 0, rotate: -14 }}
               animate={{ scale: 1, opacity: 1, rotate: 0 }}
@@ -139,10 +139,10 @@ function TaskRow({
                 className="text-primary-foreground size-3"
                 strokeWidth={2.5}
               />
-            </motion.span>
+            </m.span>
           )}
         </AnimatePresence>
-      </motion.button>
+      </m.button>
 
       <span
         className={cn(
@@ -154,7 +154,7 @@ function TaskRow({
       </span>
 
       <PriorityTag priority={task.priority} t={t} />
-    </motion.div>
+    </m.div>
   )
 }
 
@@ -199,76 +199,81 @@ export function TasksWidget({ onNavigateToTasks }: TasksWidgetProps) {
 
   return (
     <WidgetCard title={t('widgets.tasks.title')} icon={CheckSquare}>
-      <div className="flex h-full flex-col">
-        <div className="mb-2 flex items-center justify-between px-1">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            {t('widgets.tasks.header')}
-          </span>
-          {totalCount > 0 && (
-            <span className="font-mono text-[10px] text-muted-foreground">
-              {pendingCount} / {totalCount}
+      <LazyMotion features={domAnimation}>
+        <div className="flex h-full flex-col">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              {t('widgets.tasks.header')}
             </span>
-          )}
-        </div>
-
-        <div className="flex flex-1 flex-col overflow-y-auto">
-          {isLoading ? (
-            <motion.div
-              layout
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-2 px-1 py-1"
-            >
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Skeleton className="size-4 shrink-0 rounded-full" />
-                  <Skeleton className="h-4 flex-1" />
-                </div>
-              ))}
-            </motion.div>
-          ) : visibleTasks.length === 0 ? (
-            <motion.div
-              layout
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="flex flex-1 flex-col items-center justify-center gap-1.5 py-4 text-center"
-            >
-              <CheckSquare
-                className="size-5 text-muted-foreground/30"
-                strokeWidth={1.5}
-              />
-              <span className="text-[12px] text-muted-foreground/50">
-                {t('widgets.tasks.empty')}
+            {totalCount > 0 && (
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {pendingCount} / {totalCount}
               </span>
-            </motion.div>
-          ) : (
-            <AnimatePresence mode="popLayout" initial={false}>
-              {visibleTasks.map(task => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onToggle={() => toggleComplete(task.id)}
-                  onSelect={() => handleSelect(task.id)}
-                  t={t}
+            )}
+          </div>
+
+          <div className="flex flex-1 flex-col overflow-y-auto">
+            {isLoading ? (
+              <m.div
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-2 px-1 py-1"
+              >
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={`task-skeleton-${i}`}
+                    className="flex items-center gap-2"
+                  >
+                    <Skeleton className="size-4 shrink-0 rounded-full" />
+                    <Skeleton className="h-4 flex-1" />
+                  </div>
+                ))}
+              </m.div>
+            ) : visibleTasks.length === 0 ? (
+              <m.div
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex flex-1 flex-col items-center justify-center gap-1.5 py-4 text-center"
+              >
+                <CheckSquare
+                  className="size-5 text-muted-foreground/30"
+                  strokeWidth={1.5}
                 />
-              ))}
-            </AnimatePresence>
-          )}
+                <span className="text-[12px] text-muted-foreground/50">
+                  {t('widgets.tasks.empty')}
+                </span>
+              </m.div>
+            ) : (
+              <AnimatePresence mode="popLayout" initial={false}>
+                {visibleTasks.map(task => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    onToggle={() => toggleComplete(task.id)}
+                    onSelect={() => handleSelect(task.id)}
+                    t={t}
+                  />
+                ))}
+              </AnimatePresence>
+            )}
+          </div>
+
+          <QuickAddInput onAdd={handleAddTask} t={t} />
+
+          <button
+            type="button"
+            onClick={() => onNavigateToTasks?.()}
+            className="mt-auto flex items-center gap-0.5 self-end text-[11px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+          >
+            {t('widgets.tasks.viewAll')}
+            <ChevronRight className="size-3" />
+          </button>
         </div>
-
-        <QuickAddInput onAdd={handleAddTask} t={t} />
-
-        <button
-          type="button"
-          onClick={() => onNavigateToTasks?.()}
-          className="mt-auto flex items-center gap-0.5 self-end text-[11px] text-muted-foreground/60 transition-colors hover:text-muted-foreground"
-        >
-          {t('widgets.tasks.viewAll')}
-          <ChevronRight className="size-3" />
-        </button>
-      </div>
+      </LazyMotion>
     </WidgetCard>
   )
 }

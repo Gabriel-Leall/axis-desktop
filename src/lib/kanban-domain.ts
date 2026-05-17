@@ -13,12 +13,14 @@ export function recalculateOrder(
 ): OrderedItem[] {
   const currentById = new Map(currentItems.map(item => [item.id, item]))
 
-  return ids
-    .filter(id => currentById.has(id))
-    .map((id, index) => ({
+  return ids.reduce<OrderedItem[]>((items, id) => {
+    if (!currentById.has(id)) return items
+    items.push({
       id,
-      sort_order: index * SORT_GAP,
-    }))
+      sort_order: items.length * SORT_GAP,
+    })
+    return items
+  }, [])
 }
 
 export function getInsertPosition(

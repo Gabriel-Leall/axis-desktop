@@ -419,9 +419,9 @@ export function selectStreakByHabit(
   habitId: string,
   todayISO = getLocalISODate()
 ): number {
-  const dates = logs
-    .filter(log => log.habit_id === habitId)
-    .map(log => log.completed_date)
+  const dates = logs.flatMap(log =>
+    log.habit_id === habitId ? [log.completed_date] : []
+  )
   return calculateStreakFromDates(dates, todayISO)
 }
 
@@ -433,9 +433,9 @@ export function selectHabitCompletionDates(
   logs: HabitLog[],
   habitId: string
 ): string[] {
-  return logs
-    .filter(log => log.habit_id === habitId)
-    .map(log => log.completed_date)
+  return logs.flatMap(log =>
+    log.habit_id === habitId ? [log.completed_date] : []
+  )
 }
 
 export function selectTodayProgress(
@@ -476,10 +476,9 @@ export function selectHabitStats(
     }
   })
 
-  const topCurrent =
-    perHabitCurrent.length === 0
-      ? null
-      : ([...perHabitCurrent].sort((a, b) => b.current - a.current)[0] ?? null)
+  const topCurrent = perHabitCurrent.reduce<
+    (typeof perHabitCurrent)[number] | null
+  >((best, item) => (!best || item.current > best.current ? item : best), null)
 
   const totalSlots = habits.length * days
   const completionCount = monthLogs.length

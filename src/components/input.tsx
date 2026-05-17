@@ -61,10 +61,24 @@ export const Input = ({
     }
   }
 
+  const focusInput = () => {
+    _ref.current?.focus()
+  }
+
   return (
-    <div className="flex flex-col gap-2" onClick={() => _ref.current?.focus()}>
+    <div
+      className="flex flex-col gap-2"
+      onClick={focusInput}
+      onKeyDown={e => {
+        if (e.key !== 'Enter' && e.key !== ' ') return
+        e.preventDefault()
+        focusInput()
+      }}
+      role="group"
+      tabIndex={-1}
+    >
       {label && (
-        <div className="capitalize text-[13px] text-gray-900">{label}</div>
+        <div className="capitalize text-[13px] text-zinc-900">{label}</div>
       )}
       <div
         className={clsx(
@@ -92,7 +106,7 @@ export const Input = ({
         )}
         <input
           className={clsx(
-            'w-full inline-flex appearance-none placeholder:text-gray-900 placeholder:opacity-70 outline-none',
+            'w-full inline-flex appearance-none placeholder:text-zinc-900 placeholder:opacity-70 outline-none',
             size === 'xSmall' || size === 'mediumSmall' ? 'px-2' : 'px-3',
             disabled
               ? 'cursor-not-allowed bg-gray-100 text-gray-700'
