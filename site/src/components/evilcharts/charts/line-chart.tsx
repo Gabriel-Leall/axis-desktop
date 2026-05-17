@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   type ChartConfig,
@@ -6,7 +6,7 @@ import {
   getColorsCount,
   getLoadingData,
   LoadingIndicator,
-} from "@/components/evilcharts/ui/chart";
+} from '@/components/evilcharts/ui/chart'
 import {
   CartesianGrid,
   Curve,
@@ -16,118 +16,143 @@ import {
   XAxis,
   YAxis,
   type CurveProps,
-} from "recharts";
+} from 'recharts'
 import {
   ChartTooltip,
   ChartTooltipContent,
   type TooltipRoundness,
   type TooltipVariant,
-} from "@/components/evilcharts/ui/tooltip";
-import { EvilBrush, useEvilBrush, type EvilBrushRange } from "@/components/evilcharts/ui/evil-brush";
-import { ChartLegend, ChartLegendContent, type ChartLegendVariant } from "@/components/evilcharts/ui/legend";
-import { useCallback, useId, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { ChartBackground, type BackgroundVariant } from "@/components/evilcharts/ui/background";
-import { ChartDot, DotVariant } from "@/components/evilcharts/ui/dot";
-import { motion } from "motion/react";
+} from '@/components/evilcharts/ui/tooltip'
+import {
+  EvilBrush,
+  useEvilBrush,
+  type EvilBrushRange,
+} from '@/components/evilcharts/ui/evil-brush'
+import {
+  ChartLegend,
+  ChartLegendContent,
+  type ChartLegendVariant,
+} from '@/components/evilcharts/ui/legend'
+import {
+  useCallback,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react'
+import {
+  ChartBackground,
+  type BackgroundVariant,
+} from '@/components/evilcharts/ui/background'
+import { ChartDot, DotVariant } from '@/components/evilcharts/ui/dot'
+import { motion } from 'motion/react'
 
 // Constants
-const STROKE_WIDTH = 1;
-const LOADING_LINE_DATA_KEY = "loading";
-const LOADING_ANIMATION_DURATION = 2000; // in milliseconds
+const STROKE_WIDTH = 1
+const LOADING_LINE_DATA_KEY = 'loading'
+const LOADING_ANIMATION_DURATION = 2000 // in milliseconds
 
-type ChartProps = ComponentProps<typeof LineChart>;
-type XAxisProps = ComponentProps<typeof XAxis>;
-type YAxisProps = ComponentProps<typeof YAxis>;
-type LineType = ComponentProps<typeof Line>["type"];
-type StrokeVariant = "solid" | "dashed" | "animated-dashed";
-type LineAnimationEasing = "ease" | "ease-in" | "ease-out" | "ease-in-out" | "linear";
+type ChartProps = ComponentProps<typeof LineChart>
+type XAxisProps = ComponentProps<typeof XAxis>
+type YAxisProps = ComponentProps<typeof YAxis>
+type LineType = ComponentProps<typeof Line>['type']
+type StrokeVariant = 'solid' | 'dashed' | 'animated-dashed'
+type LineAnimationEasing =
+  | 'ease'
+  | 'ease-in'
+  | 'ease-out'
+  | 'ease-in-out'
+  | 'linear'
 type EndValueLabelOptions<TData extends Record<string, unknown>> = {
-  className?: string;
-  fill?: string;
-  fontSize?: number;
-  fontWeight?: number | string;
-  offsetX?: number;
-  offsetY?: number;
-  textAnchor?: "start" | "middle" | "end";
-  formatter?: (value: unknown, payload: TData, dataKey: string) => ReactNode;
-};
+  className?: string
+  fill?: string
+  fontSize?: number
+  fontWeight?: number | string
+  offsetX?: number
+  offsetY?: number
+  textAnchor?: 'start' | 'middle' | 'end'
+  formatter?: (value: unknown, payload: TData, dataKey: string) => ReactNode
+}
 
 // Validating Types to make sure user have provided valid data according to chartConfig
 type ValidateConfigKeys<TData, TConfig> = {
-  [K in keyof TConfig]: K extends keyof TData ? ChartConfig[string] : never;
-};
+  [K in keyof TConfig]: K extends keyof TData ? ChartConfig[string] : never
+}
 
 // Extract only keys from TData where the value is a number (not string, boolean, etc.)
 type NumericDataKeys<T> = {
-  [K in keyof T]: T[K] extends number ? K : never;
-}[keyof T];
+  [K in keyof T]: T[K] extends number ? K : never
+}[keyof T]
 
 type EvilLineChartProps<
   TData extends Record<string, unknown>,
   TConfig extends Record<string, ChartConfig[string]>,
 > = {
-  chartConfig: TConfig & ValidateConfigKeys<TData, TConfig>;
-  data: TData[];
-  xDataKey?: keyof TData & string;
-  yDataKey?: keyof TData & string;
-  className?: string;
-  chartProps?: ChartProps;
-  xAxisProps?: XAxisProps;
-  yAxisProps?: YAxisProps;
-  defaultSelectedDataKey?: string | null;
-  curveType?: LineType;
-  strokeVariant?: StrokeVariant;
-  dotVariant?: DotVariant;
-  activeDotVariant?: DotVariant;
-  legendVariant?: ChartLegendVariant;
-  connectNulls?: boolean;
-  tickGap?: number;
+  chartConfig: TConfig & ValidateConfigKeys<TData, TConfig>
+  data: TData[]
+  xDataKey?: keyof TData & string
+  yDataKey?: keyof TData & string
+  className?: string
+  chartProps?: ChartProps
+  xAxisProps?: XAxisProps
+  yAxisProps?: YAxisProps
+  defaultSelectedDataKey?: string | null
+  curveType?: LineType
+  strokeVariant?: StrokeVariant
+  dotVariant?: DotVariant
+  activeDotVariant?: DotVariant
+  legendVariant?: ChartLegendVariant
+  connectNulls?: boolean
+  tickGap?: number
   // Hide Stuffs
-  hideTooltip?: boolean;
-  hideCartesianGrid?: boolean;
-  hideLegend?: boolean;
-  hideCursorLine?: boolean;
+  hideTooltip?: boolean
+  hideCartesianGrid?: boolean
+  hideLegend?: boolean
+  hideCursorLine?: boolean
   // Tooltip
-  tooltipRoundness?: TooltipRoundness;
-  tooltipVariant?: TooltipVariant;
-  tooltipDefaultIndex?: number;
+  tooltipRoundness?: TooltipRoundness
+  tooltipVariant?: TooltipVariant
+  tooltipDefaultIndex?: number
   // Interactive Stuffs
-  isLoading?: boolean;
-  loadingPoints?: number;
+  isLoading?: boolean
+  loadingPoints?: number
   // Glow Effect
-  glowingLines?: NumericDataKeys<TData>[];
+  glowingLines?: NumericDataKeys<TData>[]
   // Brush
-  showBrush?: boolean;
-  brushHeight?: number;
-  brushFormatLabel?: (value: unknown, index: number) => string;
-  onBrushChange?: (range: EvilBrushRange) => void;
+  showBrush?: boolean
+  brushHeight?: number
+  brushFormatLabel?: (value: unknown, index: number) => string
+  onBrushChange?: (range: EvilBrushRange) => void
   // Background
-  backgroundVariant?: BackgroundVariant;
+  backgroundVariant?: BackgroundVariant
   // Buffer Line - renders last segment as dashed/dotted
-  enableBufferLine?: boolean;
-  isAnimationActive?: boolean;
-  strokeWidthByDataKey?: Partial<Record<string, number>>;
-  strokeDasharrayByDataKey?: Partial<Record<string, string>>;
-  animationBeginByDataKey?: Partial<Record<string, number>>;
-  animationDurationByDataKey?: Partial<Record<string, number>>;
-  animationEasingByDataKey?: Partial<Record<string, LineAnimationEasing>>;
-  endValueLabels?: Partial<Record<string, EndValueLabelOptions<TData>>>;
-};
+  enableBufferLine?: boolean
+  isAnimationActive?: boolean
+  strokeWidthByDataKey?: Partial<Record<string, number>>
+  strokeDasharrayByDataKey?: Partial<Record<string, string>>
+  animationBeginByDataKey?: Partial<Record<string, number>>
+  animationDurationByDataKey?: Partial<Record<string, number>>
+  animationEasingByDataKey?: Partial<Record<string, LineAnimationEasing>>
+  endValueLabels?: Partial<Record<string, EndValueLabelOptions<TData>>>
+}
 
 type EvilLineChartClickable = {
-  isClickable: true;
-  onSelectionChange?: (selectedDataKey: string | null) => void;
-};
+  isClickable: true
+  onSelectionChange?: (selectedDataKey: string | null) => void
+}
 
 type EvilLineChartNotClickable = {
-  isClickable?: false;
-  onSelectionChange?: never;
-};
+  isClickable?: false
+  onSelectionChange?: never
+}
 
 type EvilLineChartPropsWithCallback<
   TData extends Record<string, unknown>,
   TConfig extends Record<string, ChartConfig[string]>,
-> = EvilLineChartProps<TData, TConfig> & (EvilLineChartClickable | EvilLineChartNotClickable);
+> = EvilLineChartProps<TData, TConfig> &
+  (EvilLineChartClickable | EvilLineChartNotClickable)
 
 export function EvilLineChart<
   TData extends Record<string, unknown>,
@@ -142,8 +167,8 @@ export function EvilLineChart<
   xAxisProps,
   yAxisProps,
   defaultSelectedDataKey = null,
-  curveType = "linear",
-  strokeVariant = "solid",
+  curveType = 'linear',
+  strokeVariant = 'solid',
   dotVariant,
   activeDotVariant,
   legendVariant,
@@ -175,24 +200,29 @@ export function EvilLineChart<
   animationEasingByDataKey,
   endValueLabels,
 }: EvilLineChartPropsWithCallback<TData, TConfig>) {
-  const [selectedDataKey, setSelectedDataKey] = useState<string | null>(defaultSelectedDataKey);
-  const { loadingData, onShimmerExit } = useLoadingData(isLoading, loadingPoints);
-  const chartId = useId().replace(/:/g, ""); // Remove colons for valid CSS selectors
+  const [selectedDataKey, setSelectedDataKey] = useState<string | null>(
+    defaultSelectedDataKey
+  )
+  const { loadingData, onShimmerExit } = useLoadingData(
+    isLoading,
+    loadingPoints
+  )
+  const chartId = useId().replace(/:/g, '') // Remove colons for valid CSS selectors
 
   // ── Zoom state ──────────────────────────────────────────────────────────
-  const { visibleData, brushProps } = useEvilBrush({ data });
-  const displayData = showBrush && !isLoading ? visibleData : data;
+  const { visibleData, brushProps } = useEvilBrush({ data })
+  const displayData = showBrush && !isLoading ? visibleData : data
 
   // Wrapper function to update state and call parent callback
   const handleSelectionChange = useCallback(
     (newSelectedDataKey: string | null) => {
-      setSelectedDataKey(newSelectedDataKey);
+      setSelectedDataKey(newSelectedDataKey)
       if (isClickable && onSelectionChange) {
-        onSelectionChange(newSelectedDataKey);
+        onSelectionChange(newSelectedDataKey)
       }
     },
-    [onSelectionChange, isClickable],
-  );
+    [onSelectionChange, isClickable]
+  )
 
   return (
     <ChartContainer
@@ -214,9 +244,9 @@ export function EvilLineChart<
             skipStyle
             className="mt-1"
             {...brushProps}
-            onChange={(range) => {
-              brushProps.onChange(range);
-              onBrushChange?.(range);
+            onChange={range => {
+              brushProps.onChange(range)
+              onBrushChange?.(range)
             }}
           />
         )
@@ -278,8 +308,9 @@ export function EvilLineChart<
                 ? false
                 : {
                     strokeDasharray:
-                      strokeVariant === "dashed" || strokeVariant === "animated-dashed"
-                        ? "3 3"
+                      strokeVariant === 'dashed' ||
+                      strokeVariant === 'animated-dashed'
+                        ? '3 3'
                         : undefined,
                     strokeWidth: STROKE_WIDTH,
                   }
@@ -294,52 +325,63 @@ export function EvilLineChart<
           />
         )}
         {!isLoading &&
-          Object.keys(chartConfig).map((dataKey) => {
-            const _opacity = getOpacity(isClickable, selectedDataKey, dataKey);
-            const hasSelection = selectedDataKey !== null;
-            const isGlowing = glowingLines.includes(dataKey as NumericDataKeys<TData>);
-            const filter = isGlowing ? `url(#${chartId}-line-glow-${dataKey})` : undefined;
-            const strokeWidth = strokeWidthByDataKey?.[dataKey] ?? STROKE_WIDTH;
+          Object.keys(chartConfig).map(dataKey => {
+            const _opacity = getOpacity(isClickable, selectedDataKey, dataKey)
+            const hasSelection = selectedDataKey !== null
+            const isGlowing = glowingLines.includes(
+              dataKey as NumericDataKeys<TData>
+            )
+            const filter = isGlowing
+              ? `url(#${chartId}-line-glow-${dataKey})`
+              : undefined
+            const strokeWidth = strokeWidthByDataKey?.[dataKey] ?? STROKE_WIDTH
             const strokeDasharray =
               strokeDasharrayByDataKey?.[dataKey] ??
-              getStrokeDasharray(enableBufferLine, strokeVariant);
-            const animationBegin = animationBeginByDataKey?.[dataKey] ?? 0;
-            const animationDuration = animationDurationByDataKey?.[dataKey] ?? 1500;
-            const animationEasing = animationEasingByDataKey?.[dataKey] ?? "ease";
-            const endValueLabelOptions = endValueLabels?.[dataKey];
+              getStrokeDasharray(enableBufferLine, strokeVariant)
+            const animationBegin = animationBeginByDataKey?.[dataKey] ?? 0
+            const animationDuration =
+              animationDurationByDataKey?.[dataKey] ?? 1500
+            const animationEasing =
+              animationEasingByDataKey?.[dataKey] ?? 'ease'
+            const endValueLabelOptions = endValueLabels?.[dataKey]
             const labelRenderer = endValueLabelOptions
               ? (props: {
-                  index?: number;
-                  x?: string | number;
-                  y?: string | number;
-                  value?: unknown;
-                  payload?: TData;
+                  index?: number
+                  x?: string | number
+                  y?: string | number
+                  value?: unknown
+                  payload?: TData
                 }) => {
-                  const { index, x, y, value, payload } = props;
-                  if (index !== displayData.length - 1) return null;
-                  const xNumber = typeof x === "number" ? x : Number(x);
-                  const yNumber = typeof y === "number" ? y : Number(y);
-                  if (!Number.isFinite(xNumber) || !Number.isFinite(yNumber)) return null;
+                  const { index, x, y, value, payload } = props
+                  if (index !== displayData.length - 1) return null
+                  const xNumber = typeof x === 'number' ? x : Number(x)
+                  const yNumber = typeof y === 'number' ? y : Number(y)
+                  if (!Number.isFinite(xNumber) || !Number.isFinite(yNumber))
+                    return null
 
                   const displayValue = endValueLabelOptions.formatter
-                    ? endValueLabelOptions.formatter(value, payload as TData, dataKey)
-                    : value;
+                    ? endValueLabelOptions.formatter(
+                        value,
+                        payload as TData,
+                        dataKey
+                      )
+                    : value
 
                   return (
                     <text
                       x={xNumber + (endValueLabelOptions.offsetX ?? 10)}
                       y={yNumber + (endValueLabelOptions.offsetY ?? -8)}
                       className={endValueLabelOptions.className}
-                      fill={endValueLabelOptions.fill ?? "currentColor"}
+                      fill={endValueLabelOptions.fill ?? 'currentColor'}
                       fontSize={endValueLabelOptions.fontSize ?? 12}
                       fontWeight={endValueLabelOptions.fontWeight ?? 600}
-                      textAnchor={endValueLabelOptions.textAnchor ?? "start"}
+                      textAnchor={endValueLabelOptions.textAnchor ?? 'start'}
                     >
                       {displayValue as ReactNode}
                     </text>
-                  );
+                  )
                 }
-              : false;
+              : false
 
             const dot = dotVariant ? (
               <ChartDot
@@ -350,7 +392,7 @@ export function EvilLineChart<
               />
             ) : (
               false
-            );
+            )
             const activeDot = activeDotVariant ? (
               <ChartDot
                 fillOpacity={_opacity.dot}
@@ -360,7 +402,7 @@ export function EvilLineChart<
               />
             ) : (
               false
-            );
+            )
 
             return (
               <g key={dataKey}>
@@ -380,9 +422,11 @@ export function EvilLineChart<
                     activeDot={false}
                     legendType="none"
                     tooltipType="none"
-                    style={{ cursor: "pointer" }}
+                    style={{ cursor: 'pointer' }}
                     onClick={() => {
-                      handleSelectionChange(selectedDataKey === dataKey ? null : dataKey);
+                      handleSelectionChange(
+                        selectedDataKey === dataKey ? null : dataKey
+                      )
                     }}
                   />
                 )}
@@ -404,18 +448,22 @@ export function EvilLineChart<
                   strokeWidth={strokeWidth}
                   strokeDasharray={strokeDasharray}
                   shape={enableBufferLine ? bufferLineShape : undefined}
-                  style={isClickable ? { cursor: "pointer" } : undefined}
+                  style={isClickable ? { cursor: 'pointer' } : undefined}
                   onClick={() => {
-                    if (!isClickable) return;
+                    if (!isClickable) return
 
                     // Toggle: if already selected, unselect; otherwise select
-                    setSelectedDataKey(selectedDataKey === dataKey ? null : dataKey);
+                    setSelectedDataKey(
+                      selectedDataKey === dataKey ? null : dataKey
+                    )
                   }}
                 >
-                  {strokeVariant === "animated-dashed" && !hasSelection && <AnimatedDashedStyle />}
+                  {strokeVariant === 'animated-dashed' && !hasSelection && (
+                    <AnimatedDashedStyle />
+                  )}
                 </Line>
               </g>
-            );
+            )
           })}
         {/* ======== LOADING LINE ======== */}
         {isLoading && (
@@ -437,110 +485,140 @@ export function EvilLineChart<
         )}
         {/* ======== CHART STYLES ======== */}
         <defs>
-          {isLoading && <LoadingLinePatternStyle chartId={chartId} onShimmerExit={onShimmerExit} />}
+          {isLoading && (
+            <LoadingLinePatternStyle
+              chartId={chartId}
+              onShimmerExit={onShimmerExit}
+            />
+          )}
           {/* Shared horizontal color gradient - always rendered for stroke */}
-          <HorizontalColorGradientStyle chartConfig={chartConfig} chartId={chartId} />
+          <HorizontalColorGradientStyle
+            chartConfig={chartConfig}
+            chartId={chartId}
+          />
           {/* Glow filter for glowing lines */}
           {glowingLines.length > 0 && (
-            <GlowFilterStyle chartId={chartId} glowingLines={glowingLines as string[]} />
+            <GlowFilterStyle
+              chartId={chartId}
+              glowingLines={glowingLines as string[]}
+            />
           )}
         </defs>
       </LineChart>
     </ChartContainer>
-  );
+  )
 }
 
 // Buffer line shape - renders the last segment as dashed while the rest stays solid.
 // Renders a single <Curve> and uses a ref callback to measure the actual SVG path
 // length via getTotalLength() + getPointAtLength(), then sets stroke-dasharray
 // imperatively. Works correctly with any curve type (linear, natural, monotone, etc.).
-type CurvePoint = NonNullable<NonNullable<CurveProps["points"]>[number]>;
-type DrawableCurvePoint = CurvePoint & { x: number; y: number };
+type CurvePoint = NonNullable<NonNullable<CurveProps['points']>[number]>
+type DrawableCurvePoint = CurvePoint & { x: number; y: number }
 
-const isDrawableCurvePoint = (point: CurvePoint): point is DrawableCurvePoint => {
-  return typeof point.x === "number" && typeof point.y === "number";
-};
+const isDrawableCurvePoint = (
+  point: CurvePoint
+): point is DrawableCurvePoint => {
+  return typeof point.x === 'number' && typeof point.y === 'number'
+}
 
-const BUFFER_DASH_SIZE = 4;
-const BUFFER_GAP_SIZE = 3;
+const BUFFER_DASH_SIZE = 4
+const BUFFER_GAP_SIZE = 3
 
 /**
  * Binary-search the path to find the length at which path.x ≈ targetX.
  * Uses the browser's native getPointAtLength for exact curve measurement.
  */
-const findLengthAtX = (path: SVGPathElement, totalLength: number, targetX: number): number => {
-  let lo = 0;
-  let hi = totalLength;
+const findLengthAtX = (
+  path: SVGPathElement,
+  totalLength: number,
+  targetX: number
+): number => {
+  let lo = 0
+  let hi = totalLength
   // ~0.5px precision is more than enough for a dasharray split
   while (hi - lo > 0.5) {
-    const mid = (lo + hi) / 2;
-    const pt = path.getPointAtLength(mid);
-    if (pt.x < targetX) lo = mid;
-    else hi = mid;
+    const mid = (lo + hi) / 2
+    const pt = path.getPointAtLength(mid)
+    if (pt.x < targetX) lo = mid
+    else hi = mid
   }
-  return (lo + hi) / 2;
-};
+  return (lo + hi) / 2
+}
 
 const bufferLineShape = (props: CurveProps) => {
-  const { points, ...rest } = props;
+  const { points, ...rest } = props
 
   if (!points || points.length < 2) {
-    return <Curve {...props} />;
+    return <Curve {...props} />
   }
 
-  const drawablePoints = points.filter(isDrawableCurvePoint);
-  
+  const drawablePoints = points.filter(isDrawableCurvePoint)
+
   if (drawablePoints.length < 2) {
-    return <Curve {...props} />;
+    return <Curve {...props} />
   }
 
   // x coordinate of the second-to-last point — where solid meets dashed
-  const splitX = drawablePoints[drawablePoints.length - 2].x;
+  const splitX = drawablePoints[drawablePoints.length - 2].x
 
   // Ref callback runs synchronously during React commit (before browser paint),
   // so there's no visible flash of an un-dashed line.
   const gRef = (g: SVGGElement | null) => {
-    if (!g) return;
-    const path = g.querySelector("path");
-    if (!path) return;
+    if (!g) return
+    const path = g.querySelector('path')
+    if (!path) return
 
-    const totalLength = path.getTotalLength();
-    const solidLength = findLengthAtX(path, totalLength, splitX);
-    const lastSegmentLength = totalLength - solidLength;
+    const totalLength = path.getTotalLength()
+    const solidLength = findLengthAtX(path, totalLength, splitX)
+    const lastSegmentLength = totalLength - solidLength
 
     // Build dasharray: solid run, then repeating dash-gap for the buffer segment
-    const reps = Math.ceil(lastSegmentLength / (BUFFER_DASH_SIZE + BUFFER_GAP_SIZE)) + 1;
-    const dashedPart = Array.from({ length: reps }, () => `${BUFFER_DASH_SIZE} ${BUFFER_GAP_SIZE}`).join(" ");
+    const reps =
+      Math.ceil(lastSegmentLength / (BUFFER_DASH_SIZE + BUFFER_GAP_SIZE)) + 1
+    const dashedPart = Array.from(
+      { length: reps },
+      () => `${BUFFER_DASH_SIZE} ${BUFFER_GAP_SIZE}`
+    ).join(' ')
 
-    path.setAttribute("stroke-dasharray", `${solidLength} 0 ${dashedPart}`);
-  };
+    path.setAttribute('stroke-dasharray', `${solidLength} 0 ${dashedPart}`)
+  }
 
   return (
     <g ref={gRef}>
       <Curve {...rest} points={drawablePoints} />
     </g>
-  );
-};
+  )
+}
 
 // Returns opacity object for stroke and dot
-const getOpacity = (isClickable: boolean, selectedDataKey: string | null, dataKey: string) => {
+const getOpacity = (
+  isClickable: boolean,
+  selectedDataKey: string | null,
+  dataKey: string
+) => {
   if (!isClickable || selectedDataKey === null) {
-    return { stroke: 1, dot: 1 };
+    return { stroke: 1, dot: 1 }
   }
-  return selectedDataKey === dataKey ? { stroke: 1, dot: 1 } : { stroke: 0.3, dot: 0.3 };
-};
+  return selectedDataKey === dataKey
+    ? { stroke: 1, dot: 1 }
+    : { stroke: 0.3, dot: 0.3 }
+}
 
-const getStrokeDasharray = (enableBufferLine: boolean, strokeVariant: StrokeVariant) => {
+const getStrokeDasharray = (
+  enableBufferLine: boolean,
+  strokeVariant: StrokeVariant
+) => {
   if (enableBufferLine) {
-    return undefined;
+    return undefined
   }
 
-  if (strokeVariant === "dashed" || strokeVariant === "animated-dashed") {
-    return "5 5";
+  if (strokeVariant === 'dashed' || strokeVariant === 'animated-dashed') {
+    return '5 5'
   }
 
-  return undefined;
-};
+  return undefined
+}
 
 // Animated dashed-stroke style for the line chart
 const AnimatedDashedStyle = () => {
@@ -561,21 +639,21 @@ const AnimatedDashedStyle = () => {
         keyTimes="0;1"
       />
     </>
-  );
-};
+  )
+}
 
 // Shared horizontal color gradient (left to right) - used for stroke
 const HorizontalColorGradientStyle = ({
   chartConfig,
   chartId,
 }: {
-  chartConfig: ChartConfig;
-  chartId: string;
+  chartConfig: ChartConfig
+  chartId: string
 }) => {
   return (
     <>
       {Object.entries(chartConfig).map(([dataKey, config]) => {
-        const colorsCount = getColorsCount(config);
+        const colorsCount = getColorsCount(config)
 
         return (
           <linearGradient
@@ -604,23 +682,23 @@ const HorizontalColorGradientStyle = ({
               ))
             )}
           </linearGradient>
-        );
+        )
       })}
     </>
-  );
-};
+  )
+}
 
 // Glow filter style for glowing lines - smooth outer glow
 const GlowFilterStyle = ({
   chartId,
   glowingLines,
 }: {
-  chartId: string;
-  glowingLines: string[];
+  chartId: string
+  glowingLines: string[]
 }) => {
   return (
     <>
-      {glowingLines.map((dataKey) => (
+      {glowingLines.map(dataKey => (
         <filter
           key={`${chartId}-line-glow-${dataKey}`}
           id={`${chartId}-line-glow-${dataKey}`}
@@ -648,23 +726,26 @@ const GlowFilterStyle = ({
         </filter>
       ))}
     </>
-  );
-};
+  )
+}
 
 // Generate gradient stops with smooth easing for loading animation
 const generateEasedGradientStops = (
   steps: number = 17,
   minOpacity: number = 0.05,
-  maxOpacity: number = 0.9,
+  maxOpacity: number = 0.9
 ) => {
   return Array.from({ length: steps }, (_, i) => {
-    const t = i / (steps - 1); // 0 to 1
+    const t = i / (steps - 1) // 0 to 1
     // Sine-based bell curve easing: peaks at center (t=0.5), smooth falloff at edges
-    const eased = Math.sin(t * Math.PI) ** 2;
-    const opacity = minOpacity + eased * (maxOpacity - minOpacity);
-    return { offset: `${(t * 100).toFixed(0)}%`, opacity: Number(opacity.toFixed(3)) };
-  });
-};
+    const eased = Math.sin(t * Math.PI) ** 2
+    const opacity = minOpacity + eased * (maxOpacity - minOpacity)
+    return {
+      offset: `${(t * 100).toFixed(0)}%`,
+      opacity: Number(opacity.toFixed(3)),
+    }
+  })
+}
 
 /**
  * Hook to manage loading data with pixel-perfect shimmer synchronization.
@@ -678,23 +759,23 @@ const generateEasedGradientStops = (
  * while the invisible portion continues animating.
  */
 export function useLoadingData(isLoading: boolean, loadingPoints: number = 14) {
-  const [loadingDataKey, setLoadingDataKey] = useState(false);
+  const [loadingDataKey, setLoadingDataKey] = useState(false)
 
   // Callback fired by motion.dev when shimmer exits visible area
   const onShimmerExit = useCallback(() => {
     if (isLoading) {
-      setLoadingDataKey((prev) => !prev);
+      setLoadingDataKey(prev => !prev)
     }
-  }, [isLoading]);
+  }, [isLoading])
 
   const loadingData = useMemo(
     () => getLoadingData(loadingPoints),
     // loadingDataKey toggle triggers re-computation when shimmer exits
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loadingPoints, loadingDataKey],
-  );
+    [loadingPoints, loadingDataKey]
+  )
 
-  return { loadingData, onShimmerExit };
+  return { loadingData, onShimmerExit }
 }
 
 /**
@@ -717,28 +798,39 @@ const LoadingLinePatternStyle = ({
   chartId,
   onShimmerExit,
 }: {
-  chartId: string;
-  onShimmerExit: () => void;
+  chartId: string
+  onShimmerExit: () => void
 }) => {
-  const gradientStops = generateEasedGradientStops();
+  const gradientStops = generateEasedGradientStops()
 
   // Pattern width needs to accommodate: 1 (left buffer) + 1 (visible) + 1 (right buffer) = 3
-  const patternWidth = 3;
+  const patternWidth = 3
 
   // Animation goes from -1 (left of visible) to 2 (right of visible)
   // Total travel distance = 3, matching pattern width
-  const startX = -1;
-  const endX = 2;
+  const startX = -1
+  const endX = 2
 
   // Track last x value to detect threshold crossing
-  const lastXRef = useRef(startX);
+  const lastXRef = useRef(startX)
 
   return (
     <>
       {/* Gradient for smooth fade: edges dim, middle bright for sweep effect */}
-      <linearGradient id={`${chartId}-loading-mask-gradient`} x1="0" y1="0" x2="1" y2="0">
+      <linearGradient
+        id={`${chartId}-loading-mask-gradient`}
+        x1="0"
+        y1="0"
+        x2="1"
+        y2="0"
+      >
         {gradientStops.map(({ offset, opacity }) => (
-          <stop key={offset} offset={offset} stopColor="white" stopOpacity={opacity} />
+          <stop
+            key={offset}
+            offset={offset}
+            stopColor="white"
+            stopOpacity={opacity}
+          />
         ))}
       </linearGradient>
       <pattern
@@ -761,29 +853,33 @@ const LoadingLinePatternStyle = ({
           animate={{ x: endX }}
           transition={{
             duration: LOADING_ANIMATION_DURATION / 1000,
-            ease: "linear",
+            ease: 'linear',
             repeat: Infinity,
-            repeatType: "loop",
+            repeatType: 'loop',
           }}
           // Use onUpdate to fire callback at precise exit point
-          onUpdate={(latest) => {
-            const xValue = typeof latest.x === "number" ? latest.x : startX;
-            const lastX = lastXRef.current;
+          onUpdate={latest => {
+            const xValue = typeof latest.x === 'number' ? latest.x : startX
+            const lastX = lastXRef.current
 
             // Fire when crossing the exit threshold (x >= 1 means shimmer fully exited right)
             if (xValue >= 1 && lastX < 1) {
-              onShimmerExit();
+              onShimmerExit()
             }
 
             // Update tracked value
-            lastXRef.current = xValue;
+            lastXRef.current = xValue
           }}
         />
       </pattern>
       {/* Masking */}
       <mask id={`${chartId}-loading-mask`} maskUnits="userSpaceOnUse">
-        <rect width="100%" height="100%" fill={`url(#${chartId}-loading-mask-pattern)`} />
+        <rect
+          width="100%"
+          height="100%"
+          fill={`url(#${chartId}-loading-mask-pattern)`}
+        />
       </mask>
     </>
-  );
-};
+  )
+}

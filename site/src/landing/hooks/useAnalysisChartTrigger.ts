@@ -1,4 +1,9 @@
-import { useEffect, type Dispatch, type RefObject, type SetStateAction } from 'react'
+import {
+  useEffect,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from 'react'
 import {
   momentumComparisonTargetData,
   momentumComparisonZeroData,
@@ -31,7 +36,9 @@ export function useAnalysisChartTrigger({
     setAnalysisChartData(momentumComparisonZeroData)
 
     let hasAnimated = false
-    const chartShell = section.querySelector<HTMLElement>('.analysis-chart-shell')
+    const chartShell = section.querySelector<HTMLElement>(
+      '.analysis-chart-shell'
+    )
     const observedElement = chartShell ?? section
 
     const observer = new IntersectionObserver(

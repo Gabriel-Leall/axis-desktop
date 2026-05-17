@@ -99,7 +99,9 @@ export function WidgetStoryPreview({
                 {index === 0 ? (
                   <span className="widget-story-habit-streak">
                     <span className="widget-story-habit-streak-old">
-                      {t('landing.preview.habits.streak', { count: habit.streak })}
+                      {t('landing.preview.habits.streak', {
+                        count: habit.streak,
+                      })}
                     </span>
                     <span className="widget-story-habit-streak-new">
                       {t('landing.preview.habits.streak', {
@@ -108,7 +110,11 @@ export function WidgetStoryPreview({
                     </span>
                   </span>
                 ) : (
-                  <span>{t('landing.preview.habits.streak', { count: habit.streak })}</span>
+                  <span>
+                    {t('landing.preview.habits.streak', {
+                      count: habit.streak,
+                    })}
+                  </span>
                 )}
               </div>
               <span
@@ -159,10 +165,10 @@ export function WidgetStoryPreview({
                 </span>
               </span>
             </div>
-        </div>
-        <div className="widget-story-focus-task">
-          {t('landing.preview.pomodoro.task')}
-        </div>
+          </div>
+          <div className="widget-story-focus-task">
+            {t('landing.preview.pomodoro.task')}
+          </div>
           <div className="widget-story-focus-progress" aria-hidden="true">
             <span />
           </div>

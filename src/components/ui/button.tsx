@@ -36,9 +36,9 @@ const buttonVariants = cva(
   }
 )
 
-import { motion } from 'motion/react'
+import { LazyMotion, domAnimation, m } from 'motion/react'
 
-const MotionSlot = motion.create(Slot)
+const MotionSlot = m.create(Slot)
 
 function Button({
   className,
@@ -50,17 +50,19 @@ function Button({
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
   }) {
-  const Comp = asChild ? MotionSlot : motion.button
+  const Comp = asChild ? MotionSlot : m.button
 
   return (
-    <Comp
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      whileHover={{ scale: 1.01 }}
-      whileTap={{ scale: 0.97 }}
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      {...(props as any)}
-    />
+    <LazyMotion features={domAnimation}>
+      <Comp
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size, className }))}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.97 }}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        {...(props as any)}
+      />
+    </LazyMotion>
   )
 }
 

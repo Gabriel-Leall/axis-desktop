@@ -29,12 +29,21 @@ export const Material = ({
   style,
   onClick,
 }: MaterialProps) => {
+  const activateFromKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!onClick || (event.key !== 'Enter' && event.key !== ' ')) return
+    event.preventDefault()
+    onClick(event as unknown as React.MouseEvent<HTMLDivElement>)
+  }
+
   return (
     <div
       className={clsx('bg-background-100', types[type], className)}
       ref={ref}
       style={style}
       onClick={onClick}
+      onKeyDown={onClick ? activateFromKeyboard : undefined}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
     >
       {children}
     </div>

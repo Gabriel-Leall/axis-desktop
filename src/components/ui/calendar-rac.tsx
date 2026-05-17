@@ -27,6 +27,8 @@ type CalendarProps = ComponentProps<typeof CalendarRac> & BaseCalendarProps
 type RangeCalendarProps = ComponentProps<typeof RangeCalendarRac> &
   BaseCalendarProps
 
+const EMPTY_TASK_DATES: string[] = []
+
 const CalendarHeader = ({ compact = false }: { compact?: boolean }) => (
   <header
     className={cn(
@@ -63,7 +65,7 @@ const CalendarHeader = ({ compact = false }: { compact?: boolean }) => (
 
 const CalendarGridComponent = ({
   isRange = false,
-  taskDates = [],
+  taskDates = EMPTY_TASK_DATES,
   compact = false,
 }: {
   isRange?: boolean

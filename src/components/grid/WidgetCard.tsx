@@ -26,6 +26,18 @@ export function WidgetCard({
   contentClassName,
   onClick,
 }: WidgetCardProps) {
+  const activateCard = () => {
+    onClick?.()
+  }
+
+  const activateCardFromKeyboard = (
+    event: React.KeyboardEvent<HTMLElement>
+  ) => {
+    if (!onClick || (event.key !== 'Enter' && event.key !== ' ')) return
+    event.preventDefault()
+    onClick()
+  }
+
   return (
     <section
       className={cn(
@@ -33,7 +45,10 @@ export function WidgetCard({
         onClick && 'cursor-pointer',
         className
       )}
-      onClick={onClick}
+      onClick={onClick ? activateCard : undefined}
+      onKeyDown={onClick ? activateCardFromKeyboard : undefined}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
     >
       <div
         className="widget-drag-handle flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2"

@@ -1,4 +1,12 @@
-import { CalendarDays, CheckSquare, Download, Flame, FolderOpen, Play, Timer } from 'lucide-react'
+import {
+  CalendarDays,
+  CheckSquare,
+  Download,
+  Flame,
+  FolderOpen,
+  Play,
+  Timer,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   downloadUrl,
@@ -29,7 +37,10 @@ export function HeroSection() {
               {t('landing.hero.primaryCta')}
             </a>
           </div>
-          <div className="hero-preview" aria-label={t('landing.hero.preview.ariaLabel')}>
+          <div
+            className="hero-preview"
+            aria-label={t('landing.hero.preview.ariaLabel')}
+          >
             <div className="hero-preview-window">
               <div className="hero-preview-toolbar">
                 <div className="hero-preview-toolbar-brand">
@@ -39,7 +50,10 @@ export function HeroSection() {
                 <span className="hero-preview-toolbar-clock">
                   {t('landing.hero.preview.clock')}
                 </span>
-                <div className="hero-preview-toolbar-controls" aria-hidden="true">
+                <div
+                  className="hero-preview-toolbar-controls"
+                  aria-hidden="true"
+                >
                   <span />
                   <span />
                   <span />
@@ -124,7 +138,9 @@ export function HeroSection() {
                       </div>
                       <div className="hero-calendar">
                         <div className="hero-calendar-head">
-                          <span>{t('landing.hero.preview.calendar.month')}</span>
+                          <span>
+                            {t('landing.hero.preview.calendar.month')}
+                          </span>
                         </div>
                         <div className="hero-calendar-weekdays">
                           {calendarWeekdays.map(day => (
@@ -158,8 +174,13 @@ export function HeroSection() {
                       <div className="hero-task-list">
                         {heroPreviewTasks.map(task => (
                           <div key={task.title} className="hero-task-row">
-                            <span className="hero-task-check" aria-hidden="true" />
-                            <span className="hero-task-title">{task.title}</span>
+                            <span
+                              className="hero-task-check"
+                              aria-hidden="true"
+                            />
+                            <span className="hero-task-title">
+                              {task.title}
+                            </span>
                             <span
                               className={`hero-task-badge ${
                                 task.level === t('landing.preview.levels.high')
@@ -187,9 +208,14 @@ export function HeroSection() {
                           <div key={habit} className="hero-habit-row">
                             <div>
                               <strong>{habit}</strong>
-                              <span>{t('landing.hero.preview.protocol.streak')}</span>
+                              <span>
+                                {t('landing.hero.preview.protocol.streak')}
+                              </span>
                             </div>
-                            <span className="hero-habit-mark" aria-hidden="true">
+                            <span
+                              className="hero-habit-mark"
+                              aria-hidden="true"
+                            >
                               <Flame />
                             </span>
                           </div>
@@ -206,4 +232,3 @@ export function HeroSection() {
     </section>
   )
 }
-

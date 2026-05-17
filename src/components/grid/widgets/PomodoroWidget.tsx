@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { Timer, Play, Pause, SkipForward, RotateCcw, Link2 } from 'lucide-react'
-import { motion } from 'motion/react'
+import { LazyMotion, domAnimation, m } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { WidgetCard } from '../WidgetCard'
 import { usePomodoroStore } from '@/store/pomodoro-store'
@@ -92,6 +92,7 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
   // Fire notification when session completes (type changes or cycles increment)
   const notifyRef = useRef(false)
   useEffect(() => {
+    let resetNotificationTimer: ReturnType<typeof setTimeout> | undefined
     const justCompleted =
       prevTimerState.current === 'running' &&
       timerState !== 'running' &&
@@ -112,13 +113,19 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
       ).catch(() => {
         // Keep timer flow resilient if native notification fails.
       })
-      setTimeout(() => {
+      resetNotificationTimer = setTimeout(() => {
         notifyRef.current = false
       }, 2000)
     }
 
     prevTimerState.current = timerState
     prevType.current = currentType
+
+    return () => {
+      if (resetNotificationTimer) {
+        clearTimeout(resetNotificationTimer)
+      }
+    }
   }, [timerState, currentType, settings.sound_notifications, t])
 
   const isRunning = timerState === 'running'
@@ -139,93 +146,95 @@ export function PomodoroWidget({ onNavigateToPomodoro }: PomodoroWidgetProps) {
       icon={Timer}
       onClick={onNavigateToPomodoro}
     >
-      <div className="flex h-full flex-col items-center justify-center">
-        {/* Cycle dots */}
-        <div className="mb-2 flex items-center justify-center">
-          <CycleDots
-            completed={cyclesCompleted}
-            total={cycleTotal}
-            compact
-            ariaLabel={cycleAriaLabel}
-          />
-        </div>
+      <LazyMotion features={domAnimation}>
+        <div className="flex h-full flex-col items-center justify-center">
+          {/* Cycle dots */}
+          <div className="mb-2 flex items-center justify-center">
+            <CycleDots
+              completed={cyclesCompleted}
+              total={cycleTotal}
+              compact
+              ariaLabel={cycleAriaLabel}
+            />
+          </div>
 
-        {/* Linked task */}
-        <button
-          type="button"
-          onClick={e => {
-            e.stopPropagation()
-          }}
-          className="flex items-center gap-1.5 rounded-full bg-muted px-4 py-1.5 transition-colors hover:bg-accent"
-        >
-          <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className="max-w-[140px] truncate text-sm text-muted-foreground transition-colors hover:text-foreground">
-            {linkedTask
-              ? linkedTask.title
-              : t('widgets.pomodoro.noTaskSelected')}
-          </span>
-        </button>
-
-        {/* Timer display */}
-        <div className="my-6 flex items-center justify-center">
-          <span className="text-foreground tabular-nums tracking-tight text-6xl font-bold">
-            {formatTime(timeRemaining)}
-          </span>
-        </div>
-
-        {/* Controls */}
-        <div className="flex w-full items-center justify-center gap-6">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+          {/* Linked task */}
+          <button
             type="button"
             onClick={e => {
               e.stopPropagation()
-              reset()
             }}
-            aria-label={t('widgets.pomodoro.resetAria')}
-            className="p-2 text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center gap-1.5 rounded-full bg-muted px-4 py-1.5 transition-colors hover:bg-accent"
           >
-            <RotateCcw className="size-5" />
-          </motion.button>
+            <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="max-w-[140px] truncate text-sm text-muted-foreground transition-colors hover:text-foreground">
+              {linkedTask
+                ? linkedTask.title
+                : t('widgets.pomodoro.noTaskSelected')}
+            </span>
+          </button>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            type="button"
-            onClick={e => {
-              e.stopPropagation()
-              handlePlayPause()
-            }}
-            aria-label={
-              isRunning
-                ? t('widgets.pomodoro.pauseAria')
-                : t('widgets.pomodoro.startAria')
-            }
-            className="flex size-16 items-center justify-center rounded-full bg-accent text-foreground shadow-lg transition-all hover:bg-accent/90"
-          >
-            {isRunning ? (
-              <Pause className="size-7" fill="currentColor" />
-            ) : (
-              <Play className="size-7 translate-x-0.5" fill="currentColor" />
-            )}
-          </motion.button>
+          {/* Timer display */}
+          <div className="my-6 flex items-center justify-center">
+            <span className="text-foreground tabular-nums tracking-tight text-6xl font-bold">
+              {formatTime(timeRemaining)}
+            </span>
+          </div>
 
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            type="button"
-            onClick={e => {
-              e.stopPropagation()
-              void skip().catch(console.error)
-            }}
-            aria-label={t('widgets.pomodoro.skipAria')}
-            className="p-2 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <SkipForward className="size-5" />
-          </motion.button>
+          {/* Controls */}
+          <div className="flex w-full items-center justify-center gap-6">
+            <m.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              type="button"
+              onClick={e => {
+                e.stopPropagation()
+                reset()
+              }}
+              aria-label={t('widgets.pomodoro.resetAria')}
+              className="p-2 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <RotateCcw className="size-5" />
+            </m.button>
+
+            <m.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              type="button"
+              onClick={e => {
+                e.stopPropagation()
+                handlePlayPause()
+              }}
+              aria-label={
+                isRunning
+                  ? t('widgets.pomodoro.pauseAria')
+                  : t('widgets.pomodoro.startAria')
+              }
+              className="flex size-16 items-center justify-center rounded-full bg-accent text-foreground shadow-lg transition-all hover:bg-accent/90"
+            >
+              {isRunning ? (
+                <Pause className="size-7" fill="currentColor" />
+              ) : (
+                <Play className="size-7 translate-x-0.5" fill="currentColor" />
+              )}
+            </m.button>
+
+            <m.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              type="button"
+              onClick={e => {
+                e.stopPropagation()
+                void skip().catch(console.error)
+              }}
+              aria-label={t('widgets.pomodoro.skipAria')}
+              className="p-2 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <SkipForward className="size-5" />
+            </m.button>
+          </div>
         </div>
-      </div>
+      </LazyMotion>
     </WidgetCard>
   )
 }
