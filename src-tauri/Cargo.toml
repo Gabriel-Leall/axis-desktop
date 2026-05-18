@@ -1,6 +1,6 @@
 [package]
 name = "axis-desktop"
-version = "0.1.4"
+version = "0.1.5"
 description = "Axis application"
 authors = ["Gabriel Leall"]
 edition = "2021"

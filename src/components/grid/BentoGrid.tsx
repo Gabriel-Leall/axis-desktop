@@ -8,23 +8,25 @@ import type { Layout, LayoutItem } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import './grid.css'
 
-import { useGridStore, getDefaultVisibility } from '@/store/grid-store'
+import {
+  useGridStore,
+  getDefaultLayout,
+  getDefaultVisibility,
+  WIDGET_REGISTRY,
+} from '@/store/grid-store'
 import { saveGridLayout, loadGridLayout } from '@/services/grid-layout-db'
 import { logger } from '@/lib/logger'
 
 import {
-  ClockWidget,
   CalendarWidget,
   NotesWidget as BrainDumpWidget,
-  SystemInfoWidget,
-  QuickActionsWidget,
-  RecentFilesWidget,
   TasksWidget,
   PomodoroWidget,
   HabitWidget,
-  KanbanWidget,
+  GitHubWidget,
 } from './widgets'
 import { useUIStore } from '@/store/ui-store'
+import { useGitHubStore } from '@/store/github-store'
 
 /**
  * Wrapper that passes navigation to TasksWidget.
@@ -63,23 +65,19 @@ function BrainDumpWidgetConnected() {
   )
 }
 
-function KanbanWidgetConnected() {
+function GitHubWidgetConnected() {
   const navigateTo = useUIStore(state => state.navigateTo)
-  return <KanbanWidget onOpenKanban={() => navigateTo('kanban')} />
+  return <GitHubWidget onNavigateToGitHub={() => navigateTo('github')} />
 }
 
 /** Map widget ID → React component */
 const WIDGET_COMPONENTS: Record<string, React.FC> = {
-  clock: ClockWidget,
   calendar: CalendarWidget,
   notes: BrainDumpWidgetConnected,
-  'system-info': SystemInfoWidget,
-  'quick-actions': QuickActionsWidget,
-  'recent-files': RecentFilesWidget,
   tasks: TasksWidgetConnected,
   pomodoro: PomodoroWidget,
+  github: GitHubWidgetConnected,
   habits: HabitWidgetConnected,
-  kanban: KanbanWidgetConnected,
 }
 
 /** Grid configuration */
@@ -87,6 +85,34 @@ const GRID_COLS = 12
 const ROW_HEIGHT = 80
 const GRID_MARGIN: [number, number] = [12, 12]
 const GRID_PADDING: [number, number] = [16, 16]
+const VALID_WIDGET_IDS = new Set(WIDGET_REGISTRY.map(widget => widget.id))
+const WIDGET_CONSTRAINTS = new Map(
+  WIDGET_REGISTRY.map(widget => [
+    widget.id,
+    {
+      minW: widget.minW,
+      minH: widget.minH,
+    },
+  ])
+)
+
+function normalizeLayout(layout: LayoutItem[]): LayoutItem[] {
+  return layout
+    .filter(item => VALID_WIDGET_IDS.has(item.i))
+    .map(item => {
+      const constraints = WIDGET_CONSTRAINTS.get(item.i)
+      const minW = constraints?.minW
+      const minH = constraints?.minH
+
+      return {
+        ...item,
+        minW,
+        minH,
+        w: minW ? Math.max(item.w, minW) : item.w,
+        h: minH ? Math.max(item.h, minH) : item.h,
+      }
+    })
+}
 
 /**
  * BentoGrid — draggable/resizable widget dashboard.
@@ -102,59 +128,89 @@ export function BentoGrid() {
   const layout = useGridStore(state => state.layout)
   const widgetVisibility = useGridStore(state => state.widgetVisibility)
   const loaded = useGridStore(state => state.loaded)
+  const profileId = useGridStore(state => state.profileId)
   const setLayout = useGridStore(state => state.setLayout)
   const setWidgetVisibility = useGridStore(state => state.setWidgetVisibility)
   const setLoaded = useGridStore(state => state.setLoaded)
+  const setProfileId = useGridStore(state => state.setProfileId)
+  const githubUser = useGitHubStore(state => state.user)
+
+  const activeProfileId = githubUser?.login
+    ? `github:${githubUser.login}`
+    : 'guest'
 
   // Debounce ref for saving
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Load layout from SQLite on mount
+  // Load the layout for the active profile. Guest and authenticated users keep
+  // independent dashboard arrangements.
   useEffect(() => {
+    setLoaded(false)
+    setProfileId(activeProfileId)
+    setLayout(getDefaultLayout())
+    setWidgetVisibility(getDefaultVisibility())
+
+    let cancelled = false
+
     const hydrate = async () => {
       try {
-        const saved = await loadGridLayout()
+        const saved = await loadGridLayout(activeProfileId)
+        if (cancelled) return
+
         if (saved) {
           const parsedLayout = JSON.parse(saved.layoutJson) as LayoutItem[]
           const parsedVisibility = JSON.parse(saved.widgetVisibility) as Record<
             string,
             boolean
           >
+          const sanitizedLayout = normalizeLayout(parsedLayout)
+          const sanitizedVisibility = Object.fromEntries(
+            Object.entries(parsedVisibility).filter(([widgetId]) =>
+              VALID_WIDGET_IDS.has(widgetId)
+            )
+          )
 
           // Only use saved data if it has content
-          if (parsedLayout.length > 0) {
-            setLayout(parsedLayout)
+          if (sanitizedLayout.length > 0) {
+            setLayout(sanitizedLayout)
           }
-          if (Object.keys(parsedVisibility).length > 0) {
+          if (Object.keys(sanitizedVisibility).length > 0) {
             // Merge with defaults — new widgets get visible by default
             const defaults = getDefaultVisibility()
-            setWidgetVisibility({ ...defaults, ...parsedVisibility })
+            setWidgetVisibility({ ...defaults, ...sanitizedVisibility })
           }
         }
       } catch (error) {
         logger.warn(`Failed to hydrate grid layout: ${String(error)}`)
         // Fall through to defaults already in the store
       } finally {
-        setLoaded(true)
+        if (!cancelled) {
+          setLoaded(true)
+        }
       }
     }
 
     hydrate()
-  }, [setLayout, setWidgetVisibility, setLoaded])
+    return () => {
+      cancelled = true
+    }
+  }, [activeProfileId, setLayout, setWidgetVisibility, setLoaded, setProfileId])
 
   /**
    * Debounced save to SQLite when layout changes via drag/resize.
    */
   const handleLayoutChange = (newLayout: Layout) => {
+    const normalizedLayout = normalizeLayout([...newLayout])
+
     // Layout is readonly, spread to mutable array for the store
-    setLayout([...newLayout])
+    setLayout(normalizedLayout)
 
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
     }
     saveTimerRef.current = setTimeout(() => {
       const { widgetVisibility: vis } = useGridStore.getState()
-      saveGridLayout([...newLayout], vis)
+      saveGridLayout(normalizedLayout, vis, profileId)
     }, 500)
   }
 
@@ -176,7 +232,7 @@ export function BentoGrid() {
     }
     saveTimerRef.current = setTimeout(() => {
       const { layout: currentLayout } = useGridStore.getState()
-      saveGridLayout(currentLayout, widgetVisibility)
+      saveGridLayout(currentLayout, widgetVisibility, profileId)
     }, 300)
 
     return () => {
@@ -184,11 +240,11 @@ export function BentoGrid() {
         clearTimeout(saveTimerRef.current)
       }
     }
-  }, [widgetVisibility, loaded])
+  }, [widgetVisibility, loaded, profileId])
 
   // Filter layout to only visible widgets
   const visibleLayout = layout.filter(
-    item => widgetVisibility[item.i] !== false
+    item => VALID_WIDGET_IDS.has(item.i) && widgetVisibility[item.i] !== false
   )
 
   // Don't render grid until width is measured & data is loaded
@@ -231,7 +287,7 @@ export function BentoGrid() {
             }}
             resizeConfig={{
               enabled: true,
-              handles: ['se'],
+              handles: ['nw', 'ne', 'sw', 'se'],
             }}
             compactor={verticalCompactor}
             onLayoutChange={handleLayoutChange}

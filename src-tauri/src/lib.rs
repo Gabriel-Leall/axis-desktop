@@ -21,16 +21,12 @@ pub use types::DEFAULT_QUICK_PANE_SHORTCUT;
 pub fn run() {
     let builder = bindings::generate_bindings();
 
-    // Export TypeScript bindings in debug builds
-    #[cfg(debug_assertions)]
-    bindings::export_ts_bindings();
-
     // Build with common plugins
     let mut app_builder = tauri::Builder::default();
 
     // Single instance plugin must be registered FIRST
     // When user tries to open a second instance, focus the existing window instead
-    #[cfg(desktop)]
+    #[cfg(all(desktop, not(debug_assertions)))]
     {
         app_builder = app_builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {

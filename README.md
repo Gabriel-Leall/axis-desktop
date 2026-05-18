@@ -32,14 +32,14 @@ Axis Desktop is a cross-platform personal productivity desktop app built with **
 
 ## Tech Stack
 
-| Layer | Technologies |
-| --- | --- |
-| Frontend | React 19, TypeScript, Vite 8 |
-| UI | Tailwind CSS 4, shadcn/ui 4, Radix UI, Lucide |
-| State | Zustand 5, TanStack Query 5 |
-| Motion and visuals | Motion, GSAP, Recharts, React Grid Layout |
-| Desktop and backend | Tauri v2, Rust, SQLx, SQLite |
-| Tooling | Bun, ESLint, Prettier, ast-grep, Vitest |
+| Layer               | Technologies                                  |
+| ------------------- | --------------------------------------------- |
+| Frontend            | React 19, TypeScript, Vite 8                  |
+| UI                  | Tailwind CSS 4, shadcn/ui 4, Radix UI, Lucide |
+| State               | Zustand 5, TanStack Query 5                   |
+| Motion and visuals  | Motion, GSAP, Recharts, React Grid Layout     |
+| Desktop and backend | Tauri v2, Rust, SQLx, SQLite                  |
+| Tooling             | Bun, ESLint, Prettier, ast-grep, Vitest       |
 
 ## Development
 

@@ -4,6 +4,8 @@ node_modules/
 # Build outputs
 dist/
 build/
+site/
+.worktrees/
 
 # Tauri build artifacts
 src-tauri/target/

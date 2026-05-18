@@ -13,6 +13,7 @@ import { LinuxTitleBar } from './LinuxTitleBar'
 interface TitleBarProps {
   className?: string
   title?: string
+  showClock?: boolean
   /**
    * Force a specific platform for development/testing.
    * Only works in development builds.
@@ -30,7 +31,12 @@ interface TitleBarProps {
  *
  * Use `forcePlatform` prop in development to test other platform layouts.
  */
-export function TitleBar({ className, title, forcePlatform }: TitleBarProps) {
+export function TitleBar({
+  className,
+  title,
+  showClock = true,
+  forcePlatform,
+}: TitleBarProps) {
   const { t } = useTranslation()
   const displayTitle = title ?? t('titlebar.default')
   const detectedPlatform = usePlatform()
@@ -61,7 +67,7 @@ export function TitleBar({ className, title, forcePlatform }: TitleBarProps) {
         </div>
 
         {/* Center - Title */}
-        <TitleBarTitle title={displayTitle} />
+        <TitleBarTitle title={displayTitle} showClock={showClock} />
 
         {/* Right side - Actions + Window Controls */}
         <div className="flex items-center">
@@ -89,7 +95,7 @@ export function TitleBar({ className, title, forcePlatform }: TitleBarProps) {
       </div>
 
       {/* Center - Title */}
-      <TitleBarTitle title={displayTitle} />
+      <TitleBarTitle title={displayTitle} showClock={showClock} />
 
       {/* Right side - Actions */}
       <div className="flex items-center pr-2">

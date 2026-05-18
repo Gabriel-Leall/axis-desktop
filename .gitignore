@@ -31,6 +31,13 @@ DESIGN
 favicon_io.zip
 ui-changes.md
 
+# Bon-chan deferred feature
+.codex-pet-runs/
+src/assets/bon-chan.json
+src/lib/bon-chan.ts
+src/lib/bon-chan.test.ts
+src/components/bon-chan/
+
 # Graphify knowledge graph output
 graphify-out/
 src/graphify-out/

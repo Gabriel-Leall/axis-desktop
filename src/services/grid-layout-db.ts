@@ -40,12 +40,15 @@ export interface GridLayoutData {
   widgetVisibility: string
 }
 
+const DEFAULT_PROFILE_ID = 'guest'
+
 /**
  * Saves the grid layout and widget visibility to SQLite.
  */
 export async function saveGridLayout(
   layout: LayoutItem[],
-  widgetVisibility: Record<string, boolean>
+  widgetVisibility: Record<string, boolean>,
+  profileId = DEFAULT_PROFILE_ID
 ): Promise<void> {
   try {
     const db = await getDb()
@@ -54,11 +57,11 @@ export async function saveGridLayout(
 
     await db.execute(
       `INSERT INTO grid_layout (id, layout_json, widget_visibility)
-       VALUES ('default', $1, $2)
+       VALUES ($1, $2, $3)
        ON CONFLICT(id) DO UPDATE SET
          layout_json = excluded.layout_json,
          widget_visibility = excluded.widget_visibility`,
-      [layoutJson, visibilityJson]
+      [profileId, layoutJson, visibilityJson]
     )
 
     logger.debug('Grid layout saved to SQLite')
@@ -71,14 +74,16 @@ export async function saveGridLayout(
  * Loads the grid layout and widget visibility from SQLite.
  * Returns null if no saved layout exists.
  */
-export async function loadGridLayout(): Promise<GridLayoutData | null> {
+export async function loadGridLayout(
+  profileId = DEFAULT_PROFILE_ID
+): Promise<GridLayoutData | null> {
   try {
     const db = await getDb()
 
     const rows = await db.select<
       { layout_json: string; widget_visibility: string }[]
     >('SELECT layout_json, widget_visibility FROM grid_layout WHERE id = $1', [
-      'default',
+      profileId,
     ])
 
     if (rows.length === 0) {

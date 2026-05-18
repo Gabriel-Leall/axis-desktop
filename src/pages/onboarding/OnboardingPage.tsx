@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Check, Loader2, ArrowRight } from 'lucide-react'
+import { Check, Loader2, ArrowRight, ShieldCheck } from 'lucide-react'
 import { useOnboardingStore } from '@/store/onboarding-store'
 import { useHabitsStore } from '@/store/habits-store'
 import { useTasksStore } from '@/store/tasks-store'
 import { useGitHubStore } from '@/store/github-store'
 import { TitleBar } from '@/components/titlebar/TitleBar'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 const GithubIcon = ({ className }: { className?: string }) => (
   <svg
@@ -25,7 +35,13 @@ const GithubIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-type Step = 'obstacle' | 'goal' | 'loading' | 'login' | 'done'
+type Step =
+  | 'obstacle'
+  | 'goal'
+  | 'loading'
+  | 'login'
+  | 'done'
+  | 'projectLoading'
 
 const OBSTACLES = [
   {
@@ -66,6 +82,7 @@ const GOALS = [
 export function OnboardingPage() {
   const [step, setStep] = useState<Step>('obstacle')
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null)
+  const [skipConfirmOpen, setSkipConfirmOpen] = useState(false)
 
   const completeOnboarding = useOnboardingStore(
     state => state.completeOnboarding
@@ -80,7 +97,7 @@ export function OnboardingPage() {
     if (step === 'loading') {
       const timer = setTimeout(() => {
         setStep('login')
-      }, 2000)
+      }, 650)
       return () => clearTimeout(timer)
     }
   }, [step])
@@ -93,54 +110,136 @@ export function OnboardingPage() {
   }
 
   const handleFinish = async () => {
+    setStep('projectLoading')
+
     // Populate data based on the chosen goal
     try {
+      const addDefaultHabit = async (habit: Parameters<typeof addHabit>[0]) => {
+        const exists = useHabitsStore
+          .getState()
+          .habits.some(
+            existing =>
+              existing.name.trim().toLowerCase() ===
+              habit.name.trim().toLowerCase()
+          )
+        if (!exists) {
+          await addHabit(habit)
+        }
+      }
+
+      const addDefaultTask = async (
+        title: string,
+        options?: Parameters<typeof addTask>[1]
+      ) => {
+        const exists = useTasksStore
+          .getState()
+          .tasks.some(
+            existing =>
+              existing.title.trim().toLowerCase() === title.trim().toLowerCase()
+          )
+        if (!exists) {
+          await addTask(title, options)
+        }
+      }
+
       if (selectedGoal === 'morning') {
-        await addHabit({
-          name: 'Beber água',
-          color: '#3b82f6',
-          frequency: 'daily',
-        })
-        await addHabit({
-          name: 'Ler 10 páginas',
-          color: '#8b5cf6',
-          frequency: 'daily',
-        })
-        await addTask('Planejar meu dia', { priority: 'high' })
+        await Promise.all([
+          addDefaultHabit({
+            name: 'Beber água',
+            color: '#3b82f6',
+            frequency: 'daily',
+          }),
+          addDefaultHabit({
+            name: 'Ler 10 páginas',
+            color: '#8b5cf6',
+            frequency: 'daily',
+          }),
+          addDefaultHabit({
+            name: 'Alongamento matinal',
+            color: '#10b981',
+            frequency: 'daily',
+          }),
+          addDefaultTask('Planejar meu dia', { priority: 'high' }),
+          addDefaultTask('Definir 3 prioridades do dia', {
+            priority: 'high',
+          }),
+          addDefaultTask('Revisar agenda da manhã', {
+            priority: 'medium',
+          }),
+        ])
       } else if (selectedGoal === 'focus') {
-        await addHabit({
-          name: '1 hora sem celular',
-          color: '#ef4444',
-          frequency: 'daily',
-        })
-        await addTask('Sessão de trabalho profundo (90min)', {
-          priority: 'high',
-        })
+        await Promise.all([
+          addDefaultHabit({
+            name: '1 hora sem celular',
+            color: '#ef4444',
+            frequency: 'daily',
+          }),
+          addDefaultHabit({
+            name: 'Bloquear notificações',
+            color: '#f97316',
+            frequency: 'daily',
+          }),
+          addDefaultTask('Sessão de trabalho profundo (90min)', {
+            priority: 'high',
+          }),
+          addDefaultTask('Preparar ambiente de foco', {
+            priority: 'medium',
+          }),
+          addDefaultTask('Registrar distrações do dia', {
+            priority: 'medium',
+          }),
+        ])
       } else if (selectedGoal === 'planning') {
-        await addHabit({
-          name: 'Revisão do dia',
-          color: '#10b981',
-          frequency: 'daily',
-        })
-        await addTask('Revisão Semanal de Metas', { priority: 'high' })
+        await Promise.all([
+          addDefaultHabit({
+            name: 'Revisão do dia',
+            color: '#10b981',
+            frequency: 'daily',
+          }),
+          addDefaultHabit({
+            name: 'Organizar inbox',
+            color: '#06b6d4',
+            frequency: 'daily',
+          }),
+          addDefaultTask('Revisão Semanal de Metas', { priority: 'high' }),
+          addDefaultTask('Atualizar lista de projetos', {
+            priority: 'medium',
+          }),
+          addDefaultTask('Escolher foco da semana', { priority: 'high' }),
+        ])
       } else {
         // Fallback or generic defaults
-        await addHabit({
-          name: 'Hábitos fundamentais',
-          color: '#f59e0b',
-          frequency: 'daily',
-        })
+        await Promise.all([
+          addDefaultHabit({
+            name: 'Hábitos fundamentais',
+            color: '#f59e0b',
+            frequency: 'daily',
+          }),
+          addDefaultTask('Organizar meu dashboard', {
+            priority: 'medium',
+          }),
+        ])
       }
     } catch (e) {
       console.error('Failed to populate default data', e)
     }
 
-    completeOnboarding()
+    window.setTimeout(() => {
+      completeOnboarding()
+    }, 300)
+  }
+
+  const handleSkipAccount = () => {
+    setSkipConfirmOpen(false)
+    setStep('done')
   }
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
-      <TitleBar className="bg-transparent border-b-0 absolute top-0 w-full z-50" />
+      <TitleBar
+        className="bg-transparent border-b-0 absolute top-0 w-full z-50"
+        showClock={false}
+      />
 
       <div className="flex flex-1 flex-row overflow-hidden relative">
         {/* Left Side: Form Content */}
@@ -160,7 +259,9 @@ export function OnboardingPage() {
                         ? '75%'
                         : currentStep === 'login'
                           ? '90%'
-                          : '100%',
+                          : currentStep === 'projectLoading'
+                            ? '96%'
+                            : '100%',
               }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
             />
@@ -285,12 +386,56 @@ export function OnboardingPage() {
                   </button>
 
                   <button
-                    onClick={() => setStep('done')}
+                    onClick={() => setSkipConfirmOpen(true)}
                     className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
                   >
                     Pular por enquanto
                   </button>
                 </div>
+
+                <AlertDialog
+                  open={skipConfirmOpen}
+                  onOpenChange={setSkipConfirmOpen}
+                >
+                  <AlertDialogContent className="sm:max-w-[520px]">
+                    <AlertDialogHeader>
+                      <div className="mb-1 flex size-10 items-center justify-center rounded-md border border-border bg-muted/60">
+                        <ShieldCheck className="size-5 text-primary" />
+                      </div>
+                      <AlertDialogTitle>
+                        Continuar sem conectar uma conta?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="leading-relaxed">
+                        Você pode usar o Axis agora e conectar uma conta depois
+                        nas preferências. Sem login, alguns recursos ficam
+                        limitados.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="rounded-md border border-border bg-muted/35 p-4 text-left">
+                      <p className="text-sm font-medium text-foreground">
+                        Ao entrar com GitHub ou Google, você ganha:
+                      </p>
+                      <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                        <li>
+                          Sincronização segura de progresso e preferências.
+                        </li>
+                        <li>Recuperação de dados ao trocar de dispositivo.</li>
+                        <li>
+                          Integrações com PRs, revisões e tarefas externas.
+                        </li>
+                        <li>Atualizações futuras vinculadas ao seu perfil.</li>
+                      </ul>
+                    </div>
+
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Voltar ao login</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleSkipAccount}>
+                        Pular mesmo assim
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </motion.div>
             )}
 
@@ -324,14 +469,52 @@ export function OnboardingPage() {
                 </button>
               </motion.div>
             )}
+
+            {currentStep === 'projectLoading' && (
+              <motion.div
+                key="project-loading"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="w-full max-w-md"
+              >
+                <div className="mb-6 flex size-14 items-center justify-center rounded-lg border border-border bg-card">
+                  <Loader2 className="size-7 animate-spin text-primary" />
+                </div>
+                <h1 className="text-3xl font-medium tracking-tight text-foreground">
+                  Carregando seu projeto
+                </h1>
+                <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                  Organizando dashboard, hábitos iniciais e tarefas para abrir
+                  seu espaço de trabalho.
+                </p>
+
+                <div className="mt-8 space-y-3 rounded-md border border-border bg-muted/30 p-4">
+                  {[
+                    'Preparando estrutura diária',
+                    'Aplicando seu objetivo principal',
+                    'Abrindo o workspace Axis',
+                  ].map(item => (
+                    <div
+                      key={item}
+                      className="flex items-center gap-3 text-sm text-muted-foreground"
+                    >
+                      <span className="size-1.5 rounded-full bg-primary" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
 
-        {/* Right Side: Image Placeholder */}
+        {/* Right Side: Generated onboarding artwork */}
         <div className="hidden lg:flex w-1/2 bg-muted relative items-center justify-center overflow-hidden border-l border-border/50">
           <img
-            src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80"
-            alt="Onboarding"
+            src="/Onboarding-Image.webp"
+            alt="Pessoa caminhando em direção a uma montanha nevada"
             className="w-full h-full object-cover opacity-90"
           />
           <div className="absolute inset-0 bg-linear-to-t from-background/80 via-transparent to-transparent pointer-events-none" />

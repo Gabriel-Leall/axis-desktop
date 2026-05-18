@@ -25,84 +25,52 @@ export interface WidgetDefinition {
  */
 export const WIDGET_REGISTRY: WidgetDefinition[] = [
   {
-    id: 'clock',
-    label: 'Clock',
-    icon: 'Clock',
-    defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
-    minW: 2,
-    minH: 2,
-  },
-  {
     id: 'calendar',
     label: 'Calendar',
     icon: 'Calendar',
-    defaultLayout: { x: 3, y: 0, w: 4, h: 3 },
+    defaultLayout: { x: 0, y: 0, w: 4, h: 4 },
     minW: 3,
-    minH: 3,
+    minH: 4,
   },
   {
     id: 'notes',
     label: 'Brain Dump',
     icon: 'Brain',
-    defaultLayout: { x: 7, y: 0, w: 5, h: 3 },
+    defaultLayout: { x: 4, y: 0, w: 4, h: 3 },
     minW: 3,
-    minH: 2,
-  },
-  {
-    id: 'system-info',
-    label: 'System Info',
-    icon: 'Monitor',
-    defaultLayout: { x: 0, y: 2, w: 3, h: 3 },
-    minW: 2,
-    minH: 2,
-  },
-  {
-    id: 'quick-actions',
-    label: 'Quick Actions',
-    icon: 'Zap',
-    defaultLayout: { x: 3, y: 3, w: 4, h: 2 },
-    minW: 3,
-    minH: 2,
-  },
-  {
-    id: 'recent-files',
-    label: 'Recent Files',
-    icon: 'FolderOpen',
-    defaultLayout: { x: 7, y: 3, w: 5, h: 2 },
-    minW: 3,
-    minH: 2,
+    minH: 3,
   },
   {
     id: 'tasks',
     label: 'Tasks',
     icon: 'CheckSquare',
-    defaultLayout: { x: 0, y: 5, w: 4, h: 4 },
+    defaultLayout: { x: 8, y: 0, w: 4, h: 4 },
     minW: 3,
-    minH: 3,
+    minH: 4,
   },
   {
     id: 'pomodoro',
     label: 'Pomodoro Timer',
     icon: 'Timer',
-    defaultLayout: { x: 4, y: 5, w: 4, h: 2 },
+    defaultLayout: { x: 0, y: 4, w: 4, h: 4 },
     minW: 3,
-    minH: 2,
+    minH: 4,
+  },
+  {
+    id: 'github',
+    label: 'GitHub',
+    icon: 'GitPullRequest',
+    defaultLayout: { x: 4, y: 4, w: 4, h: 4 },
+    minW: 3,
+    minH: 3,
   },
   {
     id: 'habits',
     label: 'Habits',
     icon: 'CircleCheck',
-    defaultLayout: { x: 8, y: 5, w: 4, h: 4 },
+    defaultLayout: { x: 8, y: 4, w: 4, h: 4 },
     minW: 3,
-    minH: 3,
-  },
-  {
-    id: 'kanban',
-    label: 'Kanban',
-    icon: 'Columns3',
-    defaultLayout: { x: 0, y: 9, w: 8, h: 4 },
-    minW: 4,
-    minH: 3,
+    minH: 4,
   },
 ]
 
@@ -113,11 +81,14 @@ interface GridState {
   widgetVisibility: Record<string, boolean>
   /** Whether the initial load from SQLite is complete */
   loaded: boolean
+  /** Active profile whose layout is currently loaded */
+  profileId: string
 
   setLayout: (layout: LayoutItem[]) => void
   setWidgetVisibility: (visibility: Record<string, boolean>) => void
   toggleWidget: (widgetId: string) => void
   setLoaded: (loaded: boolean) => void
+  setProfileId: (profileId: string) => void
 }
 
 /**
@@ -150,6 +121,7 @@ export const useGridStore = create<GridState>()(
       layout: getDefaultLayout(),
       widgetVisibility: getDefaultVisibility(),
       loaded: false,
+      profileId: 'guest',
 
       setLayout: layout => set({ layout }, undefined, 'setLayout'),
 
@@ -193,6 +165,8 @@ export const useGridStore = create<GridState>()(
         ),
 
       setLoaded: loaded => set({ loaded }, undefined, 'setLoaded'),
+
+      setProfileId: profileId => set({ profileId }, undefined, 'setProfileId'),
     }),
     {
       name: 'grid-store',

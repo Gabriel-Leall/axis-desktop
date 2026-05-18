@@ -2,13 +2,123 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/Icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Axis Desktop</title>
+    <style>
+      :root {
+        background: oklch(0.985 0.006 230);
+      }
+
+      html,
+      body,
+      #root {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        background: oklch(0.985 0.006 230);
+      }
+
+      .axis-boot {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        background: oklch(0.985 0.006 230);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+
+      .axis-boot__stack {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .axis-boot__mark {
+        display: flex;
+        width: 64px;
+        height: 64px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid oklch(0.88 0.025 230);
+        border-radius: 8px;
+        background: oklch(0.995 0.004 230);
+      }
+
+      .axis-boot__mark img {
+        width: 40px;
+        height: 40px;
+      }
+
+      .axis-boot__track {
+        width: 160px;
+        height: 4px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: oklch(0.93 0.014 230);
+      }
+
+      .axis-boot__bar {
+        width: 50%;
+        height: 100%;
+        border-radius: inherit;
+        background: oklch(0.46 0.035 230);
+        animation: axis-boot-pulse 900ms ease-in-out infinite alternate;
+      }
+
+      .axis-boot__text {
+        min-height: 20px;
+        margin: 0;
+        color: oklch(0.36 0.025 230);
+        font-size: 14px;
+      }
+
+      @keyframes axis-boot-pulse {
+        from {
+          opacity: 0.45;
+          transform: translateX(-24px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateX(80px);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .axis-boot__bar {
+          animation: none;
+        }
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="axis-boot" aria-label="Carregando Axis">
+        <div class="axis-boot__stack">
+          <div class="axis-boot__mark">
+            <img src="/Axis-Mark.png" alt="Axis" />
+          </div>
+          <div class="axis-boot__track" aria-hidden="true">
+            <div class="axis-boot__bar"></div>
+          </div>
+          <p class="axis-boot__text">Verificando suas tasks</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

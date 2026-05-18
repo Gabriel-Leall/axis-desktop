@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { check } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { initializeCommandSystem } from './lib/commands'
@@ -12,13 +12,58 @@ import { useGitHubStore } from './store/github-store'
 import { useSlackStore } from './store/slack-store'
 import { useOnboardingStore } from './store/onboarding-store'
 import './App.css'
-import { MainWindow } from './components/layout/MainWindow'
-import { OnboardingPage } from './pages/onboarding/OnboardingPage'
 import { ThemeProvider } from './components/ThemeProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { TooltipProvider } from './components/ui/tooltip'
 import { useSquareCornersEffect } from './hooks/useSquareCornersEffect'
 import { Toaster } from './components/ui/sonner'
+
+const LOADING_MESSAGES = [
+  'Verificando suas tasks',
+  'Organizando seu dashboard',
+  'Separando prioridades do dia',
+  'Preparando seus hábitos',
+  'Ajustando o foco da sessão',
+]
+
+const MainWindow = lazy(() =>
+  import('./components/layout/MainWindow').then(module => ({
+    default: module.MainWindow,
+  }))
+)
+const OnboardingPage = lazy(() =>
+  import('./pages/onboarding/OnboardingPage').then(module => ({
+    default: module.OnboardingPage,
+  }))
+)
+
+function AppLoadingFallback() {
+  const [messageIndex, setMessageIndex] = useState(0)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setMessageIndex(current => (current + 1) % LOADING_MESSAGES.length)
+    }, 1800)
+
+    return () => window.clearInterval(timer)
+  }, [])
+
+  return (
+    <div className="flex h-screen w-full items-center justify-center bg-[oklch(0.985_0.006_230)]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="flex size-16 items-center justify-center rounded-lg border border-[oklch(0.88_0.025_230)] bg-[oklch(0.995_0.004_230)]">
+          <img src="/Axis-Mark.png" alt="Axis" className="size-10" />
+        </div>
+        <div className="h-1 w-40 overflow-hidden rounded-full bg-[oklch(0.93_0.014_230)]">
+          <div className="h-full w-1/2 animate-pulse rounded-full bg-[oklch(0.46_0.035_230)]" />
+        </div>
+        <p className="min-h-5 text-sm text-[oklch(0.36_0.025_230)]">
+          {LOADING_MESSAGES[messageIndex]}
+        </p>
+      </div>
+    </div>
+  )
+}
 
 function App() {
   useSquareCornersEffect()
@@ -53,17 +98,18 @@ function App() {
 
     initLanguageAndMenu()
 
-    // Register deep link handler for OAuth callbacks (axis:// scheme)
-    void registerDeepLinkHandler()
+    const backgroundStartupTimer = window.setTimeout(() => {
+      // Register deep link handler for OAuth callbacks (axis:// scheme)
+      void registerDeepLinkHandler()
 
-    // Initialize integration stores (load saved tokens, fetch if authenticated)
-    void useGitHubStore.getState().initialize()
-    void useSlackStore.getState().initialize()
+      // Initialize integration stores after the first render path is interactive.
+      void useGitHubStore.getState().initialize()
+      void useSlackStore.getState().initialize()
 
-    // Clean up old recovery files on startup
-    cleanupOldFiles().catch(error => {
-      logger.warn('Failed to cleanup old recovery files', { error })
-    })
+      cleanupOldFiles().catch(error => {
+        logger.warn('Failed to cleanup old recovery files', { error })
+      })
+    }, 1200)
 
     // Example of logging with context
     logger.info('App environment', {
@@ -124,14 +170,19 @@ function App() {
 
     // Check for updates 5 seconds after app loads
     const updateTimer = setTimeout(checkForUpdates, 5000)
-    return () => clearTimeout(updateTimer)
+    return () => {
+      clearTimeout(backgroundStartupTimer)
+      clearTimeout(updateTimer)
+    }
   }, [])
 
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <TooltipProvider delayDuration={300}>
-          {hasCompletedOnboarding ? <MainWindow /> : <OnboardingPage />}
+          <Suspense fallback={<AppLoadingFallback />}>
+            {hasCompletedOnboarding ? <MainWindow /> : <OnboardingPage />}
+          </Suspense>
           <Toaster position="bottom-right" closeButton />
         </TooltipProvider>
       </ThemeProvider>

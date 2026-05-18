@@ -23,7 +23,7 @@ jobs:
       matrix:
         include:
           - platform: 'windows-latest'
-            args: '--bundles msi'
+            args: '--bundles nsis'
           - platform: 'ubuntu-22.04'
             args: '--bundles appimage'
 
@@ -82,12 +82,12 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
-          releaseName: 'Axis ${{ github.event_name == ''workflow_dispatch'' && inputs.version || github.ref_name }}'
+          releaseName: "Axis ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}"
           releaseBody: |
             ## Axis ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
 
             ### Installation Instructions
-            - **Windows**: Download the `.msi` file and run the installer
+            - **Windows**: Download the `-setup.exe` file and run the installer. After installation, open Axis from the Start Menu shortcut instead of running the downloaded installer again.
             - **Linux**: Download the `.AppImage` file, make it executable (`chmod +x`), and run
 
             ### Auto-Updates
