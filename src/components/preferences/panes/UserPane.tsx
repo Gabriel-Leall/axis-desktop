@@ -1,4 +1,5 @@
 import { useGitHubStore } from '@/store/github-store'
+import { useGoogleStore } from '@/store/google-store'
 import { useTranslation } from 'react-i18next'
 import { LogOut, User as UserIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -33,6 +34,12 @@ export function UserPane() {
   const isAuthenticated = useGitHubStore(state => state.isAuthenticated)
   const logout = useGitHubStore(state => state.logout)
   const startOAuthFlow = useGitHubStore(state => state.startOAuthFlow)
+  const googleUser = useGoogleStore(state => state.user)
+  const googleIsAuthenticated = useGoogleStore(state => state.isAuthenticated)
+  const googleIsLoading = useGoogleStore(state => state.isLoading)
+  const googleError = useGoogleStore(state => state.error)
+  const googleLogout = useGoogleStore(state => state.logout)
+  const startGoogleOAuthFlow = useGoogleStore(state => state.startOAuthFlow)
   const resetOnboarding = useOnboardingStore(state => state.resetOnboarding)
   const setPreferencesOpen = useUIStore(state => state.setPreferencesOpen)
 
@@ -121,29 +128,60 @@ export function UserPane() {
             )}
           </div>
 
-          {/* Google Connection (Mocked) */}
-          <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card/10 opacity-60">
+          {/* Google Connection */}
+          <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card/30 hover:bg-card/50 transition-colors duration-200">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-background border border-border flex items-center justify-center shadow-sm">
-                <GoogleIcon className="w-5 h-5" />
+                {googleUser?.picture ? (
+                  <img
+                    src={googleUser.picture}
+                    alt={googleUser.name ?? googleUser.email}
+                    className="h-full w-full rounded-lg object-cover"
+                  />
+                ) : (
+                  <GoogleIcon className="w-5 h-5" />
+                )}
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-foreground">
                   Google
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {t('preferences.user.notConnected')}
+                  {googleIsAuthenticated
+                    ? t('preferences.user.connectedAs', {
+                        name: googleUser?.email,
+                      })
+                    : t('preferences.user.notConnected')}
                 </span>
+                {!googleIsAuthenticated && googleError ? (
+                  <span className="text-xs text-destructive max-w-[360px] truncate">
+                    {googleError}
+                  </span>
+                ) : null}
               </div>
             </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled
-              className="h-8 px-3 text-xs opacity-50"
-            >
-              {t('preferences.user.connect')}
-            </Button>
+            {googleIsAuthenticated ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void googleLogout()}
+                className="h-8 px-3 text-xs"
+              >
+                {t('preferences.user.logout')}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void startGoogleOAuthFlow()}
+                disabled={googleIsLoading}
+                className="h-8 px-3 text-xs"
+              >
+                {googleIsLoading
+                  ? t('preferences.user.connecting')
+                  : t('preferences.user.connect')}
+              </Button>
+            )}
           </div>
         </div>
       </SettingsSection>

@@ -2,7 +2,7 @@ use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
-        analytics, calendar, habits, kanban, notes, notifications, pomodoro, preferences,
+        analytics, calendar, habits, kanban, notes, notifications, oauth, pomodoro, preferences,
         quick_pane, recovery, tasks,
     };
 
@@ -25,6 +25,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         quick_pane::toggle_quick_pane,
         quick_pane::get_default_quick_pane_shortcut,
         quick_pane::update_quick_pane_shortcut,
+        oauth::start_google_oauth_loopback,
         // Tasks
         tasks::get_tasks,
         tasks::get_subtasks,
@@ -87,6 +88,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
 /// Export TypeScript bindings to the frontend.
 /// Run with: cargo test export_bindings -- --ignored
 #[cfg(any(test, debug_assertions))]
+#[allow(dead_code)]
 pub fn export_ts_bindings() {
     generate_bindings()
         .export(

@@ -9,6 +9,7 @@ pub mod habits;
 pub mod kanban;
 pub mod notes;
 pub mod notifications;
+pub mod oauth;
 pub mod pomodoro;
 pub mod preferences;
 pub mod quick_pane;

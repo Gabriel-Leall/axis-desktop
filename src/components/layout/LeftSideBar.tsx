@@ -8,6 +8,7 @@ import {
   User as UserIcon,
 } from 'lucide-react'
 import { useGitHubStore } from '@/store/github-store'
+import { useGoogleStore } from '@/store/google-store'
 import {
   Tooltip,
   TooltipTrigger,
@@ -43,6 +44,10 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
   const navigateTo = useUIStore(state => state.navigateTo)
   const setPreferencesOpen = useUIStore(state => state.setPreferencesOpen)
   const user = useGitHubStore(state => state.user)
+  const googleUser = useGoogleStore(state => state.user)
+  const profileImage = user?.avatar_url ?? googleUser?.picture
+  const profileName =
+    user?.name ?? user?.login ?? googleUser?.name ?? googleUser?.email
 
   return (
     <div className={cn('flex h-full flex-col border-r bg-sidebar', className)}>
@@ -109,10 +114,10 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
               onClick={() => setPreferencesOpen(true, 'user')}
               className="group relative flex size-9 items-center justify-center rounded-full border border-border bg-sidebar-accent/50 shadow-sm transition-all hover:border-primary/30 hover:ring-2 hover:ring-primary/10 overflow-hidden"
             >
-              {user?.avatar_url ? (
+              {profileImage ? (
                 <img
-                  src={user.avatar_url}
-                  alt={user.login}
+                  src={profileImage}
+                  alt={profileName ?? 'Conta'}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -121,7 +126,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
             </button>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={8}>
-            {user?.name || user?.login || 'Conta'}
+            {profileName || 'Conta'}
           </TooltipContent>
         </Tooltip>
       </div>

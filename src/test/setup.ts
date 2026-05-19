@@ -109,6 +109,14 @@ vi.mock('@/lib/tauri-bindings', () => ({
     cleanupOldRecoveryFiles: vi
       .fn()
       .mockResolvedValue({ status: 'ok', data: 0 }),
+    startGoogleOauthLoopback: vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: {
+        code: 'test-code',
+        state: 'test-state',
+        redirect_uri: 'http://127.0.0.1:12345/',
+      },
+    }),
   },
   unwrapResult: vi.fn((result: { status: string; data?: unknown }) => {
     if (result.status === 'ok') return result.data

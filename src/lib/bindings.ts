@@ -175,6 +175,14 @@ async updateQuickPaneShortcut(shortcut: string | null) : Promise<Result<null, st
     else return { status: "error", error: e  as any };
 }
 },
+async startGoogleOauthLoopback(clientId: string, scope: string, state: string, codeChallenge: string) : Promise<Result<OAuthLoopbackResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_google_oauth_loopback", { clientId, scope, state, codeChallenge }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Returns all tasks ordered by sort_order.
  */
@@ -706,6 +714,7 @@ export type KanbanColumnWithCards = { column: KanbanColumn; cards: KanbanCard[] 
 export type KanbanSubtask = { id: string; card_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
 export type Note = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
 export type NoteSummary = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
+export type OAuthLoopbackResult = { code: string; state: string | null; redirect_uri: string }
 export type PomodoroSession = { id: string; session_type: string; duration_seconds: number; completed: boolean; task_id: string | null; started_at: string; ended_at: string | null; created_at: string }
 export type PomodoroSettings = { focus_duration: number; short_break_duration: number; long_break_duration: number; pomos_until_long_break: number; auto_start_breaks: boolean; auto_start_focus: boolean; sound_notifications: boolean }
 export type PomodoroSummary = { session_type: string; sessions: number; total_seconds: number }

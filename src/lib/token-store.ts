@@ -49,6 +49,10 @@ export async function deleteToken(key: string): Promise<void> {
 export const TOKEN_KEYS = {
   GITHUB: 'github_token',
   SLACK: 'slack_token',
+  GOOGLE: 'google_token',
+  GOOGLE_REFRESH: 'google_refresh_token',
   GITHUB_STATE: 'github_oauth_state',
   SLACK_STATE: 'slack_oauth_state',
+  GOOGLE_STATE: 'google_oauth_state',
+  GOOGLE_CODE_VERIFIER: 'google_oauth_code_verifier',
 } as const

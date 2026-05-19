@@ -47,6 +47,9 @@ export type {
 // Notes domain
 export type { Note, CreateNoteInput, UpdateNoteInput } from './bindings'
 
+// OAuth domain
+export type { OAuthLoopbackResult } from './bindings'
+
 // Kanban domain
 export type {
   KanbanBoard,

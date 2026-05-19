@@ -1,5 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { Settings, User as UserIcon, Timer, CalendarCheck2 } from 'lucide-react'
+import {
+  CalendarCheck2,
+  Download,
+  Settings,
+  Timer,
+  User as UserIcon,
+} from 'lucide-react'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -29,8 +35,9 @@ import { GeneralPane } from './panes/GeneralPane'
 import { FocusTimerPane } from './panes/FocusTimerPane'
 import { HabitsPane } from './panes/HabitsPane'
 import { UserPane } from './panes/UserPane'
+import { UpdatesPane } from './panes/UpdatesPane'
 
-type PreferencePane = 'general' | 'focusTimer' | 'habits' | 'user'
+type PreferencePane = 'general' | 'focusTimer' | 'habits' | 'user' | 'updates'
 
 const navigationItems = [
   {
@@ -52,6 +59,11 @@ const navigationItems = [
     id: 'user' as const,
     labelKey: 'preferences.user',
     icon: UserIcon,
+  },
+  {
+    id: 'updates' as const,
+    labelKey: 'preferences.updates',
+    icon: Download,
   },
 ] as const
 
@@ -130,6 +142,7 @@ export function PreferencesDialog() {
               {activePane === 'focusTimer' && <FocusTimerPane />}
               {activePane === 'habits' && <HabitsPane />}
               {activePane === 'user' && <UserPane />}
+              {activePane === 'updates' && <UpdatesPane />}
             </div>
           </main>
         </SidebarProvider>

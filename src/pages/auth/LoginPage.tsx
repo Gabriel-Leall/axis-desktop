@@ -1,7 +1,13 @@
 import { TitleBar } from '@/components/titlebar/TitleBar'
 import { Button } from '@/components/ui/button'
+import { useGitHubStore } from '@/store/github-store'
+import { useGoogleStore } from '@/store/google-store'
 
 export function LoginPage() {
+  const startGitHubOAuthFlow = useGitHubStore(state => state.startOAuthFlow)
+  const startGoogleOAuthFlow = useGoogleStore(state => state.startOAuthFlow)
+  const isGoogleLoading = useGoogleStore(state => state.isLoading)
+
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
       <TitleBar className="bg-transparent border-b-0 absolute top-0 w-full z-50" />
@@ -18,9 +24,16 @@ export function LoginPage() {
               Sincronize seu progresso com segurança.
             </p>
             <div className="mt-8 flex flex-col gap-2">
-              <Button size="lg">Conectar com GitHub</Button>
-              <Button size="lg" variant="outline">
-                Continuar com Google
+              <Button size="lg" onClick={() => void startGitHubOAuthFlow()}>
+                Conectar com GitHub
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => void startGoogleOAuthFlow()}
+                disabled={isGoogleLoading}
+              >
+                {isGoogleLoading ? 'Conectando...' : 'Continuar com Google'}
               </Button>
             </div>
           </div>

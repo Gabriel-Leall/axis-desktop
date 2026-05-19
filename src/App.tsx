@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { check } from '@tauri-apps/plugin-updater'
-import { relaunch } from '@tauri-apps/plugin-process'
 import { initializeCommandSystem } from './lib/commands'
 import { buildAppMenu, setupMenuLanguageListener } from './lib/menu'
 import { initializeLanguage } from './i18n/language-init'
@@ -9,14 +8,18 @@ import { cleanupOldFiles } from './lib/recovery'
 import { commands } from './lib/tauri-bindings'
 import { registerDeepLinkHandler } from './lib/oauth-handler'
 import { useGitHubStore } from './store/github-store'
+import { useGoogleStore } from './store/google-store'
 import { useSlackStore } from './store/slack-store'
 import { useOnboardingStore } from './store/onboarding-store'
+import { useUIStore } from './store/ui-store'
+import i18n from './i18n/config'
 import './App.css'
 import { ThemeProvider } from './components/ThemeProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { TooltipProvider } from './components/ui/tooltip'
 import { useSquareCornersEffect } from './hooks/useSquareCornersEffect'
 import { Toaster } from './components/ui/sonner'
+import { notifications } from './lib/notifications'
 
 const LOADING_MESSAGES = [
   'Verificando suas tasks',
@@ -104,6 +107,7 @@ function App() {
 
       // Initialize integration stores after the first render path is interactive.
       void useGitHubStore.getState().initialize()
+      void useGoogleStore.getState().initialize()
       void useSlackStore.getState().initialize()
 
       cleanupOldFiles().catch(error => {
@@ -123,44 +127,11 @@ function App() {
         const update = await check()
         if (update) {
           logger.info(`Update available: ${update.version}`)
-
-          // Show confirmation dialog
-          const shouldUpdate = confirm(
-            `Update available: ${update.version}\n\nWould you like to install this update now?`
+          notifications.info(
+            i18n.t('updates.availableTitle'),
+            i18n.t('updates.availableDescription', { version: update.version })
           )
-
-          if (shouldUpdate) {
-            try {
-              // Download and install with progress logging
-              await update.downloadAndInstall(event => {
-                switch (event.event) {
-                  case 'Started':
-                    logger.info(`Downloading ${event.data.contentLength} bytes`)
-                    break
-                  case 'Progress':
-                    logger.info(`Downloaded: ${event.data.chunkLength} bytes`)
-                    break
-                  case 'Finished':
-                    logger.info('Download complete, installing...')
-                    break
-                }
-              })
-
-              // Ask if user wants to restart now
-              const shouldRestart = confirm(
-                'Update completed successfully!\n\nWould you like to restart the app now to use the new version?'
-              )
-
-              if (shouldRestart) {
-                await relaunch()
-              }
-            } catch (updateError) {
-              logger.error(`Update installation failed: ${String(updateError)}`)
-              alert(
-                `Update failed: There was a problem with the automatic download.\n\n${String(updateError)}`
-              )
-            }
-          }
+          useUIStore.getState().setPreferencesOpen(true, 'updates')
         }
       } catch (checkError) {
         logger.error(`Update check failed: ${String(checkError)}`)

@@ -37,6 +37,34 @@ pub fn load_quick_pane_shortcut(app: &AppHandle) -> Option<String> {
     prefs.quick_pane_shortcut
 }
 
+/// Load whether the main window should hide instead of exiting on close.
+/// Defaults to false if preferences cannot be read.
+pub fn should_minimize_to_tray(app: &AppHandle) -> bool {
+    let path = match get_preferences_path(app) {
+        Ok(path) => path,
+        Err(e) => {
+            log::warn!("Failed to resolve preferences path: {e}");
+            return false;
+        }
+    };
+
+    let contents = match std::fs::read_to_string(&path) {
+        Ok(contents) => contents,
+        Err(e) => {
+            log::debug!("Failed to read preferences for tray behavior: {e}");
+            return false;
+        }
+    };
+
+    match serde_json::from_str::<AppPreferences>(&contents) {
+        Ok(preferences) => preferences.minimize_to_tray.unwrap_or(false),
+        Err(e) => {
+            log::warn!("Failed to parse preferences for tray behavior: {e}");
+            false
+        }
+    }
+}
+
 /// Simple greeting command for demonstration purposes.
 #[tauri::command]
 #[specta::specta]

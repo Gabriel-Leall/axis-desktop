@@ -38,7 +38,7 @@
     "rust:test": "cd src-tauri && cargo test",
     "rust:bindings": "cd src-tauri && cargo test export_bindings -- --ignored --nocapture",
     "tauri": "tauri",
-    "tauri:dev": "bun run tauri dev",
+    "tauri:dev": "bun run tauri dev --config src-tauri/tauri.dev.conf.json",
     "tauri:build": "bun run tauri build",
     "tauri:check": "bun run typecheck && bun run build && cd src-tauri && cargo check",
     "test:all": "bun run test:run",

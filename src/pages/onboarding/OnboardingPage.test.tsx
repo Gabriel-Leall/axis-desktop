@@ -35,6 +35,9 @@ describe('OnboardingPage', () => {
         { timeout: 3000 }
       )
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /continuar com google/i })
+    ).toBeInTheDocument()
 
     await user.click(
       screen.getByRole('button', { name: /pular por enquanto/i })

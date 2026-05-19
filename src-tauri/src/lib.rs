@@ -9,12 +9,75 @@ mod commands;
 mod types;
 mod utils;
 
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use std::str::FromStr;
 use tauri::{Manager, RunEvent, WindowEvent};
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 // Re-export only what's needed externally
 pub use types::DEFAULT_QUICK_PANE_SHORTCUT;
+
+#[cfg(desktop)]
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+
+        #[cfg(target_os = "macos")]
+        {
+            use tauri_plugin_window_state::{StateFlags, WindowExt};
+            let _ = window.restore_state(StateFlags::all());
+        }
+
+        let _ = window.set_focus();
+        log::info!("Main window shown");
+    }
+}
+
+#[cfg(desktop)]
+fn create_tray(app: &tauri::App) -> tauri::Result<()> {
+    use tauri::{
+        menu::MenuBuilder,
+        tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    };
+
+    let menu = MenuBuilder::new(app)
+        .text("show", "Show Axis")
+        .separator()
+        .text("quit", "Quit Axis")
+        .build()?;
+
+    let icon = app
+        .default_window_icon()
+        .cloned()
+        .expect("default window icon is configured");
+
+    TrayIconBuilder::with_id("axis-tray")
+        .icon(icon)
+        .tooltip("Axis")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event(|tray, event| match event {
+            TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            }
+            | TrayIconEvent::DoubleClick {
+                button: MouseButton::Left,
+                ..
+            } => show_main_window(tray.app_handle()),
+            _ => {}
+        })
+        .on_menu_event(|app, event| match event.id().0.as_str() {
+            "show" => show_main_window(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .build(app)?;
+
+    Ok(())
+}
 
 /// Application entry point. Sets up all plugins and initializes the app.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -259,17 +322,18 @@ pub fn run() {
                     .expect("Failed to create app config directory");
 
                 let db_path = app_config_dir.join("tasks.db");
-                let db_url = format!(
-                    "sqlite://{}",
+                let connect_options = SqliteConnectOptions::from_str(
                     db_path
                         .to_str()
-                        .expect("Invalid DB path")
-                );
+                        .expect("Invalid DB path"),
+                )
+                .expect("Failed to build SQLite connection options")
+                .create_if_missing(true);
 
                 let pool = tauri::async_runtime::block_on(async {
                     SqlitePoolOptions::new()
                         .max_connections(5)
-                        .connect(&db_url)
+                        .connect_with(connect_options)
                         .await
                         .expect("Failed to connect to SQLite database")
                 });
@@ -497,6 +561,12 @@ pub fn run() {
                 // Non-fatal: app can still run without quick pane
             }
 
+            #[cfg(desktop)]
+            {
+                create_tray(app)?;
+                log::info!("System tray icon initialized");
+            }
+
             // NOTE: Application menu is built from JavaScript for i18n support
             // See src/lib/menu.ts for the menu implementation
 
@@ -506,22 +576,23 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| match &event {
-            // macOS: Hide the main window instead of quitting so the dock icon can reopen it
-            // and the quick-pane shortcut works independently of the main window.
-            // On other platforms, the close proceeds normally and the app exits.
+            // Hide the main window instead of quitting when the user enabled
+            // background behavior. This keeps the tray icon and shortcuts alive.
             RunEvent::WindowEvent {
                 label,
                 event: WindowEvent::CloseRequested { api, .. },
                 ..
             } if label == "main" => {
-                #[cfg(target_os = "macos")]
-                {
+                if commands::preferences::should_minimize_to_tray(app_handle) {
                     api.prevent_close();
 
                     // Save window state before hiding
+                    #[cfg(desktop)]
+                    {
                     use tauri_plugin_window_state::{AppHandleExt, StateFlags};
                     if let Err(e) = app_handle.save_window_state(StateFlags::all()) {
                         log::warn!("Failed to save window state: {e}");
+                    }
                     }
 
                     // Hide the window, not the app. app_handle.hide() calls NSApplication.hide()
@@ -537,19 +608,7 @@ pub fn run() {
             // macOS: Dock icon clicked — reopen the main window if it was hidden
             #[cfg(target_os = "macos")]
             RunEvent::Reopen { .. } => {
-                if let Some(window) = app_handle.get_webview_window("main") {
-                    if !window.is_visible().unwrap_or(true) {
-                        let _ = window.show();
-
-                        // The window-state plugin only auto-restores on app startup, not after
-                        // a hide/show cycle. Without this the window can appear at stale coords.
-                        use tauri_plugin_window_state::{StateFlags, WindowExt};
-                        let _ = window.restore_state(StateFlags::all());
-
-                        let _ = window.set_focus();
-                        log::info!("Main window reopened from dock");
-                    }
-                }
+                show_main_window(app_handle);
             }
 
             // Cleanup on actual exit (Cmd+Q, menu Quit, or window close on non-macOS).

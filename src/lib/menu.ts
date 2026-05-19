@@ -135,15 +135,19 @@ async function handleCheckForUpdates(): Promise<void> {
     const update = await check()
     if (update) {
       notifications.info(
-        'Update Available',
-        `Version ${update.version} is available`
+        i18n.t('updates.availableTitle'),
+        i18n.t('updates.availableDescription', { version: update.version })
       )
+      useUIStore.getState().setPreferencesOpen(true, 'updates')
     } else {
-      notifications.success('Up to Date', 'You are running the latest version')
+      notifications.success(
+        i18n.t('updates.upToDateDescription'),
+        i18n.t('updates.statusDescription')
+      )
     }
   } catch (error) {
     logger.error('Update check failed', { error })
-    notifications.error('Update Check Failed', 'Could not check for updates')
+    notifications.error(i18n.t('updates.checkFailed'))
   }
 }
 
