@@ -14,7 +14,7 @@
       "portuguese": "PT-BR"
     },
     "hero": {
-      "kicker": "Axis Desktop",
+      "kicker": "AXIS",
       "title": "Turn your daily chaos into ruthless focus.",
       "subtitle": "No more scattered tools. Tasks, habits, and calendar flow perfectly in one local-first command center.",
       "primaryCta": "Download Axis Desktop",
@@ -208,6 +208,14 @@
           "description": "Your control panel, your rules. Fully open source and built to respect your privacy from day one."
         }
       }
+    },
+    "downloads": {
+      "eyebrow": "Latest release",
+      "description": "Download AXIS and turn focus into execution.",
+      "loading": "Fetching releases from GitHub...",
+      "fallback": "Open GitHub releases",
+      "releaseLabel": "Release",
+      "downloadAria": "Download {{release}} for {{platform}}"
     },
     "footer": {
       "cta": "Execute with ruthless focus. Zero friction.",

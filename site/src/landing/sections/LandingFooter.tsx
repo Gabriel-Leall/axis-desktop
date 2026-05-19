@@ -1,7 +1,7 @@
-import { Download, LifeBuoy } from 'lucide-react'
+import { LifeBuoy } from 'lucide-react'
 import type { ComponentType, SVGProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { downloadUrl } from '../data'
+import { ReleaseDownloads } from '../components/ReleaseDownloads'
 
 function GitHubIcon(props: SVGProps<SVGSVGElement>) {
   return (
@@ -48,10 +48,7 @@ export function LandingFooter() {
     <>
       <footer className="footer-cta" data-reveal={true} data-delay="6">
         <p>{t('landing.footer.cta')}</p>
-        <a className="footer-download" href={downloadUrl}>
-          <Download />
-          {t('landing.footer.download')}
-        </a>
+        <ReleaseDownloads />
       </footer>
 
       <section className="footer-meta" data-reveal={true} data-delay="6">

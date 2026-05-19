@@ -11,8 +11,11 @@ import {
 import type { TFunction } from 'i18next'
 import type { WidgetCard } from './types'
 
-export const downloadUrl =
-  'https://github.com/Gabriel-Leall/axis-desktop/releases/latest'
+export const releasesApiUrl =
+  'https://api.github.com/repos/Gabriel-Leall/axis-desktop/releases/latest'
+
+export const releasesUrl =
+  'https://github.com/Gabriel-Leall/axis-desktop/releases'
 
 export const navLinks = [
   { href: '#widgets', labelKey: 'landing.nav.widgets' },

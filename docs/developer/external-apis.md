@@ -120,6 +120,33 @@ export function useUpdateUser() {
 
 ## Authentication
 
+### Google Sign-In for Desktop
+
+Axis uses Google OAuth Authorization Code with PKCE for desktop sign-in. The
+frontend generates the PKCE verifier/challenge, then a Rust Tauri command opens
+the system browser and listens on a temporary `http://127.0.0.1:{port}/`
+loopback callback. Google Desktop OAuth clients can still require the generated
+client secret during the token exchange, so the app reads it from local env.
+
+Required local environment:
+
+```bash
+VITE_GOOGLE_CLIENT_ID=your-google-desktop-client-id.apps.googleusercontent.com
+VITE_GOOGLE_CLIENT_SECRET=your-google-desktop-client-secret
+```
+
+Google Cloud setup:
+
+1. Create an OAuth client in Google Cloud.
+2. Use application type **Desktop app**.
+3. Configure the OAuth consent screen.
+4. Start with login-only scopes: `openid`, `email`, `profile`.
+5. Add test users while the consent screen is in Testing mode.
+
+Calendar and Gmail integrations should request their own incremental scopes in
+separate flows. Do not add Calendar/Gmail scopes to basic sign-in unless the
+feature needs them immediately.
+
 ### Token Storage Options
 
 | Option                    | Security            | Use When                          |

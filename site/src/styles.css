@@ -316,6 +316,87 @@ svg {
   height: 15px;
 }
 
+.release-downloads {
+  display: flex;
+  justify-content: center;
+  width: min(100%, 520px);
+}
+
+.release-downloads-list {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.release-card {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+}
+
+.release-platforms {
+  display: inline-flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.release-platform,
+.release-downloads-fallback,
+.release-downloads-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.release-platform,
+.release-downloads-fallback {
+  border: 1px solid rgba(22, 18, 13, 0.92);
+  background: linear-gradient(180deg, #1d1914, #0f0d0a);
+  color: #fff9f0;
+  padding: 0 15px;
+  transition:
+    transform 170ms ease,
+    border-color 170ms ease,
+    box-shadow 170ms ease;
+}
+
+.release-platform:hover,
+.release-downloads-fallback:hover {
+  transform: translateY(-2px);
+  border-color: rgba(41, 34, 26, 0.94);
+  box-shadow: 0 12px 28px -22px rgba(24, 18, 12, 0.5);
+}
+
+.release-platform svg,
+.release-downloads-fallback svg,
+.release-downloads-status svg {
+  width: 16px;
+  height: 16px;
+}
+
+.release-downloads-status {
+  color: #6d6150;
+}
+
+.release-downloads-status svg {
+  animation: release-spin 900ms linear infinite;
+}
+
+@keyframes release-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 [data-reveal] {
   opacity: 0;
   transform: translateY(26px);
@@ -2258,6 +2339,9 @@ svg {
 
 .footer-cta {
   position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 24px;
   padding: clamp(70px, 10vw, 124px) 20px;
   text-align: center;
   margin-top: 10px;
@@ -2929,7 +3013,6 @@ svg {
   }
 
   .hero-actions,
-  .hero-actions a,
   .header-actions,
   .header-download,
   .primary-action,
@@ -2977,6 +3060,20 @@ svg {
   .footer-download {
     width: 100%;
     max-width: 360px;
+  }
+
+  .release-downloads {
+    width: 100%;
+  }
+
+  .release-card {
+    width: 100%;
+    padding: 0;
+  }
+
+  .release-platforms,
+  .release-platform {
+    width: 100%;
   }
 
   .widget-story-demo {

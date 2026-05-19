@@ -106,36 +106,33 @@ All three files must have matching versions:
 ### Behavior
 
 - Checks for updates 5 seconds after app launch
-- Shows confirmation dialog when update is available
-- Downloads and installs in background
-- Offers to restart when complete
+- Shows an in-app notification and opens Preferences → Updates when update is available
+- Downloads and installs only after the user clicks install
+- Restarts after installation
 - Fails silently on network issues
 
 ### Update Flow
 
 ```
-App Launch → (5s delay) → Check GitHub → Show Dialog → Download → Install → Restart
+App Launch → (5s delay) → Check GitHub → Preferences → Updates → Download → Install → Restart
 ```
 
 ### Implementation
 
 ```typescript
-// src/App.tsx
+// src/App.tsx starts the passive check.
 import { check } from '@tauri-apps/plugin-updater'
-import { relaunch } from '@tauri-apps/plugin-process'
 
 useEffect(() => {
   const checkForUpdates = async () => {
     try {
       const update = await check()
       if (update) {
-        const shouldUpdate = confirm(`Update available: ${update.version}...`)
-        if (shouldUpdate) {
-          await update.downloadAndInstall()
-          if (confirm('Restart to apply update?')) {
-            await relaunch()
-          }
-        }
+        notifications.info(
+          'Update available',
+          `Version ${update.version} is available`
+        )
+        useUIStore.getState().setPreferencesOpen(true, 'updates')
       }
     } catch {
       // Silent fail - don't bother user with network issues
@@ -152,7 +149,15 @@ useEffect(() => {
 Users can manually check via:
 
 - **Menu**: App → Check for Updates
+- **Preferences**: Updates → Check for Updates
 - **Command Palette**: Cmd+K → "Check for Updates"
+
+## Development Data Isolation
+
+Local development uses `src-tauri/tauri.dev.conf.json` through `bun run tauri:dev`.
+That config changes the product name to `Axis Dev` and the app identifier to
+`com.gabrielleall.axis-desktop.dev`, so test data written by the dev build does
+not share the release app data directory.
 
 ## Release Artifacts
 

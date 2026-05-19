@@ -1,15 +1,14 @@
 import {
   CalendarDays,
   CheckSquare,
-  Download,
   Flame,
   FolderOpen,
   Play,
   Timer,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { ReleaseDownloads } from '../components/ReleaseDownloads'
 import {
-  downloadUrl,
   getHeroPreviewHabits,
   getHeroPreviewTasks,
   heroCalendarDays,
@@ -32,10 +31,7 @@ export function HeroSection() {
           <h1>{t('landing.hero.title')}</h1>
           <p>{t('landing.hero.subtitle')}</p>
           <div className="hero-actions">
-            <a className="primary-action" href={downloadUrl}>
-              <Download />
-              {t('landing.hero.primaryCta')}
-            </a>
+            <ReleaseDownloads id="downloads" />
           </div>
           <div
             className="hero-preview"

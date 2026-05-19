@@ -1,7 +1,7 @@
 import { Download } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { RefObject } from 'react'
-import { downloadUrl, navLinks } from '../data'
+import { navLinks } from '../data'
 
 export function LandingHeader({
   headerRef,
@@ -50,7 +50,7 @@ export function LandingHeader({
           </button>
         </div>
 
-        <a className="header-download" href={downloadUrl}>
+        <a className="header-download" href="#downloads">
           <Download />
           {t('landing.nav.download')}
         </a>

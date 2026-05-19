@@ -14,7 +14,7 @@
       "portuguese": "PT-BR"
     },
     "hero": {
-      "kicker": "Axis Desktop",
+      "kicker": "AXIS",
       "title": "Transforme o caos do seu dia em foco implacável.",
       "subtitle": "Chega de ferramentas espalhadas. Tarefas, hábitos e calendário fluem juntos em um centro de comando local-first.",
       "primaryCta": "Baixar Axis Desktop",
@@ -208,6 +208,14 @@
           "description": "Seu painel de controle, suas regras. Totalmente open source e construído para respeitar sua privacidade desde o primeiro dia."
         }
       }
+    },
+    "downloads": {
+      "eyebrow": "Última release",
+      "description": "Baixe o AXIS e transforme seu foco em execução.",
+      "loading": "Buscando releases no GitHub...",
+      "fallback": "Abrir releases no GitHub",
+      "releaseLabel": "Release",
+      "downloadAria": "Baixar {{release}} para {{platform}}"
     },
     "footer": {
       "cta": "Execute com foco implacável. Atrito zero.",
