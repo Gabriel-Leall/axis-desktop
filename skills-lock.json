@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "audit-typography": {
+      "source": "kapishdima/fonttrio",
+      "sourceType": "github",
+      "skillPath": "skills/audit-typography/SKILL.md",
+      "computedHash": "b81a05167ef34eb88d6b19ba2fcd415c4339fea880fbfb88cdd9eaf78b56f2fa"
+    },
+    "suggest-improvements": {
+      "source": "kapishdima/fonttrio",
+      "sourceType": "github",
+      "skillPath": "skills/suggest-improvements/SKILL.md",
+      "computedHash": "771be1fb110c40012b436f5639e8a431db7fae5d0b19d2ff3a254ce859cc8ae4"
+    },
+    "web-typography": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "web-typography/SKILL.md",
+      "computedHash": "be06b421155bd61ddf02e0cc7b0067cec6165672ec29b39fb83d2c19a746126f"
+    }
+  }
+}
