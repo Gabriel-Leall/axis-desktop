@@ -2,7 +2,7 @@
   "name": "axis-desktop",
   "description": "Axis application",
   "private": true,
-  "version": "0.1.6",
+  "version": "0.1.7",
   "type": "module",
   "author": "Gabriel Leall",
   "copyright": "Copyright © 2026 Gabriel Leall. All rights reserved.",
@@ -160,4 +160,5 @@
     "@ast-grep/cli"
   ]
 }
+
 

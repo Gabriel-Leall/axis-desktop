@@ -1,6 +1,6 @@
 [package]
 name = "axis-desktop"
-version = "0.1.6"
+version = "0.1.7"
 description = "Axis application"
 authors = ["Gabriel Leall"]
 edition = "2021"
@@ -62,4 +62,5 @@ lto = true               # Link-time optimizations
 opt-level = "s"          # Optimize for size over speed
 panic = "abort"          # Don't include panic unwinding code
 strip = true             # Remove debug symbols
+
 
