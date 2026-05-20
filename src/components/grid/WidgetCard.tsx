@@ -41,7 +41,7 @@ export function WidgetCard({
   return (
     <section
       className={cn(
-        'widget-card flex h-full w-full flex-col overflow-hidden border border-border bg-card text-card-foreground',
+        'widget-card axis-type-widget-body flex h-full w-full flex-col overflow-hidden border border-border bg-card text-card-foreground',
         onClick && 'cursor-pointer',
         className
       )}
@@ -58,7 +58,7 @@ export function WidgetCard({
           {Icon && (
             <Icon className="size-3.5 text-muted-foreground" strokeWidth={2} />
           )}
-          <span className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80 select-none">
+          <span className="axis-type-widget-title truncate select-none">
             {title}
           </span>
         </div>
@@ -66,7 +66,7 @@ export function WidgetCard({
 
       <div
         className={cn(
-          'widget-card-content flex-1 overflow-auto p-3',
+          'widget-card-content axis-widget flex-1 overflow-auto p-3',
           contentClassName
         )}
       >

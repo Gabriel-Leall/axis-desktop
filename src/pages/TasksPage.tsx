@@ -1255,8 +1255,8 @@ export function TasksPage({
                 className={cn(
                   'rounded-md px-2.5 py-1 text-[12px] transition-colors',
                   viewMode === 'stack'
-                    ? 'bg-accent text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-foreground/10 text-foreground ring-1 ring-border'
+                    : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
                 )}
               >
                 Formato de pilha
@@ -1267,8 +1267,8 @@ export function TasksPage({
                 className={cn(
                   'rounded-md px-2.5 py-1 text-[12px] transition-colors',
                   viewMode === 'kanban'
-                    ? 'bg-accent text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-foreground/10 text-foreground ring-1 ring-border'
+                    : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
                 )}
               >
                 Formato kanban

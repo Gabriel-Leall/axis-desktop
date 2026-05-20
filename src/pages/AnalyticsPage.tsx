@@ -156,7 +156,7 @@ function StatBox({
         </h3>
 
         <div className="flex flex-col gap-1.5">
-          <span className="font-mono text-3xl font-medium tracking-tight text-foreground">
+          <span className="text-3xl font-semibold tracking-normal tabular-nums text-foreground">
             {value}
           </span>
           <span className="text-xs font-medium text-muted-foreground h-4">

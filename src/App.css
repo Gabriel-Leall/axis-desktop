@@ -235,7 +235,8 @@
 /* ═══════════════════════════════════════════════════════════
    DARK MODE — Warm graphite & amber accent system
    ═══════════════════════════════════════════════════════════ */
-.dark {
+.dark,
+.entardecer {
   /* Soft amber text glow */
   --text-glow: 0 0 20px rgba(255, 187, 112, 0.12);
   /* Warm glass hover states */

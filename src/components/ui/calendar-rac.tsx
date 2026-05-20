@@ -48,7 +48,7 @@ const CalendarHeader = ({ compact = false }: { compact?: boolean }) => (
     <HeadingRac
       className={cn(
         'font-medium uppercase tracking-wider text-muted-foreground/90',
-        compact ? 'text-[10px]' : 'text-xs'
+        compact ? 'text-[11px]' : 'text-xs'
       )}
     />
     <Button
@@ -81,7 +81,7 @@ const CalendarGridComponent = ({
           <CalendarHeaderCellRac
             className={cn(
               'p-0 text-center font-semibold uppercase text-muted-foreground/55',
-              compact ? 'h-5.5 text-[9px]' : 'h-7 text-[11px]'
+              compact ? 'h-5.5 text-[10px]' : 'h-7 text-[11px]'
             )}
           >
             {day.slice(0, 1)}
@@ -100,7 +100,7 @@ const CalendarGridComponent = ({
               date={date}
               className={cn(
                 'relative mx-auto my-0.5 flex h-9 w-9 items-center justify-center whitespace-nowrap rounded-lg border border-transparent text-sm font-medium text-foreground outline-offset-2 duration-150 focus:outline-none data-[disabled]:pointer-events-none data-[unavailable]:pointer-events-none data-[focus-visible]:z-10',
-                compact && 'my-0.5 h-7 w-7 text-xs',
+                compact && 'my-0.5 h-7 w-7 text-[13px]',
                 // Hover & Selected states
                 'data-[hovered]:bg-accent data-[selected]:bg-primary data-[hovered]:text-foreground data-[selected]:text-primary-foreground',
                 // Disabled states

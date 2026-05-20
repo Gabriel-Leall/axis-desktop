@@ -35,6 +35,21 @@
   );
 }
 
+.entardecer {
+  --widget-shadow:
+    0 0 0 1px rgba(214, 190, 150, 0.24), 0 18px 38px -24px rgba(12, 8, 5, 0.72);
+  --widget-bg: linear-gradient(
+    180deg,
+    rgba(56, 43, 30, 0.96),
+    rgba(44, 33, 24, 0.92)
+  );
+  --widget-rail-bg: linear-gradient(
+    90deg,
+    rgba(68, 52, 36, 0.94),
+    rgba(56, 42, 30, 0.86)
+  );
+}
+
 .widget-card {
   position: relative;
   border-radius: 16px;
@@ -58,6 +73,10 @@
 
 .dark .widget-card::after {
   border-color: color-mix(in oklab, var(--border) 76%, #9db7d8);
+}
+
+.entardecer .widget-card::after {
+  border-color: color-mix(in oklab, var(--border) 78%, #e0c39f);
 }
 
 .widget-card-content {
@@ -96,6 +115,12 @@
     box-shadow:
       0 0 0 1px rgba(173, 200, 229, 0.25),
       0 24px 40px -26px rgba(0, 0, 0, 0.8);
+  }
+
+  .entardecer .react-grid-layout .react-grid-item:hover .widget-card {
+    box-shadow:
+      0 0 0 1px rgba(222, 196, 152, 0.26),
+      0 24px 40px -26px rgba(12, 8, 5, 0.78);
   }
 }
 

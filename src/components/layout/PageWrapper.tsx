@@ -8,7 +8,7 @@ export function PageWrapper({ children }: { children: React.ReactNode }) {
         variants={pageVariants}
         initial="hidden"
         animate="visible"
-        className="h-full w-full"
+        className="axis-page h-full w-full"
       >
         {children}
       </m.div>

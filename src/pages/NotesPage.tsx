@@ -326,8 +326,9 @@ function EditorArea({
   const { t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [titleInput, setTitleInput] = useState('')
-  const [prevNoteId, setPrevNoteId] = useState<string | null>(null)
+  const [titleInput, setTitleInput] = useState(() =>
+    note ? parseNoteContent(note.content).title : ''
+  )
   const menuRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<ToastEditor>(null)
   const editorShellRef = useRef<HTMLDivElement>(null)
@@ -375,11 +376,6 @@ function EditorArea({
     await navigator.clipboard.writeText(note.content)
     setShowMenu(false)
   }, [note])
-
-  if (note?.id !== prevNoteId) {
-    setPrevNoteId(note?.id ?? null)
-    setTitleInput(note ? parseNoteContent(note.content).title : '')
-  }
 
   const handleEditorChange = useCallback(() => {
     if (!note) return
@@ -671,6 +667,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           onSearchChange={setSearchQuery}
         />
         <EditorArea
+          key={activeNote?.id ?? 'no-note-selected'}
           note={activeNote}
           isSaving={isSaving}
           onDelete={handleDeleteNote}
