@@ -2,8 +2,8 @@ use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
-        analytics, calendar, habits, kanban, notes, notifications, oauth, pomodoro, preferences,
-        quick_pane, recovery, tasks,
+        analytics, calendar, daily_plan, habits, kanban, notes, notifications, oauth, pomodoro,
+        preferences, quick_pane, recovery, tasks,
     };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
@@ -12,6 +12,11 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         calendar::create_event,
         calendar::update_event,
         calendar::delete_event,
+        // Daily plan
+        daily_plan::get_daily_plan,
+        daily_plan::create_daily_plan,
+        daily_plan::update_daily_plan_focus,
+        daily_plan::complete_daily_plan,
         // Existing commands
         preferences::greet,
         preferences::load_preferences,
@@ -86,9 +91,6 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
 }
 
 /// Export TypeScript bindings to the frontend.
-/// Run with: cargo test export_bindings -- --ignored
-#[cfg(any(test, debug_assertions))]
-#[allow(dead_code)]
 pub fn export_ts_bindings() {
     generate_bindings()
         .export(
@@ -97,19 +99,4 @@ pub fn export_ts_bindings() {
             "../src/lib/bindings.ts",
         )
         .expect("Failed to export TypeScript bindings");
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Generate TypeScript bindings file.
-    /// This test is ignored by default so it doesn't run in CI.
-    /// Run manually with: cargo test export_bindings -- --ignored
-    #[test]
-    #[ignore]
-    fn export_bindings() {
-        export_ts_bindings();
-        println!("✓ TypeScript bindings exported to ../src/lib/bindings.ts");
-    }
 }

@@ -109,6 +109,20 @@ vi.mock('@/lib/tauri-bindings', () => ({
     cleanupOldRecoveryFiles: vi
       .fn()
       .mockResolvedValue({ status: 'ok', data: 0 }),
+    getDailyPlan: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
+    createDailyPlan: vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: null,
+    }),
+    updateDailyPlanFocus: vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: null,
+    }),
+    completeDailyPlan: vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: null,
+    }),
+    getTasks: vi.fn().mockResolvedValue({ status: 'ok', data: [] }),
     startGoogleOauthLoopback: vi.fn().mockResolvedValue({
       status: 'ok',
       data: {

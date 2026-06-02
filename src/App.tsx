@@ -12,6 +12,7 @@ import { useGoogleStore } from './store/google-store'
 import { useSlackStore } from './store/slack-store'
 import { useOnboardingStore } from './store/onboarding-store'
 import { useUIStore } from './store/ui-store'
+import { useDailyPlanStore } from './store/daily-plan-store'
 import i18n from './i18n/config'
 import './App.css'
 import { ThemeProvider } from './components/ThemeProvider'
@@ -72,6 +73,10 @@ function App() {
   useSquareCornersEffect()
 
   const hasCompletedOnboarding = useOnboardingStore(state => state.hasCompleted)
+  const initializeTodayPlan = useDailyPlanStore(
+    state => state.initializeTodayPlan
+  )
+  const syncCurrentDate = useDailyPlanStore(state => state.syncCurrentDate)
 
   // Initialize command system and cleanup on app startup
   useEffect(() => {
@@ -146,6 +151,22 @@ function App() {
       clearTimeout(updateTimer)
     }
   }, [])
+
+  useEffect(() => {
+    if (!hasCompletedOnboarding) {
+      return
+    }
+
+    void initializeTodayPlan()
+
+    const dateSyncTimer = window.setInterval(() => {
+      void syncCurrentDate()
+    }, 60_000)
+
+    return () => {
+      window.clearInterval(dateSyncTimer)
+    }
+  }, [hasCompletedOnboarding, initializeTodayPlan, syncCurrentDate])
 
   return (
     <ErrorBoundary>

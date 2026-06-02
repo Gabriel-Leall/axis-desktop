@@ -22,7 +22,16 @@
  */
 
 export { commands, type Result } from './bindings'
-export type { AppPreferences, JsonValue, RecoveryError } from './bindings'
+export type {
+  AppPreferences,
+  CreateDailyPlanInput,
+  DailyPlan,
+  JsonValue,
+  RecoveryError,
+} from './bindings'
+
+export type DailyPlanStatus = 'open' | 'active' | 'wrapped_up'
+export type DailyPlanFocusSource = 'auto' | 'manual' | 'recalculated'
 
 // Tasks domain
 export type {

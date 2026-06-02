@@ -17,6 +17,10 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 // Re-export only what's needed externally
 pub use types::DEFAULT_QUICK_PANE_SHORTCUT;
 
+pub fn export_ts_bindings() {
+    bindings::export_ts_bindings();
+}
+
 #[cfg(desktop)]
 fn show_main_window(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -294,6 +298,25 @@ pub fn run() {
                     ",
                     kind: MigrationKind::Up,
                 },
+                Migration {
+                    version: 5,
+                    description: "create_daily_plans_table",
+                    sql: "
+                        CREATE TABLE IF NOT EXISTS daily_plans (
+                            id TEXT PRIMARY KEY,
+                            plan_date TEXT NOT NULL UNIQUE,
+                            focus_task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+                            status TEXT NOT NULL DEFAULT 'open',
+                            focus_source TEXT NOT NULL DEFAULT 'auto',
+                            created_at TEXT NOT NULL,
+                            updated_at TEXT NOT NULL,
+                            completed_at TEXT
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_daily_plans_date
+                            ON daily_plans(plan_date);
+                    ",
+                    kind: MigrationKind::Up,
+                },
             ];
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:tasks.db", migrations)
@@ -465,6 +488,25 @@ pub fn run() {
                         "CREATE INDEX IF NOT EXISTS idx_habit_logs_date \
                          ON habit_logs(completed_date)"
                     ).execute(&pool).await.expect("Failed to create habit_logs date index");
+
+                    // Daily plans
+                    sqlx::query(
+                        "CREATE TABLE IF NOT EXISTS daily_plans (
+                            id TEXT PRIMARY KEY,
+                            plan_date TEXT NOT NULL UNIQUE,
+                            focus_task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+                            status TEXT NOT NULL DEFAULT 'open',
+                            focus_source TEXT NOT NULL DEFAULT 'auto',
+                            created_at TEXT NOT NULL,
+                            updated_at TEXT NOT NULL,
+                            completed_at TEXT
+                        )"
+                    ).execute(&pool).await.expect("Failed to create daily_plans table");
+
+                    sqlx::query(
+                        "CREATE INDEX IF NOT EXISTS idx_daily_plans_date \
+                         ON daily_plans(plan_date)"
+                    ).execute(&pool).await.expect("Failed to create daily_plans index");
 
                     // Notes
                     sqlx::query(
