@@ -15,6 +15,14 @@ import {
   WIDGET_REGISTRY,
 } from '@/store/grid-store'
 import { saveGridLayout, loadGridLayout } from '@/services/grid-layout-db'
+import { usePreferences } from '@/services/preferences'
+import {
+  getDashboardContextMode,
+  getDashboardWidgetPriority,
+  normalizeDashboardAdaptationMode,
+  shouldDeemphasizeDashboardWidgets,
+} from '@/lib/dashboard-context-domain'
+import { getDailyAxisPeriod } from '@/lib/daily-axis-banner-domain'
 import { logger } from '@/lib/logger'
 
 import {
@@ -27,6 +35,7 @@ import {
 } from './widgets'
 import { useUIStore } from '@/store/ui-store'
 import { useGitHubStore } from '@/store/github-store'
+import { usePomodoroStore } from '@/store/pomodoro-store'
 
 /**
  * Wrapper that passes navigation to TasksWidget.
@@ -134,6 +143,21 @@ export function BentoGrid() {
   const setLoaded = useGridStore(state => state.setLoaded)
   const setProfileId = useGridStore(state => state.setProfileId)
   const githubUser = useGitHubStore(state => state.user)
+  const timerState = usePomodoroStore(state => state.timerState)
+  const { data: preferences } = usePreferences()
+
+  const adaptationMode = normalizeDashboardAdaptationMode(
+    preferences?.adaptive_dashboard_mode
+  )
+  const dashboardMode = getDashboardContextMode({
+    adaptationMode,
+    period: getDailyAxisPeriod(),
+    focusSessionActive: timerState === 'running',
+  })
+  const deemphasizeWidgets = shouldDeemphasizeDashboardWidgets(
+    dashboardMode,
+    adaptationMode
+  )
 
   const activeProfileId = githubUser?.login
     ? `github:${githubUser.login}`
@@ -296,8 +320,24 @@ export function BentoGrid() {
               const WidgetComponent = WIDGET_COMPONENTS[item.i]
               if (!WidgetComponent) return null
 
+              const adaptivePriority = getDashboardWidgetPriority(
+                dashboardMode,
+                adaptationMode,
+                item.i
+              )
+
               return (
-                <div key={item.i}>
+                <div
+                  key={item.i}
+                  className="axis-grid-slot h-full"
+                  data-adaptive-priority={adaptivePriority}
+                  data-adaptive-muted={
+                    deemphasizeWidgets && adaptivePriority === 'default'
+                      ? 'true'
+                      : 'false'
+                  }
+                  data-dashboard-context={dashboardMode}
+                >
                   <WidgetComponent />
                 </div>
               )

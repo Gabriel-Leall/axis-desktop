@@ -5,7 +5,9 @@
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
-use crate::types::{validate_string_input, validate_theme, AppPreferences};
+use crate::types::{
+    validate_dashboard_adaptation_mode, validate_string_input, validate_theme, AppPreferences,
+};
 
 /// Gets the path to the preferences file.
 fn get_preferences_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -113,6 +115,9 @@ pub async fn load_preferences(app: AppHandle) -> Result<AppPreferences, String> 
 pub async fn save_preferences(app: AppHandle, preferences: AppPreferences) -> Result<(), String> {
     // Validate theme value
     validate_theme(&preferences.theme)?;
+    if let Some(mode) = &preferences.adaptive_dashboard_mode {
+        validate_dashboard_adaptation_mode(mode)?;
+    }
 
     log::debug!("Saving preferences to disk: {preferences:?}");
     let prefs_path = get_preferences_path(&app)?;

@@ -101,6 +101,32 @@
   pointer-events: none;
 }
 
+.axis-grid-slot {
+  height: 100%;
+}
+
+.axis-grid-slot[data-adaptive-priority='primary'] .widget-card {
+  border-color: color-mix(in oklab, var(--primary) 55%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--primary) 28%, transparent),
+    var(--widget-shadow);
+}
+
+.axis-grid-slot[data-adaptive-priority='primary'] .widget-card::after {
+  border-color: color-mix(in oklab, var(--primary) 42%, white);
+}
+
+.axis-grid-slot[data-adaptive-priority='secondary'] .widget-card {
+  border-color: color-mix(in oklab, var(--accent) 50%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent) 18%, transparent),
+    var(--widget-shadow);
+}
+
+.axis-grid-slot[data-adaptive-muted='true'] .widget-card {
+  opacity: 0.82;
+}
+
 /* Hover elevation for desktop pointers only. */
 @media (hover: hover) {
   .react-grid-layout .react-grid-item:hover .widget-card {
@@ -121,6 +147,13 @@
     box-shadow:
       0 0 0 1px rgba(222, 196, 152, 0.26),
       0 24px 40px -26px rgba(12, 8, 5, 0.78);
+  }
+
+  .react-grid-layout
+    .react-grid-item:hover
+    .axis-grid-slot[data-adaptive-muted='true']
+    .widget-card {
+    opacity: 1;
   }
 }
 

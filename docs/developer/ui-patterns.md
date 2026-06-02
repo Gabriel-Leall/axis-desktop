@@ -373,5 +373,6 @@ Pattern goals:
 - **Unified drag affordance**: dragging always starts from `.widget-drag-handle`.
 - **Layered surfaces**: card body uses theme-aware gradients and ring shadows.
 - **Interaction consistency**: hover lift, resize handle, and drag placeholder use the same token system.
+- **Contextual emphasis**: adaptive dashboard styling may change emphasis, but it must not reorder the saved layout or force hidden widgets back into view.
 
 When adding new widgets, compose content inside `WidgetCard` and avoid re-implementing card chrome per widget.

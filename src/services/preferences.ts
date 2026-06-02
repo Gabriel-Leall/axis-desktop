@@ -29,6 +29,7 @@ export function usePreferences() {
           minimize_to_tray: false,
           start_of_week: 'sunday',
           daily_reset_time: '00:00',
+          adaptive_dashboard_mode: 'full',
         }
       }
 

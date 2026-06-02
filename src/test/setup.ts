@@ -98,6 +98,7 @@ vi.mock('@/lib/tauri-bindings', () => ({
         theme: 'system',
         language: 'en',
         quick_pane_shortcut: 'Option+Space',
+        adaptive_dashboard_mode: 'full',
       },
     }),
     savePreferences: vi.fn().mockResolvedValue({ status: 'ok', data: null }),

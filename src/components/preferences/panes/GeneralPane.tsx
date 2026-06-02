@@ -206,6 +206,44 @@ export function GeneralPane() {
               </SelectContent>
             </Select>
           </SettingsField>
+
+          <SettingsField
+            label={t('preferences.appearance.dashboardAdaptation')}
+            description={t(
+              'preferences.appearance.dashboardAdaptationDescription'
+            )}
+          >
+            <Select
+              value={preferences?.adaptive_dashboard_mode ?? 'full'}
+              onValueChange={value => {
+                if (preferences) {
+                  savePreferences.mutate({
+                    ...preferences,
+                    adaptive_dashboard_mode: value as
+                      | 'full'
+                      | 'reduced'
+                      | 'off',
+                  })
+                }
+              }}
+              disabled={!preferences || savePreferences.isPending}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="full">
+                  {t('preferences.appearance.dashboardAdaptation.full')}
+                </SelectItem>
+                <SelectItem value="reduced">
+                  {t('preferences.appearance.dashboardAdaptation.reduced')}
+                </SelectItem>
+                <SelectItem value="off">
+                  {t('preferences.appearance.dashboardAdaptation.off')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </SettingsField>
         </div>
       </SettingsSection>
 

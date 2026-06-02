@@ -40,6 +40,11 @@
   "preferences.appearance.language": "Language",
   "preferences.appearance.languageDescription": "Choose your preferred display language",
   "preferences.appearance.language.system": "System Default",
+  "preferences.appearance.dashboardAdaptation": "Dashboard adaptation",
+  "preferences.appearance.dashboardAdaptationDescription": "Control how strongly the dashboard highlights the most relevant surfaces for the current context.",
+  "preferences.appearance.dashboardAdaptation.full": "Full adaptation",
+  "preferences.appearance.dashboardAdaptation.reduced": "Reduced adaptation",
+  "preferences.appearance.dashboardAdaptation.off": "Fixed layout only",
 
   "preferences.advanced.startup": "Startup",
   "preferences.advanced.launchAtStartup": "Launch at system startup",
