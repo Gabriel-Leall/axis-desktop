@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Archive, Check, Flame, Plus, Trash2 } from 'lucide-react'
+import {
+  Archive,
+  Check,
+  CircleDot,
+  Flame,
+  PauseCircle,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react'
 import {
   AnimatePresence,
   LazyMotion,
@@ -24,11 +33,12 @@ import type { HabitFrequency } from '@/lib/habits-domain'
 import { cn } from '@/lib/utils'
 import {
   selectHabitCompletionDates,
-  selectLastNDates,
+  selectHabitLogStateMap,
+  selectRecoverableDatesForHabit,
   selectHabitStats,
   selectSortedTodayHabits,
   selectStreakByHabit,
-  selectTodayDoneSet,
+  selectTodayLogMap,
   selectTodayProgress,
   useHabitsStore,
   type Habit,
@@ -206,7 +216,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
   const setActiveTab = useHabitsStore(state => state.setActiveTab)
   const addHabit = useHabitsStore(state => state.addHabit)
   const updateHabit = useHabitsStore(state => state.updateHabit)
-  const toggleHabit = useHabitsStore(state => state.toggleHabit)
+  const setHabitLogState = useHabitsStore(state => state.setHabitLogState)
   const archiveHabit = useHabitsStore(state => state.archiveHabit)
   const deleteHabit = useHabitsStore(state => state.deleteHabit)
 
@@ -223,7 +233,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
   }, [loadHabits, loadMonthLogs, loadTodayLogs])
 
   const todayHabits = selectSortedTodayHabits(habits, todayLogs)
-  const todayDoneSet = selectTodayDoneSet(todayLogs)
+  const todayLogMap = selectTodayLogMap(todayLogs)
   const progress = selectTodayProgress(habits, todayLogs)
   const stats = selectHabitStats(habits, monthLogs)
 
@@ -238,11 +248,15 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
   const focusCompletionDates = focusedHabit
     ? selectHabitCompletionDates(monthLogs, focusedHabit.id)
     : []
-  const focusCompletionSet = new Set(focusCompletionDates)
-  const focusMatrixDates = selectLastNDates(30)
+  const focusStateMap = focusedHabit
+    ? selectHabitLogStateMap(monthLogs, focusedHabit.id)
+    : {}
   const focusStreak = focusedHabit
     ? selectStreakByHabit(monthLogs, focusedHabit.id)
     : 0
+  const focusRecoverableDates = focusedHabit
+    ? selectRecoverableDatesForHabit(focusedHabit, monthLogs)
+    : []
 
   const weekdayCounts = weekdayDistribution(monthLogs)
   const weekdayPeak = Math.max(1, ...weekdayCounts)
@@ -431,9 +445,15 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                   ) : (
                     <div className="divide-y divide-border/60">
                       {todayHabits.map((habit, index) => {
-                        const doneToday = todayDoneSet.has(habit.id)
+                        const todayLog = todayLogMap.get(habit.id) ?? null
+                        const todayState = todayLog?.state ?? null
+                        const coveredToday = !!todayLog
                         const streak = selectStreakByHabit(monthLogs, habit.id)
                         const completionDates = selectHabitCompletionDates(
+                          monthLogs,
+                          habit.id
+                        )
+                        const stateMap = selectHabitLogStateMap(
                           monthLogs,
                           habit.id
                         )
@@ -449,43 +469,74 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                             }}
                             className="grid gap-3 px-4 py-4 transition-colors hover:bg-accent/15 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
                             style={{
-                              backgroundColor: doneToday
+                              backgroundColor: coveredToday
                                 ? 'color-mix(in oklab, var(--card) 86%, transparent)'
                                 : `color-mix(in oklab, ${habit.color} 12%, var(--card))`,
                             }}
                           >
-                            <m.button
-                              type="button"
-                              aria-label={
-                                doneToday
-                                  ? t('habits.markUndoneAria', {
-                                      name: habit.name,
-                                    })
-                                  : t('habits.markDoneAria', {
-                                      name: habit.name,
-                                    })
-                              }
-                              onClick={() => void toggleHabit(habit.id)}
-                              whileTap={{ scale: 0.85 }}
-                              animate={{ scale: doneToday ? [1, 1.15, 1] : 1 }}
-                              transition={{
-                                duration: 0.24,
-                                ease: [0.16, 1, 0.3, 1],
-                              }}
-                              className={cn(
-                                'mt-0.5 flex size-8 items-center justify-center self-start rounded-full border transition-all',
-                                doneToday
-                                  ? 'border-transparent text-primary-foreground'
-                                  : 'border-muted-foreground/45 text-transparent hover:border-foreground/60'
-                              )}
-                              style={{
-                                backgroundColor: doneToday
-                                  ? habit.color
-                                  : 'transparent',
-                              }}
-                            >
-                              <Check className="size-3.5" strokeWidth={3} />
-                            </m.button>
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                type="button"
+                                variant={
+                                  todayState === 'done' ? 'default' : 'outline'
+                                }
+                                size="sm"
+                                onClick={() =>
+                                  void setHabitLogState(
+                                    habit.id,
+                                    todayState === 'done' ? null : 'done'
+                                  )
+                                }
+                                aria-label={t('habits.actions.doneAria', {
+                                  name: habit.name,
+                                })}
+                              >
+                                <Check className="size-3.5" />
+                                {t('habits.actions.done')}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={
+                                  todayState === 'minimal'
+                                    ? 'default'
+                                    : 'outline'
+                                }
+                                size="sm"
+                                onClick={() =>
+                                  void setHabitLogState(
+                                    habit.id,
+                                    todayState === 'minimal' ? null : 'minimal'
+                                  )
+                                }
+                                aria-label={t('habits.actions.minimumAria', {
+                                  name: habit.name,
+                                })}
+                              >
+                                <CircleDot className="size-3.5" />
+                                {t('habits.actions.minimum')}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={
+                                  todayState === 'paused'
+                                    ? 'default'
+                                    : 'outline'
+                                }
+                                size="sm"
+                                onClick={() =>
+                                  void setHabitLogState(
+                                    habit.id,
+                                    todayState === 'paused' ? null : 'paused'
+                                  )
+                                }
+                                aria-label={t('habits.actions.pauseAria', {
+                                  name: habit.name,
+                                })}
+                              >
+                                <PauseCircle className="size-3.5" />
+                                {t('habits.actions.pause')}
+                              </Button>
+                            </div>
 
                             <div className="min-w-0">
                               <div className="flex min-w-0 items-center gap-2">
@@ -494,7 +545,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                                   onClick={() => setSelectedHabit(habit.id)}
                                   className={cn(
                                     'min-w-0 truncate text-start text-sm font-semibold',
-                                    doneToday &&
+                                    todayState === 'done' &&
                                       'text-muted-foreground line-through'
                                   )}
                                 >
@@ -509,6 +560,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                                 <div className="ml-1 shrink-0">
                                   <HeatMap
                                     logs={completionDates}
+                                    statesByDate={stateMap}
                                     days={7}
                                     color={habit.color}
                                     size="md"
@@ -518,11 +570,20 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                             </div>
 
                             <div className="md:justify-self-end">
-                              <div className="flex items-center gap-3">
+                              <div className="flex flex-col items-end gap-2">
                                 <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
                                   <Flame className="size-3.5" />
                                   {t('habits.streakRun', { count: streak })}
                                 </span>
+                                {todayState ? (
+                                  <span className="rounded-full border border-border/70 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                                    {t(`habits.logState.${todayState}`)}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">
+                                    {t('habits.openToday')}
+                                  </span>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -590,30 +651,53 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                           </select>
                         </div>
 
-                        <div className="grid grid-cols-10 gap-1.5">
-                          {focusMatrixDates.map(dateISO => {
-                            const completed = focusCompletionSet.has(dateISO)
-                            return (
-                              <div
-                                key={dateISO}
-                                title={`${dateISO} - ${completed ? 'Completed' : 'Missed'}`}
-                                className="size-3 rounded-lg border border-border/60"
-                                style={{
-                                  backgroundColor: completed
-                                    ? focusedHabit.color
-                                    : 'color-mix(in oklab, var(--muted) 72%, transparent)',
-                                  opacity: completed ? 0.9 : 0.6,
-                                }}
-                              />
-                            )
-                          })}
-                        </div>
+                        <HeatMap
+                          logs={focusCompletionDates}
+                          statesByDate={focusStateMap}
+                          days={30}
+                          color={focusedHabit.color}
+                          size="md"
+                        />
 
                         <p className="text-xs text-muted-foreground">
                           {t('habits.focusHabit.currentStreak', {
                             count: focusStreak,
                           })}
                         </p>
+
+                        {focusRecoverableDates.length > 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                              {t('habits.focusHabit.recoveryHeading')}
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {focusRecoverableDates.map(dateISO => (
+                                <Button
+                                  key={dateISO}
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    void setHabitLogState(
+                                      focusedHabit.id,
+                                      'recovered',
+                                      dateISO
+                                    )
+                                  }
+                                  aria-label={t('habits.actions.recoverAria', {
+                                    name: focusedHabit.name,
+                                    date: dateISO,
+                                  })}
+                                >
+                                  <RotateCcw className="size-3.5" />
+                                  {t('habits.actions.recover', {
+                                    date: dateISO,
+                                  })}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     ) : (
                       <p className="mt-3 text-xs text-muted-foreground">
@@ -674,8 +758,13 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                         monthLogs,
                         habit.id
                       )
+                      const stateMap = selectHabitLogStateMap(
+                        monthLogs,
+                        habit.id
+                      )
                       const streak = selectStreakByHabit(monthLogs, habit.id)
-                      const doneToday = todayDoneSet.has(habit.id)
+                      const todayState =
+                        todayLogMap.get(habit.id)?.state ?? null
 
                       return (
                         <article
@@ -707,6 +796,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                           <div className="mt-3">
                             <HeatMap
                               logs={completionDates}
+                              statesByDate={stateMap}
                               days={30}
                               color={habit.color}
                               size="md"
@@ -714,9 +804,9 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                           </div>
 
                           <p className="mt-3 text-xs text-muted-foreground">
-                            {doneToday
-                              ? t('habits.completedToday')
-                              : t('habits.pendingToday')}
+                            {todayState
+                              ? t(`habits.logState.${todayState}`)
+                              : t('habits.openToday')}
                           </p>
                         </article>
                       )

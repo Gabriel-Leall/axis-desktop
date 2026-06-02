@@ -425,6 +425,17 @@ async deleteHabit(id: string) : Promise<Result<null, string>> {
 }
 },
 /**
+ * Sets or clears a habit log state for a specific date.
+ */
+async setHabitLogState(habitId: string, date: string, logId: string, state: string | null, completedAt: string) : Promise<Result<HabitLog | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_habit_log_state", { habitId, date, logId, state, completedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Toggles a habit log for the given date.
  * Inserts if no log exists; deletes if it already exists.
  * Returns `true` if the habit is now completed, `false` if uncompleted.
@@ -743,7 +754,7 @@ export type DailyPlan = { id: string; plan_date: string; focus_task_id: string |
 export type FocusTimeByDay = { day: string; total_seconds: number }
 export type FullBoard = { board: KanbanBoard; columns: KanbanColumnWithCards[] }
 export type Habit = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; active: boolean; sort_order: number; created_at: string; updated_at: string }
-export type HabitLog = { id: string; habit_id: string; completed_date: string; completed_at: string }
+export type HabitLog = { id: string; habit_id: string; completed_date: string; completed_at: string; state: string }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 export type KanbanBoard = { id: string; name: string; is_active: boolean; sort_order: number; created_at: string; updated_at: string }
 export type KanbanCard = { id: string; column_id: string; title: string; description: string | null; priority: string; sort_order: number; created_at: string; updated_at: string }

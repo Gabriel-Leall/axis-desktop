@@ -30,6 +30,7 @@ pub struct HabitLog {
     pub habit_id: String,
     pub completed_date: String, // "YYYY-MM-DD"
     pub completed_at: String,
+    pub state: String, // "done" | "minimal" | "paused" | "recovered"
 }
 
 #[derive(Debug, Serialize, Deserialize, Type)]
@@ -81,6 +82,7 @@ fn row_to_log(row: &sqlx::sqlite::SqliteRow) -> HabitLog {
         habit_id: row.get("habit_id"),
         completed_date: row.get("completed_date"),
         completed_at: row.get("completed_at"),
+        state: row.get("state"),
     }
 }
 
@@ -234,7 +236,7 @@ pub async fn toggle_habit_log(
     completed_at: String,
 ) -> Result<bool, String> {
     let existing =
-        sqlx::query("SELECT id FROM habit_logs WHERE habit_id = ? AND completed_date = ?")
+        sqlx::query("SELECT id, state FROM habit_logs WHERE habit_id = ? AND completed_date = ?")
             .bind(&habit_id)
             .bind(&date)
             .fetch_optional(pool.inner())
@@ -243,8 +245,8 @@ pub async fn toggle_habit_log(
 
     if existing.is_none() {
         sqlx::query(
-            "INSERT INTO habit_logs (id, habit_id, completed_date, completed_at)
-             VALUES (?, ?, ?, ?)",
+            "INSERT INTO habit_logs (id, habit_id, completed_date, completed_at, state)
+             VALUES (?, ?, ?, ?, 'done')",
         )
         .bind(&log_id)
         .bind(&habit_id)
@@ -257,15 +259,93 @@ pub async fn toggle_habit_log(
         log::debug!("Habit log inserted for {habit_id}");
         Ok(true)
     } else {
-        sqlx::query("DELETE FROM habit_logs WHERE habit_id = ? AND completed_date = ?")
+        let current_state: String = existing
+            .as_ref()
+            .and_then(|row| row.try_get("state").ok())
+            .unwrap_or_else(|| "done".to_string());
+
+        if current_state == "done" {
+            sqlx::query("DELETE FROM habit_logs WHERE habit_id = ? AND completed_date = ?")
+                .bind(&habit_id)
+                .bind(&date)
+                .execute(pool.inner())
+                .await
+                .map_err(|e| format!("Failed to delete habit log: {e}"))?;
+
+            log::debug!("Habit log removed for {habit_id}");
+            Ok(false)
+        } else {
+            sqlx::query(
+                "UPDATE habit_logs
+                 SET state = 'done', completed_at = ?
+                 WHERE habit_id = ? AND completed_date = ?",
+            )
+            .bind(&completed_at)
             .bind(&habit_id)
             .bind(&date)
             .execute(pool.inner())
             .await
-            .map_err(|e| format!("Failed to delete habit log: {e}"))?;
+            .map_err(|e| format!("Failed to promote habit log to done: {e}"))?;
 
-        log::debug!("Habit log removed for {habit_id}");
-        Ok(false)
+            log::debug!("Habit log promoted to done for {habit_id}");
+            Ok(true)
+        }
+    }
+}
+
+/// Sets or clears a habit log state for a specific date.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_habit_log_state(
+    pool: State<'_, Pool<Sqlite>>,
+    habit_id: String,
+    date: String,
+    log_id: String,
+    state: Option<String>,
+    completed_at: String,
+) -> Result<Option<HabitLog>, String> {
+    match state.as_deref() {
+        None => {
+            sqlx::query("DELETE FROM habit_logs WHERE habit_id = ? AND completed_date = ?")
+                .bind(&habit_id)
+                .bind(&date)
+                .execute(pool.inner())
+                .await
+                .map_err(|e| format!("Failed to clear habit log: {e}"))?;
+
+            Ok(None)
+        }
+        Some("done" | "minimal" | "paused" | "recovered") => {
+            sqlx::query(
+                "INSERT INTO habit_logs (id, habit_id, completed_date, completed_at, state)
+                 VALUES (?, ?, ?, ?, ?)
+                 ON CONFLICT(habit_id, completed_date) DO UPDATE SET
+                   completed_at = excluded.completed_at,
+                   state = excluded.state",
+            )
+            .bind(&log_id)
+            .bind(&habit_id)
+            .bind(&date)
+            .bind(&completed_at)
+            .bind(&state)
+            .execute(pool.inner())
+            .await
+            .map_err(|e| format!("Failed to set habit log state: {e}"))?;
+
+            let row = sqlx::query(
+                "SELECT id, habit_id, completed_date, completed_at, state
+                 FROM habit_logs
+                 WHERE habit_id = ? AND completed_date = ?",
+            )
+            .bind(&habit_id)
+            .bind(&date)
+            .fetch_one(pool.inner())
+            .await
+            .map_err(|e| format!("Failed to load habit log after update: {e}"))?;
+
+            Ok(Some(row_to_log(&row)))
+        }
+        Some(_) => Err("Invalid habit log state".to_string()),
     }
 }
 
@@ -278,7 +358,7 @@ pub async fn get_habit_logs_range(
     end_date: String,
 ) -> Result<Vec<HabitLog>, String> {
     let rows = sqlx::query(
-        "SELECT id, habit_id, completed_date, completed_at
+        "SELECT id, habit_id, completed_date, completed_at, state
          FROM habit_logs
          WHERE completed_date >= ? AND completed_date <= ?
          ORDER BY completed_date ASC, completed_at ASC",
@@ -300,7 +380,7 @@ pub async fn get_habit_logs_for_date(
     date: String,
 ) -> Result<Vec<HabitLog>, String> {
     let rows = sqlx::query(
-        "SELECT id, habit_id, completed_date, completed_at
+        "SELECT id, habit_id, completed_date, completed_at, state
          FROM habit_logs
          WHERE completed_date = ?
          ORDER BY completed_at ASC",
