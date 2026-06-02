@@ -39,6 +39,8 @@ pub struct AppPreferences {
     pub start_of_week: Option<String>,
     /// The time when daily habits and stats reset (e.g., "00:00", "03:00")
     pub daily_reset_time: Option<String>,
+    /// How strongly the dashboard should adapt to the current context
+    pub adaptive_dashboard_mode: Option<String>,
 }
 
 impl Default for AppPreferences {
@@ -50,6 +52,7 @@ impl Default for AppPreferences {
             minimize_to_tray: Some(false),
             start_of_week: Some("monday".to_string()),
             daily_reset_time: Some("00:00".to_string()),
+            adaptive_dashboard_mode: Some("full".to_string()),
         }
     }
 }
@@ -129,6 +132,16 @@ pub fn validate_theme(theme: &str) -> Result<(), String> {
         _ => Err(
             "Invalid theme: must be 'light', 'dark', 'system', 'entardecer', or 'cream'"
                 .to_string(),
+        ),
+    }
+}
+
+/// Validates dashboard adaptation mode.
+pub fn validate_dashboard_adaptation_mode(mode: &str) -> Result<(), String> {
+    match mode {
+        "full" | "reduced" | "off" => Ok(()),
+        _ => Err(
+            "Invalid dashboard adaptation mode: must be 'full', 'reduced', or 'off'".to_string(),
         ),
     }
 }
