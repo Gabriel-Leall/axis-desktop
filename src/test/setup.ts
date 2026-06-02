@@ -123,6 +123,26 @@ vi.mock('@/lib/tauri-bindings', () => ({
       data: null,
     }),
     getTasks: vi.fn().mockResolvedValue({ status: 'ok', data: [] }),
+    savePomodoroSession: vi
+      .fn()
+      .mockResolvedValue({ status: 'ok', data: null }),
+    getTodaySessions: vi.fn().mockResolvedValue({ status: 'ok', data: [] }),
+    getPomodoroSettings: vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: {
+        focus_duration: 25,
+        short_break_duration: 5,
+        long_break_duration: 15,
+        pomos_until_long_break: 4,
+        auto_start_breaks: false,
+        auto_start_focus: false,
+        sound_notifications: true,
+      },
+    }),
+    savePomodoroSettings: vi
+      .fn()
+      .mockResolvedValue({ status: 'ok', data: null }),
+    toggleTaskComplete: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
     startGoogleOauthLoopback: vi.fn().mockResolvedValue({
       status: 'ok',
       data: {

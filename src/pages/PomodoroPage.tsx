@@ -25,9 +25,19 @@ import type {
 import { cn } from '@/lib/utils'
 import { LazyMotion, domAnimation, m } from 'motion/react'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import {
   isPermissionGranted,
   requestPermission,
 } from '@tauri-apps/plugin-notification'
+import { notifications } from '@/lib/notifications'
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -174,6 +184,17 @@ function TaskLinkSection() {
       ),
     [todayTasks, search, linkedTaskId]
   )
+
+  useEffect(() => {
+    if (!linkedTaskId) return
+    if (linkedTask) return
+
+    unlinkTask()
+    void notifications.info(
+      t('pomodoro.linkedTask.removedTitle'),
+      t('pomodoro.linkedTask.removedDescription')
+    )
+  }, [linkedTaskId, linkedTask, unlinkTask, t])
 
   return (
     <section className="space-y-3">
@@ -555,16 +576,26 @@ export function PomodoroPage() {
   const cyclesCompleted = usePomodoroStore(state => state.cyclesCompleted)
   const settings = usePomodoroStore(state => state.settings)
   const todaySessions = usePomodoroStore(state => state.todaySessions)
+  const linkedTaskId = usePomodoroStore(state => state.linkedTaskId)
+  const completionPrompt = usePomodoroStore(state => state.completionPrompt)
 
   const start = usePomodoroStore(state => state.start)
+  const startContextualFocus = usePomodoroStore(
+    state => state.startContextualFocus
+  )
   const pause = usePomodoroStore(state => state.pause)
   const reset = usePomodoroStore(state => state.reset)
   const skip = usePomodoroStore(state => state.skip)
+  const dismissCompletionPrompt = usePomodoroStore(
+    state => state.dismissCompletionPrompt
+  )
   const updateSettings = usePomodoroStore(state => state.updateSettings)
   const loadSettings = usePomodoroStore(state => state.loadSettings)
   const loadTodaySessions = usePomodoroStore(state => state.loadTodaySessions)
 
   const loadTasks = useTasksStore(state => state.loadTasks)
+  const tasks = useTasksStore(state => state.tasks)
+  const toggleComplete = useTasksStore(state => state.toggleComplete)
 
   const { t } = useTranslation()
 
@@ -614,6 +645,25 @@ export function PomodoroPage() {
     else start()
   }, [isRunning, pause, start])
 
+  const promptTask = completionPrompt?.taskId
+    ? (tasks.find(task => task.id === completionPrompt.taskId) ?? null)
+    : null
+
+  const handleCompletePromptTask = async () => {
+    if (!promptTask) {
+      dismissCompletionPrompt()
+      return
+    }
+
+    await toggleComplete(promptTask.id)
+    dismissCompletionPrompt()
+  }
+
+  const handleContinueFocus = async () => {
+    await startContextualFocus(linkedTaskId)
+    dismissCompletionPrompt()
+  }
+
   return (
     <LazyMotion features={domAnimation}>
       <div className="flex h-full flex-col overflow-y-auto bg-background/50">
@@ -625,6 +675,50 @@ export function PomodoroPage() {
         </div>
 
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 px-6 py-10">
+          <Dialog
+            open={!!completionPrompt}
+            onOpenChange={open => {
+              if (!open) dismissCompletionPrompt()
+            }}
+          >
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{t('pomodoro.postFocus.title')}</DialogTitle>
+                <DialogDescription>
+                  {promptTask
+                    ? t('pomodoro.postFocus.descriptionWithTask', {
+                        task: promptTask.title,
+                      })
+                    : t('pomodoro.postFocus.description')}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2 sm:justify-start">
+                {promptTask ? (
+                  <Button
+                    type="button"
+                    onClick={() => void handleCompletePromptTask()}
+                  >
+                    {t('pomodoro.postFocus.completeTask')}
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void handleContinueFocus()}
+                >
+                  {t('pomodoro.postFocus.continue')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={dismissCompletionPrompt}
+                >
+                  {t('pomodoro.postFocus.keepOpen')}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {/* ── Timer card ──────────────────────────────────────────────────────── */}
           <div className="relative flex flex-col items-center justify-center overflow-hidden rounded-[2.5rem] border border-border/60 bg-card/60 p-10 shadow-2xl backdrop-blur-xl">
             {/* Background glow when running */}
