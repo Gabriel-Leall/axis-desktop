@@ -70,6 +70,10 @@ interface PomodoroStoreState {
 
   // UI state
   linkedTaskId: string | null
+  completionPrompt: {
+    sessionId: string
+    taskId: string | null
+  } | null
 
   // Loaded data
   settings: PomodoroSettings
@@ -88,6 +92,8 @@ interface PomodoroStoreState {
   tick: () => void
   linkTask: (taskId: string) => void
   unlinkTask: () => void
+  startContextualFocus: (taskId?: string | null) => Promise<boolean>
+  dismissCompletionPrompt: () => void
   loadSettings: () => Promise<void>
   updateSettings: (updates: Partial<PomodoroSettings>) => Promise<void>
   loadTodaySessions: () => Promise<void>
@@ -169,6 +175,7 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
       currentSessionId: null,
 
       linkedTaskId: null,
+      completionPrompt: null,
       settings: DEFAULT_SETTINGS,
       todaySessions: [],
       isLoadingSettings: false,
@@ -232,6 +239,50 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
         }
 
         _startInterval()
+      },
+
+      startContextualFocus: async taskId => {
+        const snapshot = get()
+
+        try {
+          if (taskId) {
+            set(
+              { linkedTaskId: taskId },
+              undefined,
+              'startContextualFocus/link'
+            )
+          }
+
+          set(
+            { completionPrompt: null },
+            undefined,
+            'startContextualFocus/clearPrompt'
+          )
+          get().start()
+          return true
+        } catch (error) {
+          set(
+            {
+              linkedTaskId: snapshot.linkedTaskId,
+              timerState: snapshot.timerState,
+              currentType: snapshot.currentType,
+              totalDuration: snapshot.totalDuration,
+              cyclesCompleted: snapshot.cyclesCompleted,
+              startedAt: snapshot.startedAt,
+              pausedElapsed: snapshot.pausedElapsed,
+              sessionStartedAt: snapshot.sessionStartedAt,
+              currentSessionId: snapshot.currentSessionId,
+              timeRemaining: snapshot.timeRemaining,
+              completionPrompt: snapshot.completionPrompt,
+            },
+            undefined,
+            'startContextualFocus/rollback'
+          )
+          logger.error(
+            `[pomodoro] Failed to start contextual focus: ${String(error)}`
+          )
+          return false
+        }
       },
 
       // ── Pause ─────────────────────────────────────────────────────────────────
@@ -432,6 +483,13 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
             currentSessionId: autoStart ? generateId() : null,
             sessionStartedAt: autoStart ? utcNow() : null,
             todaySessions: [...state.todaySessions, completedSession],
+            completionPrompt:
+              currentType === 'focus'
+                ? {
+                    sessionId: completedSession.id,
+                    taskId: completedSession.task_id,
+                  }
+                : state.completionPrompt,
           }),
           undefined,
           '_completeSession'
@@ -487,6 +545,9 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
         set({ linkedTaskId: taskId }, undefined, 'linkTask'),
 
       unlinkTask: () => set({ linkedTaskId: null }, undefined, 'unlinkTask'),
+
+      dismissCompletionPrompt: () =>
+        set({ completionPrompt: null }, undefined, 'dismissCompletionPrompt'),
 
       // ── Settings ──────────────────────────────────────────────────────────────
       loadSettings: async () => {

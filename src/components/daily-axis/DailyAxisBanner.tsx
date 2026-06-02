@@ -47,7 +47,9 @@ export function DailyAxisBanner() {
   const updateFocus = useDailyPlanStore(state => state.updateFocus)
 
   const linkTask = usePomodoroStore(state => state.linkTask)
-  const startPomodoro = usePomodoroStore(state => state.start)
+  const startContextualFocus = usePomodoroStore(
+    state => state.startContextualFocus
+  )
   const timerState = usePomodoroStore(state => state.timerState)
   const linkedTaskId = usePomodoroStore(state => state.linkedTaskId)
 
@@ -65,14 +67,12 @@ export function DailyAxisBanner() {
     task => task.status !== 'done' && !task.completed_at
   )
   const focusedTask = activePlan?.focus_task_id
-    ? availableFocusTasks.find(task => task.id === activePlan.focus_task_id) ??
-      null
+    ? (availableFocusTasks.find(task => task.id === activePlan.focus_task_id) ??
+      null)
     : null
   const selectableTasks = availableFocusTasks.slice(0, 5)
   const isRunningFocusedTask =
-    timerState === 'running' &&
-    !!focusedTask &&
-    linkedTaskId === focusedTask.id
+    timerState === 'running' && !!focusedTask && linkedTaskId === focusedTask.id
   const isLoading = planLoading || tasksLoading
   const emptyState = !isLoading && !focusedTask
 
@@ -107,7 +107,7 @@ export function DailyAxisBanner() {
     }
   }
 
-  const handleStartFocus = () => {
+  const handleStartFocus = async () => {
     if (!focusedTask) {
       navigateTo('tasks')
       return
@@ -117,7 +117,14 @@ export function DailyAxisBanner() {
     navigateTo('pomodoro')
 
     if (timerState !== 'running' || linkedTaskId !== focusedTask.id) {
-      startPomodoro()
+      const ok = await startContextualFocus(focusedTask.id)
+      if (!ok) {
+        void notifications.error(
+          t('dailyAxis.error.startFailed'),
+          t('dailyAxis.error.startPreserved')
+        )
+        return
+      }
     }
 
     void notifications.success(
@@ -137,7 +144,7 @@ export function DailyAxisBanner() {
       return
     }
 
-    handleStartFocus()
+    void handleStartFocus()
   }
 
   return (
@@ -223,7 +230,9 @@ export function DailyAxisBanner() {
                   type="button"
                   variant="outline"
                   className="rounded-xl"
-                  disabled={isLoading || planSaving || selectableTasks.length <= 1}
+                  disabled={
+                    isLoading || planSaving || selectableTasks.length <= 1
+                  }
                 >
                   <RefreshCcw className="size-4" />
                   <span>{t('dailyAxis.changeFocus')}</span>
@@ -248,7 +257,9 @@ export function DailyAxisBanner() {
                         )}
                       >
                         <span className="flex-1 truncate">{task.title}</span>
-                        {selected ? <Check className="size-4 text-primary" /> : null}
+                        {selected ? (
+                          <Check className="size-4 text-primary" />
+                        ) : null}
                       </button>
                     )
                   })}
