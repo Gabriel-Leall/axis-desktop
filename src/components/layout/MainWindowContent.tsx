@@ -3,6 +3,7 @@ import { AnimatePresence } from 'motion/react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { BentoGrid } from '@/components/grid'
 import { WidgetToggleMenu } from '@/components/grid'
+import { DailyAxisBanner } from '@/components/daily-axis/DailyAxisBanner'
 import { useUIStore } from '@/store/ui-store'
 import { Maximize2, Minimize2 } from 'lucide-react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
@@ -129,6 +130,8 @@ export function MainWindowContent({
                     </button>
                     <WidgetToggleMenu />
                   </div>
+
+                  <DailyAxisBanner />
 
                   <div className="min-w-0 flex-1 overflow-hidden">
                     <BentoGrid />
