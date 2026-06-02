@@ -53,6 +53,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         habits::update_habit,
         habits::archive_habit,
         habits::delete_habit,
+        habits::set_habit_log_state,
         habits::toggle_habit_log,
         habits::get_habit_logs_range,
         habits::get_habit_logs_for_date,

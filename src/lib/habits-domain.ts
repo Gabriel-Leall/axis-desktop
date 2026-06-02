@@ -1,4 +1,5 @@
 export type HabitFrequency = 'daily' | 'weekdays' | 'weekends' | 'custom'
+export type HabitLogState = 'done' | 'minimal' | 'paused' | 'recovered'
 
 export function getLocalISODate(date = new Date()): string {
   return date.toLocaleDateString('en-CA')
@@ -71,6 +72,33 @@ export function buildDateRange(days: number, endDate = new Date()): string[] {
     const step = new Date(end)
     step.setDate(end.getDate() - (days - 1 - i))
     dates.push(getLocalISODate(step))
+  }
+
+  return dates
+}
+
+export function getRecoverableHabitDates(
+  frequency: HabitFrequency,
+  frequencyDays: string | null,
+  existingDates: string[],
+  todayISO: string,
+  maxDays = 3
+): string[] {
+  const existing = new Set(existingDates)
+  const dates: string[] = []
+  const today = new Date(`${todayISO}T12:00:00`)
+
+  for (let offset = 1; offset <= maxDays; offset += 1) {
+    const candidate = new Date(today)
+    candidate.setDate(today.getDate() - offset)
+    const dateISO = getLocalISODate(candidate)
+    if (!shouldDoOnDate(frequency, frequencyDays, dateISO)) {
+      continue
+    }
+    if (existing.has(dateISO)) {
+      continue
+    }
+    dates.push(dateISO)
   }
 
   return dates

@@ -317,6 +317,14 @@ pub fn run() {
                     ",
                     kind: MigrationKind::Up,
                 },
+                Migration {
+                    version: 6,
+                    description: "add_habit_log_state",
+                    sql: "
+                        ALTER TABLE habit_logs ADD COLUMN state TEXT NOT NULL DEFAULT 'done';
+                    ",
+                    kind: MigrationKind::Up,
+                },
             ];
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:tasks.db", migrations)
@@ -470,6 +478,7 @@ pub fn run() {
                             habit_id TEXT NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
                             completed_date TEXT NOT NULL,
                             completed_at TEXT NOT NULL,
+                            state TEXT NOT NULL DEFAULT 'done',
                             UNIQUE(habit_id, completed_date)
                         )"
                     ).execute(&pool).await.expect("Failed to create habit_logs table");
@@ -488,6 +497,20 @@ pub fn run() {
                         "CREATE INDEX IF NOT EXISTS idx_habit_logs_date \
                          ON habit_logs(completed_date)"
                     ).execute(&pool).await.expect("Failed to create habit_logs date index");
+
+                    let has_habit_state_col: bool = sqlx::query_scalar::<_, i64>(
+                        "SELECT COUNT(*) FROM pragma_table_info('habit_logs') \
+                         WHERE name = 'state'"
+                    )
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap_or(0) > 0;
+
+                    if !has_habit_state_col {
+                        sqlx::query(
+                            "ALTER TABLE habit_logs ADD COLUMN state TEXT NOT NULL DEFAULT 'done'"
+                        ).execute(&pool).await.expect("Failed to add habit_logs.state column");
+                    }
 
                     // Daily plans
                     sqlx::query(

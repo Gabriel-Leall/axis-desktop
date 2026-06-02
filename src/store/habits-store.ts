@@ -6,9 +6,11 @@ import {
   buildDateRange,
   calculateStreakFromDates,
   completionRate,
+  getRecoverableHabitDates,
   getLocalISODate,
   topCompletionWeekday,
   shouldDoOnDate,
+  type HabitLogState,
   type HabitFrequency,
 } from '@/lib/habits-domain'
 import { logger } from '@/lib/logger'
@@ -31,6 +33,7 @@ export interface HabitLog {
   habit_id: string
   completed_date: string
   completed_at: string
+  state: HabitLogState
 }
 
 export interface HabitInput {
@@ -56,6 +59,11 @@ interface HabitsState {
   loadTodayLogs: () => Promise<void>
   loadMonthLogs: () => Promise<void>
   toggleHabit: (habitId: string) => Promise<void>
+  setHabitLogState: (
+    habitId: string,
+    state: HabitLogState | null,
+    dateISO?: string
+  ) => Promise<void>
   addHabit: (input: HabitInput) => Promise<Habit>
   updateHabit: (id: string, updates: Partial<HabitInput>) => Promise<void>
   archiveHabit: (id: string) => Promise<void>
@@ -126,6 +134,7 @@ export const useHabitsStore = create<HabitsState>()(
             habit_id: l.habit_id,
             completed_date: l.completed_date,
             completed_at: l.completed_at,
+            state: l.state as HabitLogState,
           }))
 
           set({ todayLogs }, undefined, 'loadTodayLogs')
@@ -151,6 +160,7 @@ export const useHabitsStore = create<HabitsState>()(
             habit_id: l.habit_id,
             completed_date: l.completed_date,
             completed_at: l.completed_at,
+            state: l.state as HabitLogState,
           }))
 
           set({ monthLogs }, undefined, 'loadMonthLogs')
@@ -166,65 +176,156 @@ export const useHabitsStore = create<HabitsState>()(
 
       toggleHabit: async habitId => {
         const today = getLocalISODate()
-        const nowISO = new Date().toISOString()
         const existing = get().todayLogs.find(
           log => log.habit_id === habitId && log.completed_date === today
         )
+        await get().setHabitLogState(
+          habitId,
+          existing?.state === 'done' ? null : 'done',
+          today
+        )
+      },
 
-        if (existing) {
-          // Optimistic remove
-          set(
-            state => ({
-              todayLogs: state.todayLogs.filter(log => log.id !== existing.id),
-              monthLogs: state.monthLogs.filter(log => log.id !== existing.id),
-            }),
-            undefined,
-            'toggleHabit/uncheck'
-          )
+      setHabitLogState: async (habitId, state, dateISO = getLocalISODate()) => {
+        const nowISO = new Date().toISOString()
+        const existing =
+          get().todayLogs.find(
+            log => log.habit_id === habitId && log.completed_date === dateISO
+          ) ??
+          get().monthLogs.find(
+            log => log.habit_id === habitId && log.completed_date === dateISO
+          ) ??
+          null
 
-          try {
-            const result = await commands.toggleHabitLog(
-              habitId,
-              today,
-              existing.id,
-              nowISO
-            )
-            // If backend returned true (completed), it means the log was re-inserted
-            // which shouldn't happen in uncheck flow — reload to reconcile.
-            if (result.status === 'ok' && result.data === true) {
-              await get().loadTodayLogs()
-              await get().loadMonthLogs()
-            }
-          } catch (error) {
-            logger.error(`Failed to uncheck habit: ${String(error)}`)
-            await get().loadTodayLogs()
-            await get().loadMonthLogs()
-          }
-          return
-        }
+        const optimisticLog =
+          state === null
+            ? null
+            : {
+                id: existing?.id ?? newId(),
+                habit_id: habitId,
+                completed_date: dateISO,
+                completed_at: nowISO,
+                state,
+              }
 
-        const newLog: HabitLog = {
-          id: newId(),
-          habit_id: habitId,
-          completed_date: today,
-          completed_at: nowISO,
-        }
-
-        // Optimistic add
         set(
-          state => ({
-            todayLogs: [...state.todayLogs, newLog],
-            monthLogs: [...state.monthLogs, newLog],
+          currentState => ({
+            todayLogs:
+              dateISO === getLocalISODate()
+                ? optimisticLog
+                  ? [
+                      ...currentState.todayLogs.filter(
+                        log =>
+                          !(
+                            log.habit_id === habitId &&
+                            log.completed_date === dateISO
+                          )
+                      ),
+                      optimisticLog,
+                    ]
+                  : currentState.todayLogs.filter(
+                      log =>
+                        !(
+                          log.habit_id === habitId &&
+                          log.completed_date === dateISO
+                        )
+                    )
+                : currentState.todayLogs,
+            monthLogs: optimisticLog
+              ? [
+                  ...currentState.monthLogs.filter(
+                    log =>
+                      !(
+                        log.habit_id === habitId &&
+                        log.completed_date === dateISO
+                      )
+                  ),
+                  optimisticLog,
+                ]
+              : currentState.monthLogs.filter(
+                  log =>
+                    !(
+                      log.habit_id === habitId && log.completed_date === dateISO
+                    )
+                ),
           }),
           undefined,
-          'toggleHabit/check'
+          'setHabitLogState/optimistic'
         )
 
         try {
-          await commands.toggleHabitLog(habitId, today, newLog.id, nowISO)
+          const result = await commands.setHabitLogState(
+            habitId,
+            dateISO,
+            existing?.id ?? optimisticLog?.id ?? newId(),
+            state,
+            nowISO
+          )
+
+          if (result.status !== 'ok') {
+            throw result.error
+          }
+
+          const persistedLog = result.data
+            ? {
+                id: result.data.id,
+                habit_id: result.data.habit_id,
+                completed_date: result.data.completed_date,
+                completed_at: result.data.completed_at,
+                state: result.data.state as HabitLogState,
+              }
+            : null
+
+          set(
+            currentState => ({
+              todayLogs:
+                dateISO === getLocalISODate()
+                  ? persistedLog
+                    ? [
+                        ...currentState.todayLogs.filter(
+                          log =>
+                            !(
+                              log.habit_id === habitId &&
+                              log.completed_date === dateISO
+                            )
+                        ),
+                        persistedLog,
+                      ]
+                    : currentState.todayLogs.filter(
+                        log =>
+                          !(
+                            log.habit_id === habitId &&
+                            log.completed_date === dateISO
+                          )
+                      )
+                  : currentState.todayLogs,
+              monthLogs: persistedLog
+                ? [
+                    ...currentState.monthLogs.filter(
+                      log =>
+                        !(
+                          log.habit_id === habitId &&
+                          log.completed_date === dateISO
+                        )
+                    ),
+                    persistedLog,
+                  ]
+                : currentState.monthLogs.filter(
+                    log =>
+                      !(
+                        log.habit_id === habitId &&
+                        log.completed_date === dateISO
+                      )
+                  ),
+            }),
+            undefined,
+            'setHabitLogState/done'
+          )
         } catch (error) {
-          logger.error(`Failed to check habit: ${String(error)}`)
-          await get().loadTodayLogs()
+          logger.error(`Failed to set habit log state: ${String(error)}`)
+          if (dateISO === getLocalISODate()) {
+            await get().loadTodayLogs()
+          }
           await get().loadMonthLogs()
         }
       },
@@ -400,6 +501,12 @@ export function selectTodayDoneSet(todayLogs: HabitLog[]): Set<string> {
   return new Set(todayLogs.map(log => log.habit_id))
 }
 
+export function selectTodayLogMap(
+  todayLogs: HabitLog[]
+): Map<string, HabitLog> {
+  return new Map(todayLogs.map(log => [log.habit_id, log]))
+}
+
 export function selectSortedTodayHabits(
   habits: Habit[],
   todayLogs: HabitLog[]
@@ -438,15 +545,39 @@ export function selectHabitCompletionDates(
   )
 }
 
+export function selectHabitLogStateMap(
+  logs: HabitLog[],
+  habitId: string
+): Record<string, HabitLogState> {
+  return Object.fromEntries(
+    logs.flatMap(log =>
+      log.habit_id === habitId ? [[log.completed_date, log.state]] : []
+    )
+  )
+}
+
 export function selectTodayProgress(
   habits: Habit[],
   todayLogs: HabitLog[]
 ): { done: number; total: number; ratio: number } {
   const dueToday = selectTodayHabits(habits)
-  const doneSet = selectTodayDoneSet(todayLogs)
-  const done = dueToday.filter(habit => doneSet.has(habit.id)).length
+  const coveredSet = selectTodayDoneSet(todayLogs)
+  const done = dueToday.filter(habit => coveredSet.has(habit.id)).length
   const total = dueToday.length
   return { done, total, ratio: total > 0 ? done / total : 0 }
+}
+
+export function selectRecoverableDatesForHabit(
+  habit: Habit,
+  logs: HabitLog[],
+  todayISO = getLocalISODate()
+): string[] {
+  return getRecoverableHabitDates(
+    habit.frequency,
+    habit.frequency_days ?? null,
+    selectHabitCompletionDates(logs, habit.id),
+    todayISO
+  )
 }
 
 export interface HabitStats {
