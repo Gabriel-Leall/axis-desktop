@@ -4,6 +4,11 @@ import { useCommandContext } from './use-command-context'
 import { useKeyboardShortcuts } from './use-keyboard-shortcuts'
 import { useUIStore } from '@/store/ui-store'
 import { logger } from '@/lib/logger'
+import { useTasksStore } from '@/store/tasks-store'
+import { useNotesStore } from '@/store/notes-store'
+import { useHabitsStore } from '@/store/habits-store'
+import { useCalendarStore } from '@/store/calendar-store'
+import type { CapturePaneCreatedPayload } from '@/lib/capture-pane-domain'
 
 /**
  * Main window event listeners - handles global keyboard shortcuts and cross-window events.
@@ -38,6 +43,68 @@ export function useMainWindowEventListeners() {
       })
       .catch(error => {
         logger.error('Failed to setup quick-pane-submit listener', { error })
+      })
+
+    return () => {
+      isMounted = false
+      if (unlisten) {
+        unlisten()
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    let isMounted = true
+    let unlisten: (() => void) | null = null
+
+    listen<CapturePaneCreatedPayload>('capture-pane-created', event => {
+      logger.debug('Capture pane create event received', {
+        payload: event.payload,
+      })
+
+      const navigateTo = useUIStore.getState().navigateTo
+
+      if (event.payload.kind === 'task' || event.payload.kind === 'focus') {
+        void useTasksStore.getState().loadTasks()
+      }
+
+      if (event.payload.kind === 'note') {
+        void useNotesStore.getState().loadNotes()
+      }
+
+      if (event.payload.kind === 'habit') {
+        void Promise.all([
+          useHabitsStore.getState().loadHabits(),
+          useHabitsStore.getState().loadTodayLogs(),
+          useHabitsStore.getState().loadMonthLogs(),
+        ])
+      }
+
+      if (event.payload.kind === 'event') {
+        void useCalendarStore.getState().loadEvents(new Date())
+      }
+
+      if (event.payload.openTarget === 'tasks' && event.payload.id) {
+        navigateTo('tasks', { selectedTaskId: event.payload.id })
+      } else if (event.payload.openTarget === 'notes' && event.payload.id) {
+        navigateTo('notes', { selectedNoteId: event.payload.id })
+      } else if (event.payload.openTarget === 'habits' && event.payload.id) {
+        navigateTo('habits', { selectedHabitId: event.payload.id })
+      } else if (event.payload.openTarget === 'calendar') {
+        navigateTo('calendar')
+      } else if (event.payload.openTarget === 'pomodoro') {
+        navigateTo('pomodoro')
+      }
+    })
+      .then(unlistenFn => {
+        if (!isMounted) {
+          unlistenFn()
+        } else {
+          unlisten = unlistenFn
+        }
+      })
+      .catch(error => {
+        logger.error('Failed to setup capture-pane-created listener', { error })
       })
 
     return () => {

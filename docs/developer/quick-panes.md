@@ -70,6 +70,14 @@ This pattern is intentionally flexible - the action can be anything:
 - Invoke a Tauri command
 - Make an API request
 
+The current capture pane uses typed prefixes for fast creation:
+
+- `task:` or no prefix → create task
+- `note:` → create note
+- `event:` → create all-day event for today
+- `habit:` → create daily habit
+- `focus:` → create a task and set it as today's manual focus
+
 ### Theme Synchronization
 
 Since windows don't share React context, theme must be synchronized manually:
