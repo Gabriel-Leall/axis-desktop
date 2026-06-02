@@ -123,7 +123,22 @@ vi.mock('@/lib/tauri-bindings', () => ({
       status: 'ok',
       data: null,
     }),
+    showQuickPane: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
+    dismissQuickPane: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
     getTasks: vi.fn().mockResolvedValue({ status: 'ok', data: [] }),
+    createTask: vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: { id: 'task-1' },
+    }),
+    createEvent: vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: { id: 'event-1' },
+    }),
+    createHabit: vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: { id: 'habit-1' },
+    }),
+    getHabits: vi.fn().mockResolvedValue({ status: 'ok', data: [] }),
     savePomodoroSession: vi
       .fn()
       .mockResolvedValue({ status: 'ok', data: null }),
@@ -152,6 +167,10 @@ vi.mock('@/lib/tauri-bindings', () => ({
         state: 'test-state',
         redirect_uri: 'http://127.0.0.1:12345/',
       },
+    }),
+    createNote: vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: { id: 'note-1' },
     }),
   },
   unwrapResult: vi.fn((result: { status: string; data?: unknown }) => {
