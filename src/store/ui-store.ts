@@ -19,6 +19,7 @@ interface UIState {
   rightSidebarVisible: boolean
   commandPaletteOpen: boolean
   preferencesOpen: boolean
+  wrapUpOpen: boolean
   lastQuickPaneEntry: string | null
   activePage: AppPage
   activePageData: Record<string, string>
@@ -32,6 +33,7 @@ interface UIState {
   toggleCommandPalette: () => void
   setCommandPaletteOpen: (open: boolean) => void
   togglePreferences: () => void
+  setWrapUpOpen: (open: boolean) => void
   setPreferencesOpen: (open: boolean, pane?: string) => void
   setActivePreferencesPane: (pane: string) => void
   setLastQuickPaneEntry: (text: string) => void
@@ -47,6 +49,7 @@ export const useUIStore = create<UIState>()(
       rightSidebarVisible: false,
       commandPaletteOpen: false,
       preferencesOpen: false,
+      wrapUpOpen: false,
       lastQuickPaneEntry: null,
       activePage: 'grid' as AppPage,
       activePageData: {},
@@ -97,6 +100,9 @@ export const useUIStore = create<UIState>()(
           undefined,
           'togglePreferences'
         ),
+
+      setWrapUpOpen: open =>
+        set({ wrapUpOpen: open }, undefined, 'setWrapUpOpen'),
 
       setPreferencesOpen: (open, pane) =>
         set(

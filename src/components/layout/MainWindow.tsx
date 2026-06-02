@@ -15,6 +15,7 @@ import { useUIStore } from '@/store/ui-store'
 import { useMainWindowEventListeners } from '@/hooks/useMainWindowEventListeners'
 import { cn } from '@/lib/utils'
 import { BonChanPet } from '@/components/bon-chan/BonChanPet'
+import { WrapUpDialog } from '@/components/wrap-up/WrapUpDialog'
 
 /**
  * Layout sizing configuration for resizable panels.
@@ -80,6 +81,7 @@ export function MainWindow() {
       <BonChanPet />
       <CommandPalette />
       <PreferencesDialog />
+      <WrapUpDialog />
       <Toaster
         position="bottom-right"
         theme={

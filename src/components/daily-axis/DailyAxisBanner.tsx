@@ -54,6 +54,7 @@ export function DailyAxisBanner() {
   const linkedTaskId = usePomodoroStore(state => state.linkedTaskId)
 
   const navigateTo = useUIStore(state => state.navigateTo)
+  const setWrapUpOpen = useUIStore(state => state.setWrapUpOpen)
 
   const period = getDailyAxisPeriod()
 
@@ -135,7 +136,7 @@ export function DailyAxisBanner() {
 
   const handlePrimaryAction = () => {
     if (period === 'evening') {
-      navigateTo('tasks')
+      setWrapUpOpen(true)
       return
     }
 
