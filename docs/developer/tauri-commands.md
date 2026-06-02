@@ -137,10 +137,10 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
 ### 4. Regenerate TypeScript bindings
 
 ```bash
-npm run rust:bindings
+bun run rust:bindings
 ```
 
-This runs `cargo test export_bindings -- --ignored` which generates `src/lib/bindings.ts`.
+This runs `cargo run --bin export-bindings`, which generates `src/lib/bindings.ts` without relying on the Rust test harness.
 
 ### 5. Use in frontend
 
@@ -162,7 +162,9 @@ Always commit:
 ```
 src-tauri/src/
 ├── lib.rs              # Commands with #[specta::specta]
-├── bindings.rs         # Command registration + export test
+├── bindings.rs         # Command registration + TypeScript export helper
+├── bin/
+│   └── export-bindings.rs # Dedicated bindings generator
 └── Cargo.toml          # specta, tauri-specta dependencies
 
 src/lib/
@@ -197,7 +199,7 @@ await commands.saveEmergencyData(filename, data as JsonValue)
 TypeScript bindings are generated when the app runs in debug mode, or via:
 
 ```bash
-npm run rust:bindings
+bun run rust:bindings
 ```
 
 This must be run after changing Rust commands.

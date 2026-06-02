@@ -40,6 +40,38 @@ async deleteEvent(id: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async getDailyPlan(date: string) : Promise<Result<DailyPlan | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_daily_plan", { date }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createDailyPlan(input: CreateDailyPlanInput) : Promise<Result<DailyPlan, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_daily_plan", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateDailyPlanFocus(planId: string, taskId: string | null, focusSource: string, updatedAt: string) : Promise<Result<DailyPlan, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_daily_plan_focus", { planId, taskId, focusSource, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async completeDailyPlan(planId: string, completedAt: string, updatedAt: string) : Promise<Result<DailyPlan, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("complete_daily_plan", { planId, completedAt, updatedAt }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Simple greeting command for demonstration purposes.
  */
@@ -697,11 +729,13 @@ daily_reset_time: string | null }
 export type CalendarEvent = { id: string; title: string; description: string | null; start_date: string; end_date: string; all_day: boolean; color: string | null; created_at: string; updated_at: string }
 export type CardOrderUpdate = { id: string; column_id: string; sort_order: number; updated_at: string }
 export type ColumnOrderUpdate = { id: string; sort_order: number; updated_at: string }
+export type CreateDailyPlanInput = { id: string; plan_date: string; focus_task_id: string | null; status: string; focus_source: string; created_at: string; updated_at: string }
 export type CreateEventInput = { id: string; title: string; description: string | null; start_date: string; end_date: string; all_day: boolean; color: string | null; created_at: string; updated_at: string }
 export type CreateHabitInput = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; sort_order: number; created_at: string; updated_at: string }
 export type CreateNoteInput = { title: string | null; content: string | null; folder: string | null }
 export type CreateSubtaskInput = { id: string; task_id: string; title: string; sort_order: number; created_at: string }
 export type CreateTaskInput = { id: string; title: string; description: string | null; priority: string; due_date: string | null; created_at: string; updated_at: string; sort_order: number }
+export type DailyPlan = { id: string; plan_date: string; focus_task_id: string | null; status: string; focus_source: string; created_at: string; updated_at: string; completed_at: string | null }
 export type FocusTimeByDay = { day: string; total_seconds: number }
 export type FullBoard = { board: KanbanBoard; columns: KanbanColumnWithCards[] }
 export type Habit = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; active: boolean; sort_order: number; created_at: string; updated_at: string }

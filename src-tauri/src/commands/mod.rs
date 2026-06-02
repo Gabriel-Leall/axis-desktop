@@ -5,6 +5,7 @@
 
 pub mod analytics;
 pub mod calendar;
+pub mod daily_plan;
 pub mod habits;
 pub mod kanban;
 pub mod notes;
