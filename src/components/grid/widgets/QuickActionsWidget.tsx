@@ -1,7 +1,16 @@
 import { WidgetCard } from '../WidgetCard'
-import { Zap, Settings, FolderOpen, Terminal, Palette } from 'lucide-react'
+import {
+  Zap,
+  Settings,
+  FolderOpen,
+  Terminal,
+  Palette,
+  PanelTopOpen,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useUIStore } from '@/store/ui-store'
+import { commands } from '@/lib/tauri-bindings'
+import { notifications } from '@/lib/notifications'
 
 /**
  * Quick Actions widget — shortcut buttons for common actions.
@@ -10,6 +19,14 @@ export function QuickActionsWidget() {
   const { t } = useTranslation()
   const togglePreferences = useUIStore(state => state.togglePreferences)
   const toggleCommandPalette = useUIStore(state => state.toggleCommandPalette)
+
+  const toggleQuickPane = async () => {
+    const result = await commands.toggleQuickPane()
+
+    if (result.status === 'error') {
+      void notifications.error(t('quickPane.error.openFailed'), result.error)
+    }
+  }
 
   const actions = [
     {
@@ -21,6 +38,11 @@ export function QuickActionsWidget() {
       label: t('widgets.quickActions.actions.commandPalette'),
       icon: Terminal,
       onClick: toggleCommandPalette,
+    },
+    {
+      label: t('widgets.quickActions.actions.quickPane'),
+      icon: PanelTopOpen,
+      onClick: () => void toggleQuickPane(),
     },
     {
       label: t('widgets.quickActions.actions.openFolder'),

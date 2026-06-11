@@ -131,9 +131,8 @@ export function MainWindowContent({
                     <WidgetToggleMenu />
                   </div>
 
-                  <DailyAxisBanner />
-
-                  <div className="min-w-0 flex-1 overflow-hidden">
+                  <div className="relative min-w-0 flex-1 overflow-hidden">
+                    <DailyAxisBanner />
                     <BentoGrid />
                   </div>
                 </div>

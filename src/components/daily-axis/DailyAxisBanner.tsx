@@ -3,6 +3,8 @@ import {
   Check,
   CheckSquare2,
   ChevronDown,
+  Maximize2,
+  Minimize2,
   Play,
   RefreshCcw,
   Sparkles,
@@ -35,6 +37,7 @@ function greetingKey(period: ReturnType<typeof getDailyAxisPeriod>) {
 export function DailyAxisBanner() {
   const { t } = useTranslation()
   const [selectorOpen, setSelectorOpen] = useState(false)
+  const [minimized, setMinimized] = useState(false)
 
   const tasks = useTasksStore(state => state.tasks)
   const tasksLoading = useTasksStore(state => state.isLoading)
@@ -148,29 +151,62 @@ export function DailyAxisBanner() {
     void handleStartFocus()
   }
 
+  if (minimized) {
+    return (
+      <section
+        role="region"
+        aria-label="Daily Axis"
+        className="pointer-events-none fixed bottom-5 right-5 z-50"
+      >
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="pointer-events-auto rounded-xl bg-background/95 shadow-modal backdrop-blur"
+          onClick={() => setMinimized(false)}
+          title={t('dailyAxis.restore')}
+        >
+          <Maximize2 className="size-3.5" />
+          <span>{t('dailyAxis.title')}</span>
+        </Button>
+      </section>
+    )
+  }
+
   return (
     <section
       role="region"
       aria-label="Daily Axis"
-      className="border-b border-border px-4 py-4"
+      className="pointer-events-none fixed bottom-5 right-5 z-50 w-[min(390px,calc(100vw-7rem))]"
     >
       <div
         className={cn(
-          'relative overflow-hidden rounded-2xl border px-5 py-4',
+          'pointer-events-auto relative overflow-hidden rounded-xl border px-4 py-3 shadow-modal backdrop-blur',
           period === 'evening'
             ? 'border-amber-500/25 bg-gradient-to-br from-amber-500/8 via-background to-background'
             : 'border-primary/15 bg-gradient-to-br from-primary/8 via-background to-background'
         )}
       >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0 space-y-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="absolute right-2 top-2 rounded-lg text-muted-foreground"
+          onClick={() => setMinimized(true)}
+          title={t('dailyAxis.minimize')}
+        >
+          <Minimize2 className="size-4" />
+        </Button>
+
+        <div className="flex flex-col gap-3 pr-8">
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {period === 'morning' ? (
-                <Sunrise className="size-4" />
+                <Sunrise className="size-3.5" />
               ) : period === 'afternoon' ? (
-                <SunMedium className="size-4" />
+                <SunMedium className="size-3.5" />
               ) : (
-                <Sunset className="size-4" />
+                <Sunset className="size-3.5" />
               )}
               <span>{t(greetingKey(period))}</span>
             </div>
@@ -182,28 +218,28 @@ export function DailyAxisBanner() {
               </div>
             ) : planError ? (
               <div className="space-y-2">
-                <h2 className="text-xl font-semibold tracking-tight">
+                <h2 className="text-base font-semibold tracking-tight">
                   {t('dailyAxis.errorTitle')}
                 </h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {t('dailyAxis.error.loadFailed')}
                 </p>
               </div>
             ) : emptyState ? (
               <div className="space-y-2">
-                <h2 className="text-xl font-semibold tracking-tight">
+                <h2 className="text-base font-semibold tracking-tight">
                   {t('dailyAxis.emptyTitle')}
                 </h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {t('dailyAxis.emptyDescription')}
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                <h2 className="text-xl font-semibold tracking-tight">
+              <div className="space-y-1.5">
+                <h2 className="text-base font-semibold tracking-tight">
                   {t('dailyAxis.title')}
                 </h2>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1">
                     <CheckSquare2 className="size-3.5" />
                     <span className="truncate">{focusedTask?.title}</span>
@@ -230,7 +266,8 @@ export function DailyAxisBanner() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-xl"
+                  size="sm"
+                  className="rounded-lg"
                   disabled={
                     isLoading || planSaving || selectableTasks.length <= 1
                   }
@@ -272,7 +309,8 @@ export function DailyAxisBanner() {
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-xl"
+                size="sm"
+                className="rounded-lg"
                 disabled={isLoading || planSaving}
                 onClick={handleStartFocus}
               >
@@ -283,7 +321,8 @@ export function DailyAxisBanner() {
 
             <Button
               type="button"
-              className="rounded-xl"
+              size="sm"
+              className="rounded-lg"
               disabled={isLoading || planSaving}
               onClick={handlePrimaryAction}
             >

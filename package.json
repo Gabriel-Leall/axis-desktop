@@ -36,7 +36,7 @@
     "rust:clippy": "cd src-tauri && cargo clippy -- -D warnings",
     "rust:clippy:fix": "cd src-tauri && cargo clippy --fix --allow-dirty",
     "rust:test": "cd src-tauri && cargo test",
-    "rust:bindings": "cd src-tauri && cargo run --bin export-bindings",
+    "rust:bindings": "cd src-tauri && cargo run --features export-bindings --bin Axis",
     "tauri": "tauri",
     "tauri:dev": "bun run tauri dev --config src-tauri/tauri.dev.conf.json",
     "tauri:build": "bun run tauri build",

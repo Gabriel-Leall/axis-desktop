@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import {
   CheckSquare,
   LayoutGrid,
@@ -5,8 +6,10 @@ import {
   CircleCheck,
   NotebookPen,
   BarChart2,
+  PanelTopOpen,
   User as UserIcon,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useGitHubStore } from '@/store/github-store'
 import { useGoogleStore } from '@/store/google-store'
 import {
@@ -17,6 +20,8 @@ import {
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui-store'
 import type { AppPage } from '@/store/ui-store'
+import { commands } from '@/lib/tauri-bindings'
+import { notifications } from '@/lib/notifications'
 
 interface NavItem {
   id: AppPage
@@ -40,6 +45,10 @@ interface LeftSideBarProps {
 }
 
 export function LeftSideBar({ children, className }: LeftSideBarProps) {
+  const { t } = useTranslation()
+  const [quickPaneShortcut, setQuickPaneShortcut] = useState<string | null>(
+    null
+  )
   const activePage = useUIStore(state => state.activePage)
   const navigateTo = useUIStore(state => state.navigateTo)
   const setPreferencesOpen = useUIStore(state => state.setPreferencesOpen)
@@ -48,6 +57,38 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
   const profileImage = user?.avatar_url ?? googleUser?.picture
   const profileName =
     user?.name ?? user?.login ?? googleUser?.name ?? googleUser?.email
+  const quickPaneLabel = quickPaneShortcut
+    ? t('quickPane.openWithShortcut', { shortcut: quickPaneShortcut })
+    : t('quickPane.open')
+
+  useEffect(() => {
+    let cancelled = false
+
+    commands
+      .getDefaultQuickPaneShortcut()
+      .then(shortcut => {
+        if (!cancelled) {
+          setQuickPaneShortcut(shortcut)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setQuickPaneShortcut(null)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleQuickPaneToggle = async () => {
+    const result = await commands.toggleQuickPane()
+
+    if (result.status === 'error') {
+      void notifications.error(t('quickPane.error.openFailed'), result.error)
+    }
+  }
 
   return (
     <div className={cn('flex h-full flex-col border-r bg-sidebar', className)}>
@@ -107,6 +148,22 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
       </nav>
 
       <div className="mt-auto flex flex-col items-center pb-4">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => void handleQuickPaneToggle()}
+              aria-label={quickPaneLabel}
+              className="group mb-3 flex size-9 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent/8 hover:text-foreground"
+            >
+              <PanelTopOpen className="size-4.5 transition-colors" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {quickPaneLabel}
+          </TooltipContent>
+        </Tooltip>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <button

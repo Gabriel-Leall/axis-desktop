@@ -140,7 +140,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
 bun run rust:bindings
 ```
 
-This runs `cargo run --bin export-bindings`, which generates `src/lib/bindings.ts` without relying on the Rust test harness.
+This runs `cargo run --features export-bindings --bin Axis`, which generates `src/lib/bindings.ts` without relying on the Rust test harness.
 
 ### 5. Use in frontend
 
@@ -163,8 +163,7 @@ Always commit:
 src-tauri/src/
 ├── lib.rs              # Commands with #[specta::specta]
 ├── bindings.rs         # Command registration + TypeScript export helper
-├── bin/
-│   └── export-bindings.rs # Dedicated bindings generator
+├── main.rs              # App entry point + feature-gated bindings generator
 └── Cargo.toml          # specta, tauri-specta dependencies
 
 src/lib/
