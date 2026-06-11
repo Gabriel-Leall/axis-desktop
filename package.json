@@ -2,7 +2,7 @@
   "name": "axis-desktop",
   "description": "Axis application",
   "private": true,
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "module",
   "author": "Gabriel Leall",
   "copyright": "Copyright © 2026 Gabriel Leall. All rights reserved.",
