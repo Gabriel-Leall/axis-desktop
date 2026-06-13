@@ -24,18 +24,21 @@ const SUPPORTED_PREFIXES: CapturePaneKind[] = [
   'focus',
 ]
 
-export function parseCapturePaneInput(raw: string): CapturePaneParseResult {
+export function parseCapturePaneInput(
+  raw: string,
+  defaultKind: CapturePaneKind = 'task'
+): CapturePaneParseResult {
   const trimmed = raw.trim()
   if (!trimmed) {
     return { status: 'error', reason: 'empty' }
   }
 
-  const prefixedMatch = trimmed.match(/^([a-zA-Z]+)\s*:\s*(.*)$/)
+  const prefixedMatch = trimmed.match(/^([a-zA-Z]+)\s*:\s*([\s\S]*)$/)
   if (!prefixedMatch) {
     return {
       status: 'ok',
       intent: {
-        kind: 'task',
+        kind: defaultKind,
         content: trimmed,
       },
     }

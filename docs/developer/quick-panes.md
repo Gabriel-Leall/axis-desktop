@@ -70,13 +70,25 @@ This pattern is intentionally flexible - the action can be anything:
 - Invoke a Tauri command
 - Make an API request
 
-The current capture pane uses typed prefixes for fast creation:
+The current capture pane uses a hybrid mode model. The visible mode selector is
+the default affordance, and the user can collapse it into a compact prefix mode:
 
 - `task:` or no prefix → create task
 - `note:` → create note
 - `event:` → create all-day event for today
 - `habit:` → create daily habit
 - `focus:` → create a task and set it as today's manual focus
+
+When the selector is visible and there is no typed prefix, the selected visual
+mode determines what gets created. When the selector is hidden, no prefix
+defaults to task and prefixes choose the destination. This keeps first-time use
+discoverable while preserving a quiet typed path for repeat users.
+
+The capture field is multiline. `Enter` inserts a line break,
+`Cmd/Ctrl+Enter` saves, and `Cmd/Ctrl+Shift+Enter` saves and opens the target
+section. For task, event, and focus captures, the first line becomes the title
+and the remaining lines become the description. For habit captures, the first
+line becomes the habit name.
 
 ### Theme Synchronization
 
@@ -219,14 +231,25 @@ listen('quick-pane-submit', async ({ payload }) => {
 
 ### Changing Window Size
 
-Update the constants in `src-tauri/src/lib.rs`:
+The initial quick pane size is defined in `src-tauri/src/commands/quick_pane.rs`
+via `QUICK_PANE_WIDTH` and `QUICK_PANE_HEIGHT`. Keep these constants aligned
+with the React layout in `src/components/quick-pane/QuickPaneApp.tsx`; the pane
+should have enough height for the mode selector, input, contextual hint, and
+error state without clipping.
+
+Current default:
 
 ```rust
-const QUICK_PANE_WIDTH: f64 = 500.0;
-const QUICK_PANE_HEIGHT: f64 = 72.0;
+const QUICK_PANE_WIDTH: f64 = 680.0;
+const QUICK_PANE_HEIGHT: f64 = 176.0;
 ```
 
-Also update the window creation in `init_quick_pane_macos` and `init_quick_pane_standard`.
+The macOS and standard window builders both read these constants. Avoid
+reintroducing literal dimensions in either path. After the window is visible,
+the React quick pane measures the multiline textarea and calls
+`getCurrentWindow().setSize(new LogicalSize(...))` so the pane grows with the
+draft instead of showing an internal scrollbar. That requires
+`core:window:allow-set-size` in `src-tauri/capabilities/quick-pane.json`.
 
 ## Implementation Notes
 
