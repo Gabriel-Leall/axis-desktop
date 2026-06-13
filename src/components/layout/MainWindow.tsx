@@ -14,7 +14,6 @@ import { useTheme } from '@/hooks/use-theme'
 import { useUIStore } from '@/store/ui-store'
 import { useMainWindowEventListeners } from '@/hooks/useMainWindowEventListeners'
 import { cn } from '@/lib/utils'
-import { BonChanPet } from '@/components/bon-chan/BonChanPet'
 import { WrapUpDialog } from '@/components/wrap-up/WrapUpDialog'
 
 /**
@@ -78,7 +77,6 @@ export function MainWindow() {
       </div>
 
       {/* Global UI Components (hidden until triggered) */}
-      <BonChanPet />
       <CommandPalette />
       <PreferencesDialog />
       <WrapUpDialog />
