@@ -8,10 +8,13 @@ export interface HeatMapProps {
   color: string
   size?: 'sm' | 'md'
   statesByDate?: Record<string, HabitLogState>
+  ariaLabel?: string
+  locale?: string
+  stateLabels?: Partial<Record<HabitLogState | 'missed', string>>
 }
 
-function dateLabel(dateISO: string): string {
-  return new Date(`${dateISO}T12:00:00`).toLocaleDateString('en-US', {
+function dateLabel(dateISO: string, locale: string): string {
+  return new Date(`${dateISO}T12:00:00`).toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -38,6 +41,9 @@ export function HeatMap({
   color,
   size = 'sm',
   statesByDate = {},
+  ariaLabel,
+  locale = 'en-US',
+  stateLabels = {},
 }: HeatMapProps) {
   const completedSet = new Set(logs)
   const dates = lastNDates(days)
@@ -45,7 +51,9 @@ export function HeatMap({
   return (
     <div
       role="grid"
-      aria-label={`Habit completion heat map for last ${days} days`}
+      aria-label={
+        ariaLabel ?? `Habit completion heat map for last ${days} days`
+      }
       className="grid"
       style={{
         gridTemplateColumns: `repeat(${days}, minmax(0, 1fr))`,
@@ -55,14 +63,18 @@ export function HeatMap({
       {dates.map(dateISO => {
         const completed = completedSet.has(dateISO)
         const state = statesByDate[dateISO]
+        const stateLabel =
+          stateLabels[state ?? (completed ? 'done' : 'missed')] ??
+          state ??
+          (completed ? 'done' : 'missed')
         const recovered = state === 'recovered'
         const gentle = state === 'minimal' || state === 'paused'
         return (
           <div
             key={dateISO}
             role="gridcell"
-            aria-label={`${state ?? (completed ? 'done' : 'missed')} on ${dateISO}`}
-            title={`${dateLabel(dateISO)} - ${state ?? (completed ? 'done' : 'missed')}`}
+            aria-label={`${stateLabel} on ${dateISO}`}
+            title={`${dateLabel(dateISO, locale)} - ${stateLabel}`}
             className={cn(
               'rounded-[3px] border border-border/60 transition-colors',
               size === 'sm' ? 'size-2.5' : 'size-3.5'

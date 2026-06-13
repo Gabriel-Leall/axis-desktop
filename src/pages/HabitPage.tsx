@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import {
   Archive,
+  AlertCircle,
   Check,
   CircleDot,
   Flame,
+  MoreHorizontal,
   PauseCircle,
   Plus,
   RotateCcw,
@@ -18,6 +21,17 @@ import {
   useReducedMotion,
 } from 'motion/react'
 import { HeatMap } from '@/components/habits/HeatMap'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -27,6 +41,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { HabitFrequency } from '@/lib/habits-domain'
@@ -59,13 +80,24 @@ const HABIT_COLORS = [
   '#e11d48',
 ]
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 
-const FREQUENCY_LABELS: Record<HabitFrequency, string> = {
-  daily: 'Daily',
-  weekdays: 'Weekdays',
-  weekends: 'Weekends',
-  custom: 'Custom',
+const FREQUENCY_KEYS: HabitFrequency[] = [
+  'daily',
+  'weekdays',
+  'weekends',
+  'custom',
+]
+
+const HABIT_COLOR_NAMES: Record<string, string> = {
+  '#0ea5e9': 'blue',
+  '#22c55e': 'green',
+  '#f59e0b': 'amber',
+  '#f97316': 'orange',
+  '#ef4444': 'red',
+  '#8b5cf6': 'violet',
+  '#06b6d4': 'cyan',
+  '#e11d48': 'rose',
 }
 
 interface HabitPageProps {
@@ -133,20 +165,28 @@ function toHabitInput(form: HabitFormState): HabitInput {
   }
 }
 
-function formatCustomDays(days: number[]): string {
+function formatCustomDays(days: number[], t: TFunction): string {
   const normalized = [...new Set(days)].sort((a, b) => a - b)
-  if (normalized.length === 0) return 'No days selected'
-  if (normalized.length === 7) return 'Every day'
-  return normalized.map(day => WEEKDAY_LABELS[day] ?? '?').join(' ')
+  if (normalized.length === 0) return t('habits.formatNodays')
+  if (normalized.length === 7) return t('habits.formatEveryDay')
+  return normalized
+    .map(day => {
+      const key = WEEKDAY_KEYS[day]
+      return key ? t(`habits.weekday.${key}`) : '?'
+    })
+    .join(' ')
 }
 
-function formatHabitFrequency(habit: Habit): string {
-  if (habit.frequency !== 'custom') return FREQUENCY_LABELS[habit.frequency]
-  return formatCustomDays(parseFrequencyDays(habit.frequency_days))
+function formatHabitFrequency(habit: Habit, t: TFunction): string {
+  if (habit.frequency !== 'custom') {
+    return t(`habits.frequency.${habit.frequency}`)
+  }
+  return formatCustomDays(parseFrequencyDays(habit.frequency_days), t)
 }
 
-function weekdayName(index: number): string {
-  return WEEKDAY_LABELS[index] ?? 'N/A'
+function weekdayName(index: number, t: TFunction): string {
+  const key = WEEKDAY_KEYS[index]
+  return key ? t(`habits.weekday.${key}`) : t('habits.quickSummary.noData')
 }
 
 function weekdayDistribution(logs: HabitLog[]): number[] {
@@ -162,26 +202,58 @@ function weekdayDistribution(logs: HabitLog[]): number[] {
   return distribution
 }
 
-function todayLabel(): string {
-  return new Intl.DateTimeFormat('en-US', {
+function todayLabel(locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
   }).format(new Date())
 }
 
+function recoveryDateLabel(
+  dateISO: string,
+  locale: string,
+  t: TFunction
+): string {
+  const target = new Date(`${dateISO}T12:00:00`)
+  if (Number.isNaN(target.getTime())) return dateISO
+
+  const today = new Date()
+  today.setHours(12, 0, 0, 0)
+  const diffDays = Math.round((today.getTime() - target.getTime()) / 86_400_000)
+
+  if (diffDays === 0) return t('habits.recovery.today')
+  if (diffDays === 1) return t('habits.recovery.yesterday')
+  if (diffDays > 1 && diffDays < 7) {
+    return t('habits.recovery.daysAgo', { count: diffDays })
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+  }).format(target)
+}
+
 function SegmentedTab({
   active,
   label,
   onClick,
+  id,
+  controls,
 }: {
   active: boolean
   label: string
   onClick: () => void
+  id: string
+  controls: string
 }) {
   return (
     <button
+      id={id}
       type="button"
+      role="tab"
+      aria-selected={active}
+      aria-controls={controls}
       onClick={onClick}
       className={cn(
         'rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-wide transition-colors',
@@ -196,11 +268,14 @@ function SegmentedTab({
 }
 
 export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [modalOpen, setModalOpen] = useState(false)
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null)
   const [form, setForm] = useState<HabitFormState>(() => defaultFormState())
+  const [modalError, setModalError] = useState<string | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const reduceMotion = useReducedMotion()
+  const locale = i18n.resolvedLanguage ?? i18n.language ?? 'en-US'
 
   const habits = useHabitsStore(state => state.habits)
   const todayLogs = useHabitsStore(state => state.todayLogs)
@@ -208,6 +283,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
   const activeTab = useHabitsStore(state => state.activeTab)
   const selectedHabitId = useHabitsStore(state => state.selectedHabitId)
   const isLoading = useHabitsStore(state => state.isLoading)
+  const error = useHabitsStore(state => state.error)
 
   const loadHabits = useHabitsStore(state => state.loadHabits)
   const loadTodayLogs = useHabitsStore(state => state.loadTodayLogs)
@@ -238,6 +314,13 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
   const stats = selectHabitStats(habits, monthLogs)
 
   const progressPercent = Math.round(progress.ratio * 100)
+  const heatMapStateLabels = {
+    done: t('habits.logState.done'),
+    minimal: t('habits.logState.minimal'),
+    paused: t('habits.logState.paused'),
+    recovered: t('habits.logState.recovered'),
+    missed: t('habits.logState.missed'),
+  }
 
   const focusedHabit =
     habits.find(habit => habit.id === selectedHabitId) ??
@@ -272,6 +355,8 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
 
   const openCreate = () => {
     setEditingHabitId(null)
+    setModalError(null)
+    setDeleteConfirmOpen(false)
     setForm(defaultFormState())
     setModalOpen(true)
   }
@@ -279,6 +364,8 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
   const openEdit = (habit: Habit) => {
     setSelectedHabit(habit.id)
     setEditingHabitId(habit.id)
+    setModalError(null)
+    setDeleteConfirmOpen(false)
     setForm(formFromHabit(habit))
     setModalOpen(true)
   }
@@ -287,13 +374,22 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
     if (!canSubmit) return
 
     const payload = toHabitInput(form)
-    if (editingHabitId) {
-      await updateHabit(editingHabitId, payload)
-    } else {
-      await addHabit(payload)
-    }
+    setModalError(null)
+    try {
+      if (editingHabitId) {
+        await updateHabit(editingHabitId, payload)
+      } else {
+        await addHabit(payload)
+      }
 
-    setModalOpen(false)
+      setModalOpen(false)
+    } catch {
+      setModalError(
+        editingHabitId
+          ? t('habits.modal.updateFailed')
+          : t('habits.modal.createFailed')
+      )
+    }
   }
 
   return (
@@ -314,7 +410,9 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
               <h1 className="text-2xl font-semibold leading-tight md:text-[2rem]">
                 {t('habits.pageTitle')}
               </h1>
-              <p className="text-sm text-muted-foreground">{todayLabel()}</p>
+              <p className="text-sm text-muted-foreground">
+                {todayLabel(locale)}
+              </p>
             </div>
 
             <Button size="sm" onClick={openCreate}>
@@ -337,7 +435,14 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                 </p>
               </div>
 
-              <div className="mt-2 h-4 overflow-hidden rounded-full bg-muted/70">
+              <div
+                role="progressbar"
+                aria-label={t('habits.dailyCompletion')}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={progressPercent}
+                className="mt-2 h-4 overflow-hidden rounded-full bg-muted/70"
+              >
                 <m.div
                   className="h-full rounded-full bg-foreground/85"
                   initial={{ width: 0 }}
@@ -364,7 +469,14 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                   total: stats.monthRate.totalDays,
                 })}
               </p>
-              <div className="mt-2 h-3 overflow-hidden rounded-full bg-muted/70">
+              <div
+                role="progressbar"
+                aria-label={t('habits.monthlySignal')}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={stats.monthRate.percentage}
+                className="mt-2 h-3 overflow-hidden rounded-full bg-muted/70"
+              >
                 <m.div
                   className="h-full rounded-full bg-foreground/80"
                   initial={{ width: 0 }}
@@ -377,18 +489,28 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
         </header>
 
         <div className="relative border-b border-border/70 px-5 py-3 md:px-8">
-          <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/70 p-1">
+          <div
+            role="tablist"
+            aria-label={t('habits.tabs.label')}
+            className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/70 p-1"
+          >
             <SegmentedTab
+              id="habits-tab-today"
+              controls="habits-panel-today"
               active={activeTab === 'today'}
               label={t('habits.tabs.today')}
               onClick={() => setActiveTab('today')}
             />
             <SegmentedTab
+              id="habits-tab-overview"
+              controls="habits-panel-overview"
               active={activeTab === 'overview'}
               label={t('habits.tabs.overview')}
               onClick={() => setActiveTab('overview')}
             />
             <SegmentedTab
+              id="habits-tab-stats"
+              controls="habits-panel-stats"
               active={activeTab === 'stats'}
               label={t('habits.tabs.stats')}
               onClick={() => setActiveTab('stats')}
@@ -397,9 +519,21 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
         </div>
 
         <div className="relative flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-6">
+          {error ? (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="size-4" />
+              <AlertTitle>{t('habits.error.title')}</AlertTitle>
+              <AlertDescription>
+                {t('habits.error.description')}
+              </AlertDescription>
+            </Alert>
+          ) : null}
           <AnimatePresence mode="wait">
             {activeTab === 'today' ? (
               <m.section
+                id="habits-panel-today"
+                role="tabpanel"
+                aria-labelledby="habits-tab-today"
                 key="today"
                 initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -448,6 +582,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                         const todayLog = todayLogMap.get(habit.id) ?? null
                         const todayState = todayLog?.state ?? null
                         const coveredToday = !!todayLog
+                        const isFocused = focusedHabit?.id === habit.id
                         const streak = selectStreakByHabit(monthLogs, habit.id)
                         const completionDates = selectHabitCompletionDates(
                           monthLogs,
@@ -467,7 +602,10 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                               ...transition,
                               delay: reduceMotion ? 0 : index * 0.04,
                             }}
-                            className="grid gap-3 px-4 py-4 transition-colors hover:bg-accent/15 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
+                            className={cn(
+                              'grid gap-3 px-4 py-4 transition-colors hover:bg-accent/15 md:grid-cols-[auto_minmax(0,1fr)_minmax(150px,auto)] md:items-center',
+                              isFocused && 'ring-1 ring-ring/45'
+                            )}
                             style={{
                               backgroundColor: coveredToday
                                 ? 'color-mix(in oklab, var(--card) 86%, transparent)'
@@ -481,6 +619,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                                   todayState === 'done' ? 'default' : 'outline'
                                 }
                                 size="sm"
+                                aria-pressed={todayState === 'done'}
                                 onClick={() =>
                                   void setHabitLogState(
                                     habit.id,
@@ -494,52 +633,10 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                                 <Check className="size-3.5" />
                                 {t('habits.actions.done')}
                               </Button>
-                              <Button
-                                type="button"
-                                variant={
-                                  todayState === 'minimal'
-                                    ? 'default'
-                                    : 'outline'
-                                }
-                                size="sm"
-                                onClick={() =>
-                                  void setHabitLogState(
-                                    habit.id,
-                                    todayState === 'minimal' ? null : 'minimal'
-                                  )
-                                }
-                                aria-label={t('habits.actions.minimumAria', {
-                                  name: habit.name,
-                                })}
-                              >
-                                <CircleDot className="size-3.5" />
-                                {t('habits.actions.minimum')}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant={
-                                  todayState === 'paused'
-                                    ? 'default'
-                                    : 'outline'
-                                }
-                                size="sm"
-                                onClick={() =>
-                                  void setHabitLogState(
-                                    habit.id,
-                                    todayState === 'paused' ? null : 'paused'
-                                  )
-                                }
-                                aria-label={t('habits.actions.pauseAria', {
-                                  name: habit.name,
-                                })}
-                              >
-                                <PauseCircle className="size-3.5" />
-                                {t('habits.actions.pause')}
-                              </Button>
                             </div>
 
                             <div className="min-w-0">
-                              <div className="flex min-w-0 items-center gap-2">
+                              <div className="flex min-w-0 flex-wrap items-center gap-2">
                                 <button
                                   type="button"
                                   onClick={() => setSelectedHabit(habit.id)}
@@ -554,7 +651,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                                 </button>
 
                                 <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                                  {formatHabitFrequency(habit)}
+                                  {formatHabitFrequency(habit, t)}
                                 </span>
 
                                 <div className="ml-1 shrink-0">
@@ -564,33 +661,80 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                                     days={7}
                                     color={habit.color}
                                     size="md"
+                                    locale={locale}
+                                    stateLabels={heatMapStateLabels}
+                                    ariaLabel={t('habits.heatmap.weekAria', {
+                                      name: habit.name,
+                                    })}
                                   />
                                 </div>
                               </div>
                             </div>
 
-                            <div className="md:justify-self-end">
-                              <div className="flex flex-col items-end gap-2">
-                                <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
-                                  <Flame className="size-3.5" />
-                                  {t('habits.streakRun', { count: streak })}
-                                </span>
-                                {todayState ? (
-                                  <span className="rounded-full border border-border/70 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    {t(`habits.logState.${todayState}`)}
+                            <div className="self-center md:justify-self-end">
+                              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                                <div className="flex min-w-28 flex-col items-end justify-center gap-2 text-right">
+                                  <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
+                                    <Flame className="size-3.5" />
+                                    {t('habits.streakRun', { count: streak })}
                                   </span>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">
-                                    {t('habits.openToday')}
-                                  </span>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openEdit(habit)}
-                                >
-                                  Edit
-                                </Button>
+                                  {todayState ? (
+                                    <span className="rounded-full border border-border/70 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                                      {t(`habits.logState.${todayState}`)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">
+                                      {t('habits.openToday')}
+                                    </span>
+                                  )}
+                                </div>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      aria-label={t('habits.actions.moreAria', {
+                                        name: habit.name,
+                                      })}
+                                    >
+                                      <MoreHorizontal className="size-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        void setHabitLogState(
+                                          habit.id,
+                                          todayState === 'minimal'
+                                            ? null
+                                            : 'minimal'
+                                        )
+                                      }
+                                    >
+                                      <CircleDot className="size-3.5" />
+                                      {t('habits.actions.minimum')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        void setHabitLogState(
+                                          habit.id,
+                                          todayState === 'paused'
+                                            ? null
+                                            : 'paused'
+                                        )
+                                      }
+                                    >
+                                      <PauseCircle className="size-3.5" />
+                                      {t('habits.actions.pause')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => openEdit(habit)}
+                                    >
+                                      {t('habits.actions.edit')}
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </div>
                           </m.article>
@@ -612,43 +756,53 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                         </p>
                       </div>
                       {focusedHabit ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEdit(focusedHabit)}
-                        >
-                          {t('habits.focusHabit.manage')}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {habits.length > 1 ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  {t('habits.focusHabit.switch')}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {habits.map(habit => (
+                                  <DropdownMenuItem
+                                    key={habit.id}
+                                    onClick={() => setSelectedHabit(habit.id)}
+                                  >
+                                    <span className="min-w-0 truncate">
+                                      {habit.icon ? `${habit.icon} ` : ''}
+                                      {habit.name}
+                                    </span>
+                                    {habit.id === focusedHabit.id ? (
+                                      <Check className="ml-auto size-3.5" />
+                                    ) : null}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : null}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEdit(focusedHabit)}
+                          >
+                            {t('habits.focusHabit.manage')}
+                          </Button>
+                        </div>
                       ) : null}
                     </div>
 
                     {focusedHabit ? (
                       <div className="mt-3 space-y-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-base font-semibold">
-                              {focusedHabit.icon ? `${focusedHabit.icon} ` : ''}
-                              {focusedHabit.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatHabitFrequency(focusedHabit)}
-                            </p>
-                          </div>
-                          <select
-                            value={selectedHabitId ?? focusedHabit.id}
-                            onChange={event =>
-                              setSelectedHabit(event.target.value || null)
-                            }
-                            className="h-8 max-w-47.5 rounded-md border border-border bg-background px-2 text-xs"
-                            aria-label={t('habits.focusHabit.switchAria')}
-                          >
-                            {habits.map(habit => (
-                              <option key={habit.id} value={habit.id}>
-                                {habit.icon ? `${habit.icon} ` : ''}
-                                {habit.name}
-                              </option>
-                            ))}
-                          </select>
+                        <div>
+                          <p className="text-base font-semibold">
+                            {focusedHabit.icon ? `${focusedHabit.icon} ` : ''}
+                            {focusedHabit.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatHabitFrequency(focusedHabit, t)}
+                          </p>
                         </div>
 
                         <HeatMap
@@ -657,7 +811,51 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                           days={30}
                           color={focusedHabit.color}
                           size="md"
+                          locale={locale}
+                          stateLabels={heatMapStateLabels}
+                          ariaLabel={t('habits.heatmap.monthAria', {
+                            name: focusedHabit.name,
+                          })}
                         />
+
+                        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                          {(
+                            [
+                              'done',
+                              'minimal',
+                              'paused',
+                              'recovered',
+                              'missed',
+                            ] as const
+                          ).map(state => (
+                            <span
+                              key={state}
+                              className="inline-flex items-center gap-1"
+                            >
+                              <span
+                                aria-hidden
+                                className={cn(
+                                  'size-2 rounded-[3px] border border-border/70',
+                                  state === 'missed' && 'bg-muted/70',
+                                  state === 'paused' && 'opacity-60',
+                                  state === 'recovered' && 'ring-1 ring-ring/60'
+                                )}
+                                style={{
+                                  backgroundColor:
+                                    state === 'missed'
+                                      ? undefined
+                                      : state === 'minimal' ||
+                                          state === 'paused'
+                                        ? `color-mix(in oklab, ${focusedHabit.color} 36%, var(--muted))`
+                                        : state === 'recovered'
+                                          ? `color-mix(in oklab, ${focusedHabit.color} 55%, var(--accent))`
+                                          : focusedHabit.color,
+                                }}
+                              />
+                              {heatMapStateLabels[state]}
+                            </span>
+                          ))}
+                        </div>
 
                         <p className="text-xs text-muted-foreground">
                           {t('habits.focusHabit.currentStreak', {
@@ -670,13 +868,14 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                             <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                               {t('habits.focusHabit.recoveryHeading')}
                             </p>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="space-y-2">
                               {focusRecoverableDates.map(dateISO => (
                                 <Button
                                   key={dateISO}
                                   type="button"
                                   variant="outline"
                                   size="sm"
+                                  className="w-full justify-start"
                                   onClick={() =>
                                     void setHabitLogState(
                                       focusedHabit.id,
@@ -690,9 +889,10 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                                   })}
                                 >
                                   <RotateCcw className="size-3.5" />
-                                  {t('habits.actions.recover', {
-                                    date: dateISO,
-                                  })}
+                                  <span>
+                                    {t('habits.actions.recover')}{' '}
+                                    {recoveryDateLabel(dateISO, locale, t)}
+                                  </span>
                                 </Button>
                               ))}
                             </div>
@@ -714,14 +914,17 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                       <p>
                         {t('habits.quickSummary.topStreak')}{' '}
                         {stats.topCurrentHabit
-                          ? `${stats.topCurrentHabit.name} (${stats.topCurrentHabit.streak}d)`
+                          ? t('habits.quickSummary.topStreakValue', {
+                              name: stats.topCurrentHabit.name,
+                              count: stats.topCurrentHabit.streak,
+                            })
                           : t('habits.quickSummary.noData')}
                       </p>
                       <p>
                         {t('habits.quickSummary.topWeekday')}{' '}
                         {stats.topWeekday === null
                           ? t('habits.quickSummary.noData')
-                          : weekdayName(stats.topWeekday)}
+                          : weekdayName(stats.topWeekday, t)}
                       </p>
                     </div>
                   </section>
@@ -729,6 +932,9 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
               </m.section>
             ) : activeTab === 'overview' ? (
               <m.section
+                id="habits-panel-overview"
+                role="tabpanel"
+                aria-labelledby="habits-tab-overview"
                 key="overview"
                 initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -785,11 +991,11 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                                 {habit.name}
                               </button>
                               <p className="mt-1 text-xs text-muted-foreground">
-                                {formatHabitFrequency(habit)}
+                                {formatHabitFrequency(habit, t)}
                               </p>
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {streak}d run
+                              {t('habits.streakRun', { count: streak })}
                             </span>
                           </div>
 
@@ -800,6 +1006,11 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                               days={30}
                               color={habit.color}
                               size="md"
+                              locale={locale}
+                              stateLabels={heatMapStateLabels}
+                              ariaLabel={t('habits.heatmap.monthAria', {
+                                name: habit.name,
+                              })}
                             />
                           </div>
 
@@ -816,6 +1027,9 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
               </m.section>
             ) : (
               <m.section
+                id="habits-panel-stats"
+                role="tabpanel"
+                aria-labelledby="habits-tab-stats"
                 key="stats"
                 initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -829,12 +1043,13 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                   </p>
 
                   <div className="mt-3 space-y-2">
-                    {WEEKDAY_LABELS.map((label, day) => {
+                    {WEEKDAY_KEYS.map((key, day) => {
+                      const label = t(`habits.weekday.${key}`)
                       const value = weekdayCounts[day] ?? 0
                       const width = `${Math.round((value / weekdayPeak) * 100)}%`
                       return (
                         <div
-                          key={label}
+                          key={key}
                           className="grid grid-cols-[32px_minmax(0,1fr)_30px] items-center gap-2 text-xs"
                         >
                           <span className="text-muted-foreground">{label}</span>
@@ -875,7 +1090,9 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                               {index + 1}. {item.name}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {item.streak} days
+                              {t('habits.stats.days', {
+                                count: item.streak,
+                              })}
                             </span>
                           </li>
                         ))}
@@ -914,6 +1131,14 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                 void submitForm()
               }}
             >
+              {modalError ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="size-4" />
+                  <AlertTitle>{t('habits.error.title')}</AlertTitle>
+                  <AlertDescription>{modalError}</AlertDescription>
+                </Alert>
+              ) : null}
+
               <div className="space-y-2">
                 <Label htmlFor="habit-name">
                   {t('habits.modal.habitName')}
@@ -954,36 +1179,35 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                   {t('habits.modal.frequencyLabel')}
                 </Label>
                 <div className="grid grid-cols-2 gap-2">
-                  {(Object.keys(FREQUENCY_LABELS) as HabitFrequency[]).map(
-                    frequency => (
-                      <button
-                        key={frequency}
-                        type="button"
-                        onClick={() =>
-                          setForm(current => ({
-                            ...current,
-                            frequency,
-                            frequencyDays:
-                              frequency === 'weekdays'
-                                ? [1, 2, 3, 4, 5]
-                                : frequency === 'weekends'
-                                  ? [0, 6]
-                                  : current.frequencyDays.length === 0
-                                    ? [1, 2, 3, 4, 5]
-                                    : current.frequencyDays,
-                          }))
-                        }
-                        className={cn(
-                          'rounded-xl border px-3 py-2 text-xs font-medium transition-colors',
-                          form.frequency === frequency
-                            ? 'border-foreground bg-accent/70'
-                            : 'border-border hover:bg-accent/30'
-                        )}
-                      >
-                        {FREQUENCY_LABELS[frequency]}
-                      </button>
-                    )
-                  )}
+                  {FREQUENCY_KEYS.map(frequency => (
+                    <button
+                      key={frequency}
+                      type="button"
+                      aria-pressed={form.frequency === frequency}
+                      onClick={() =>
+                        setForm(current => ({
+                          ...current,
+                          frequency,
+                          frequencyDays:
+                            frequency === 'weekdays'
+                              ? [1, 2, 3, 4, 5]
+                              : frequency === 'weekends'
+                                ? [0, 6]
+                                : current.frequencyDays.length === 0
+                                  ? [1, 2, 3, 4, 5]
+                                  : current.frequencyDays,
+                        }))
+                      }
+                      className={cn(
+                        'rounded-xl border px-3 py-2 text-xs font-medium transition-colors',
+                        form.frequency === frequency
+                          ? 'border-foreground bg-accent/70'
+                          : 'border-border hover:bg-accent/30'
+                      )}
+                    >
+                      {t(`habits.frequency.${frequency}`)}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -993,12 +1217,14 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                     {t('habits.modal.customDaysLabel')}
                   </Label>
                   <div className="flex flex-wrap gap-1.5">
-                    {WEEKDAY_LABELS.map((label, day) => {
+                    {WEEKDAY_KEYS.map((key, day) => {
                       const active = form.frequencyDays.includes(day)
+                      const label = t(`habits.weekday.${key}`)
                       return (
                         <button
-                          key={label}
+                          key={key}
                           type="button"
+                          aria-pressed={active}
                           onClick={() =>
                             setForm(current => ({
                               ...current,
@@ -1040,6 +1266,7 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                     <button
                       key={color}
                       type="button"
+                      aria-pressed={form.color === color}
                       onClick={() =>
                         setForm(current => ({ ...current, color }))
                       }
@@ -1050,7 +1277,11 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                           : 'border-transparent'
                       )}
                       style={{ backgroundColor: color }}
-                      aria-label={t('habits.modal.colorAria', { color })}
+                      aria-label={t('habits.modal.colorAria', {
+                        color: t(
+                          `habits.colors.${HABIT_COLOR_NAMES[color] ?? 'custom'}`
+                        ),
+                      })}
                     />
                   ))}
                 </div>
@@ -1063,31 +1294,66 @@ export function HabitPage({ initialSelectedHabitId }: HabitPageProps) {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={async () => {
-                        await archiveHabit(editingHabitId)
-                        setModalOpen(false)
+                      onClick={() => {
+                        setModalError(null)
+                        archiveHabit(editingHabitId)
+                          .then(() => setModalOpen(false))
+                          .catch(() =>
+                            setModalError(t('habits.modal.archiveFailed'))
+                          )
                       }}
                     >
                       <Archive className="size-3.5" />
-                      Archive
+                      {t('habits.modal.archive')}
                     </Button>
 
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={async () => {
-                        const confirmed = window.confirm(
-                          'Delete this habit permanently? This will remove all logs.'
-                        )
-                        if (!confirmed) return
-                        await deleteHabit(editingHabitId)
-                        setModalOpen(false)
-                      }}
+                    <AlertDialog
+                      open={deleteConfirmOpen}
+                      onOpenChange={setDeleteConfirmOpen}
                     >
-                      <Trash2 className="size-3.5" />
-                      Delete
-                    </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setDeleteConfirmOpen(true)}
+                      >
+                        <Trash2 className="size-3.5" />
+                        {t('habits.modal.delete')}
+                      </Button>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            {t('habits.modal.deleteTitle')}
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {t('habits.modal.deleteConfirm')}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>
+                            {t('habits.modal.cancel')}
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={event => {
+                              event.preventDefault()
+                              setModalError(null)
+                              deleteHabit(editingHabitId)
+                                .then(() => {
+                                  setDeleteConfirmOpen(false)
+                                  setModalOpen(false)
+                                })
+                                .catch(() => {
+                                  setDeleteConfirmOpen(false)
+                                  setModalError(t('habits.modal.deleteFailed'))
+                                })
+                            }}
+                          >
+                            {t('habits.modal.delete')}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 ) : (
                   <span />

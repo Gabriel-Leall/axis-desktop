@@ -278,6 +278,7 @@ export const useHabitsStore = create<HabitsState>()(
 
           set(
             currentState => ({
+              error: null,
               todayLogs:
                 dateISO === getLocalISODate()
                   ? persistedLog
@@ -327,6 +328,11 @@ export const useHabitsStore = create<HabitsState>()(
             await get().loadTodayLogs()
           }
           await get().loadMonthLogs()
+          set(
+            { error: 'Failed to update habit progress.' },
+            undefined,
+            'setHabitLogState/error'
+          )
         }
       },
 
@@ -349,7 +355,7 @@ export const useHabitsStore = create<HabitsState>()(
         }
 
         set(
-          state => ({ habits: [...state.habits, newHabit] }),
+          state => ({ habits: [...state.habits, newHabit], error: null }),
           undefined,
           'addHabit/optimistic'
         )
@@ -372,6 +378,7 @@ export const useHabitsStore = create<HabitsState>()(
           set(
             state => ({
               habits: state.habits.filter(habit => habit.id !== newHabit.id),
+              error: 'Failed to create habit.',
             }),
             undefined,
             'addHabit/rollback'
@@ -398,6 +405,7 @@ export const useHabitsStore = create<HabitsState>()(
             habits: state.habits.map(habit =>
               habit.id === id ? { ...habit, ...normalized } : habit
             ),
+            error: null,
           }),
           undefined,
           'updateHabit/optimistic'
@@ -422,6 +430,11 @@ export const useHabitsStore = create<HabitsState>()(
         } catch (error) {
           logger.error(`Failed to update habit: ${String(error)}`)
           await get().loadHabits()
+          set(
+            { error: 'Failed to update habit.' },
+            undefined,
+            'updateHabit/error'
+          )
           throw error
         }
       },
@@ -431,7 +444,10 @@ export const useHabitsStore = create<HabitsState>()(
         const snapshot = get().habits
 
         set(
-          state => ({ habits: state.habits.filter(habit => habit.id !== id) }),
+          state => ({
+            habits: state.habits.filter(habit => habit.id !== id),
+            error: null,
+          }),
           undefined,
           'archiveHabit/optimistic'
         )
@@ -440,7 +456,11 @@ export const useHabitsStore = create<HabitsState>()(
           await commands.archiveHabit(id, now)
         } catch (error) {
           logger.error(`Failed to archive habit: ${String(error)}`)
-          set({ habits: snapshot }, undefined, 'archiveHabit/rollback')
+          set(
+            { habits: snapshot, error: 'Failed to archive habit.' },
+            undefined,
+            'archiveHabit/rollback'
+          )
           throw error
         }
       },
@@ -457,6 +477,7 @@ export const useHabitsStore = create<HabitsState>()(
             monthLogs: state.monthLogs.filter(log => log.habit_id !== id),
             selectedHabitId:
               state.selectedHabitId === id ? null : state.selectedHabitId,
+            error: null,
           }),
           undefined,
           'deleteHabit/optimistic'
@@ -471,6 +492,7 @@ export const useHabitsStore = create<HabitsState>()(
               habits: snapshotHabits,
               todayLogs: snapshotToday,
               monthLogs: snapshotMonth,
+              error: 'Failed to delete habit.',
             },
             undefined,
             'deleteHabit/rollback'
