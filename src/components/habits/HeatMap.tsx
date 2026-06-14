@@ -13,6 +13,9 @@ export interface HeatMapProps {
   stateLabels?: Partial<Record<HabitLogState | 'missed', string>>
 }
 
+const EMPTY_STATES_BY_DATE: Record<string, HabitLogState> = {}
+const EMPTY_STATE_LABELS: Partial<Record<HabitLogState | 'missed', string>> = {}
+
 function dateLabel(dateISO: string, locale: string): string {
   return new Date(`${dateISO}T12:00:00`).toLocaleDateString(locale, {
     month: 'short',
@@ -40,21 +43,20 @@ export function HeatMap({
   days,
   color,
   size = 'sm',
-  statesByDate = {},
+  statesByDate = EMPTY_STATES_BY_DATE,
   ariaLabel,
   locale = 'en-US',
-  stateLabels = {},
+  stateLabels = EMPTY_STATE_LABELS,
 }: HeatMapProps) {
   const completedSet = new Set(logs)
   const dates = lastNDates(days)
 
   return (
-    <div
-      role="grid"
+    <ol
       aria-label={
         ariaLabel ?? `Habit completion heat map for last ${days} days`
       }
-      className="grid"
+      className="grid list-none p-0"
       style={{
         gridTemplateColumns: `repeat(${days}, minmax(0, 1fr))`,
         gap: size === 'sm' ? '4px' : '6px',
@@ -70,9 +72,8 @@ export function HeatMap({
         const recovered = state === 'recovered'
         const gentle = state === 'minimal' || state === 'paused'
         return (
-          <div
+          <li
             key={dateISO}
-            role="gridcell"
             aria-label={`${stateLabel} on ${dateISO}`}
             title={`${dateLabel(dateISO, locale)} - ${stateLabel}`}
             className={cn(
@@ -95,6 +96,6 @@ export function HeatMap({
           />
         )
       })}
-    </div>
+    </ol>
   )
 }

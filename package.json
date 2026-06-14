@@ -51,7 +51,8 @@
     "knip": "knip",
     "jscpd": "jscpd",
     "ast:lint": "ast-grep scan",
-    "ast:fix": "ast-grep scan --fix"
+    "ast:fix": "ast-grep scan --fix",
+    "doctor": "bunx react-doctor"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
