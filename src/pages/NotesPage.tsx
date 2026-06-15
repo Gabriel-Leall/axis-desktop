@@ -650,7 +650,13 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }
 
   async function handleOpenVaultFolder() {
-    const result = await commands.openNotesVaultFolder()
+    const result = await commands
+      .openNotesVaultFolder()
+      .catch(commandError => ({
+        status: 'error' as const,
+        error: String(commandError),
+      }))
+
     if (result.status === 'error') {
       logger.error(`Failed to open notes vault folder: ${result.error}`)
       toast.error(t('notes.welcome.openFolderFailed'), {

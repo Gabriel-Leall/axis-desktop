@@ -782,13 +782,11 @@ mod tests {
 
     #[test]
     fn ensure_vault_structure_creates_required_directories() {
-        let root = std::env::temp_dir().join(format!(
-            "axis-notes-vault-test-{}",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("system time should be after epoch")
-                .as_nanos()
-        ));
+        let suffix = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time should be after epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("axis-notes-vault-test-{suffix}"));
 
         ensure_vault_structure(&root).expect("vault structure should be created");
 
