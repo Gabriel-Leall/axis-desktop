@@ -101,7 +101,7 @@ fn notes_root(app: &AppHandle) -> Result<PathBuf, String> {
         .document_dir()
         .map_err(|e| format!("Failed to get documents directory: {e}"))?;
     let preferences = preferences::load_preferences_from_disk(app)?;
-    let notes_dir = resolve_vault_root_from_preferences(&documents_dir, &preferences);
+    let notes_dir = resolve_vault_root_from_preferences(&documents_dir, &preferences)?;
 
     ensure_vault_structure(&notes_dir)?;
 
@@ -115,14 +115,27 @@ fn default_vault_path_from_documents(documents_dir: &Path) -> PathBuf {
 fn resolve_vault_root_from_preferences(
     documents_dir: &Path,
     preferences: &AppPreferences,
-) -> PathBuf {
-    preferences
+) -> Result<PathBuf, String> {
+    let root = preferences
         .notes_vault_path
         .as_deref()
         .map(str::trim)
         .filter(|path| !path.is_empty())
         .map(PathBuf::from)
-        .unwrap_or_else(|| default_vault_path_from_documents(documents_dir))
+        .unwrap_or_else(|| default_vault_path_from_documents(documents_dir));
+
+    if preferences
+        .notes_vault_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+        .is_some()
+        && !root.is_absolute()
+    {
+        return Err("Configured notes vault path must be absolute".to_string());
+    }
+
+    Ok(root)
 }
 
 fn ensure_vault_structure(root: &Path) -> Result<(), String> {
@@ -695,6 +708,10 @@ pub async fn set_notes_vault_path(app: AppHandle, path: String) -> Result<NoteVa
     }
 
     let root = PathBuf::from(trimmed);
+    if !root.is_absolute() {
+        return Err("Notes vault path must be absolute".to_string());
+    }
+
     ensure_vault_structure(&root)?;
 
     let mut app_preferences = preferences::load_preferences_from_disk(&app)?;
@@ -785,21 +802,36 @@ mod tests {
 
     #[test]
     fn resolve_vault_root_prefers_configured_path() {
+        let configured_path = std::env::temp_dir().join("Axis Vault");
         let preferences = AppPreferences {
-            notes_vault_path: Some("D:/Axis Vault".to_string()),
+            notes_vault_path: Some(configured_path.to_string_lossy().to_string()),
             ..AppPreferences::default()
         };
 
-        let root = resolve_vault_root_from_preferences(Path::new("Documents"), &preferences);
+        let root = resolve_vault_root_from_preferences(Path::new("Documents"), &preferences)
+            .expect("absolute configured vault path should resolve");
 
-        assert_eq!(root, PathBuf::from("D:/Axis Vault"));
+        assert_eq!(root, configured_path);
+    }
+
+    #[test]
+    fn resolve_vault_root_rejects_relative_configured_path() {
+        let preferences = AppPreferences {
+            notes_vault_path: Some("relative/vault".to_string()),
+            ..AppPreferences::default()
+        };
+
+        let result = resolve_vault_root_from_preferences(Path::new("Documents"), &preferences);
+
+        assert!(result.is_err());
     }
 
     #[test]
     fn resolve_vault_root_falls_back_to_default_documents_path() {
         let preferences = AppPreferences::default();
 
-        let root = resolve_vault_root_from_preferences(Path::new("Documents"), &preferences);
+        let root = resolve_vault_root_from_preferences(Path::new("Documents"), &preferences)
+            .expect("default vault path should resolve");
 
         assert_eq!(root, Path::new("Documents").join("Axis Notes"));
     }
