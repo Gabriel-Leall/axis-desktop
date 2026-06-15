@@ -54,7 +54,12 @@ export type {
 } from './bindings'
 
 // Notes domain
-export type { Note, CreateNoteInput, UpdateNoteInput } from './bindings'
+export type {
+  Note,
+  CreateNoteInput,
+  UpdateNoteInput,
+  NoteVaultInfo,
+} from './bindings'
 
 // OAuth domain
 export type { OAuthLoopbackResult } from './bindings'

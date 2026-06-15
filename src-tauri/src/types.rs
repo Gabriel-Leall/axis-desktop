@@ -41,6 +41,8 @@ pub struct AppPreferences {
     pub daily_reset_time: Option<String>,
     /// How strongly the dashboard should adapt to the current context
     pub adaptive_dashboard_mode: Option<String>,
+    /// Absolute path to the active local notes vault. If None, uses Documents/Axis Notes.
+    pub notes_vault_path: Option<String>,
 }
 
 impl Default for AppPreferences {
@@ -53,6 +55,7 @@ impl Default for AppPreferences {
             start_of_week: Some("monday".to_string()),
             daily_reset_time: Some("00:00".to_string()),
             adaptive_dashboard_mode: Some("full".to_string()),
+            notes_vault_path: None,
         }
     }
 }

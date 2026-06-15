@@ -9,9 +9,16 @@ use std::collections::HashSet;
 use std::path::{Component, Path, PathBuf};
 use std::sync::LazyLock;
 use tauri::{AppHandle, Manager};
+use tauri_plugin_opener::OpenerExt;
 
-const NOTES_ROOT_DIR: &str = "notes";
+use crate::commands::preferences;
+use crate::types::AppPreferences;
+
+const DEFAULT_VAULT_DIR_NAME: &str = "Axis Notes";
 const INBOX_DIR: &str = "inbox";
+const ARCHIVE_DIR: &str = "archive";
+const TRASH_DIR: &str = "trash";
+const VAULT_METADATA_DIR: &str = ".axis-notes";
 const SEARCH_MAX_RESULTS: usize = 80;
 
 static TAG_PATTERN: LazyLock<Regex> =
@@ -82,17 +89,94 @@ pub struct RenameNoteInput {
     pub title: String,
 }
 
-fn notes_root(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {e}"))?;
-    let notes_dir = app_data_dir.join(NOTES_ROOT_DIR);
+#[derive(Debug, Serialize, Deserialize, Type, Clone)]
+pub struct NoteVaultInfo {
+    pub path: String,
+    pub is_default: bool,
+}
 
-    std::fs::create_dir_all(notes_dir.join(INBOX_DIR))
-        .map_err(|e| format!("Failed to create notes directory: {e}"))?;
+fn notes_root(app: &AppHandle) -> Result<PathBuf, String> {
+    let documents_dir = app
+        .path()
+        .document_dir()
+        .map_err(|e| format!("Failed to get documents directory: {e}"))?;
+    let preferences = preferences::load_preferences_from_disk(app)?;
+    let notes_dir = resolve_vault_root_from_preferences(&documents_dir, &preferences)?;
+
+    ensure_vault_structure(&notes_dir)?;
 
     Ok(notes_dir)
+}
+
+fn default_vault_path_from_documents(documents_dir: &Path) -> PathBuf {
+    documents_dir.join(DEFAULT_VAULT_DIR_NAME)
+}
+
+fn resolve_vault_root_from_preferences(
+    documents_dir: &Path,
+    preferences: &AppPreferences,
+) -> Result<PathBuf, String> {
+    let root = preferences
+        .notes_vault_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| default_vault_path_from_documents(documents_dir));
+
+    if preferences
+        .notes_vault_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+        .is_some()
+        && !root.is_absolute()
+    {
+        return Err("Configured notes vault path must be absolute".to_string());
+    }
+
+    Ok(root)
+}
+
+fn ensure_vault_structure(root: &Path) -> Result<(), String> {
+    if root.exists() && !root.is_dir() {
+        return Err("Selected notes vault path is not a directory".to_string());
+    }
+
+    for dir in [INBOX_DIR, ARCHIVE_DIR, TRASH_DIR, VAULT_METADATA_DIR] {
+        std::fs::create_dir_all(root.join(dir))
+            .map_err(|e| format!("Failed to create notes vault directory: {e}"))?;
+    }
+
+    Ok(())
+}
+
+fn default_notes_vault_root(app: &AppHandle) -> Result<PathBuf, String> {
+    let documents_dir = app
+        .path()
+        .document_dir()
+        .map_err(|e| format!("Failed to get documents directory: {e}"))?;
+    Ok(default_vault_path_from_documents(&documents_dir))
+}
+
+fn vault_info_from_path(path: &Path, is_default: bool) -> NoteVaultInfo {
+    NoteVaultInfo {
+        path: path.to_string_lossy().to_string(),
+        is_default,
+    }
+}
+
+fn active_vault_info(app: &AppHandle) -> Result<NoteVaultInfo, String> {
+    let preferences = preferences::load_preferences_from_disk(app)?;
+    let root = notes_root(app)?;
+    let is_default = preferences
+        .notes_vault_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+        .is_none();
+
+    Ok(vault_info_from_path(&root, is_default))
 }
 
 fn normalize_rel_path(input: &str) -> String {
@@ -609,6 +693,56 @@ pub async fn search_notes(app: AppHandle, query: String) -> Result<Vec<Note>, St
     Ok(notes)
 }
 
+#[tauri::command]
+#[specta::specta]
+pub async fn get_notes_vault_info(app: AppHandle) -> Result<NoteVaultInfo, String> {
+    active_vault_info(&app)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_notes_vault_path(app: AppHandle, path: String) -> Result<NoteVaultInfo, String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("Notes vault path cannot be empty".to_string());
+    }
+
+    let root = PathBuf::from(trimmed);
+    if !root.is_absolute() {
+        return Err("Notes vault path must be absolute".to_string());
+    }
+
+    ensure_vault_structure(&root)?;
+
+    let mut app_preferences = preferences::load_preferences_from_disk(&app)?;
+    app_preferences.notes_vault_path = Some(root.to_string_lossy().to_string());
+    preferences::save_preferences_to_disk(&app, &app_preferences)?;
+
+    Ok(vault_info_from_path(&root, false))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn reset_notes_vault_path(app: AppHandle) -> Result<NoteVaultInfo, String> {
+    let root = default_notes_vault_root(&app)?;
+    ensure_vault_structure(&root)?;
+
+    let mut app_preferences = preferences::load_preferences_from_disk(&app)?;
+    app_preferences.notes_vault_path = None;
+    preferences::save_preferences_to_disk(&app, &app_preferences)?;
+
+    Ok(vault_info_from_path(&root, true))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn open_notes_vault_folder(app: AppHandle) -> Result<(), String> {
+    let info = active_vault_info(&app)?;
+    app.opener()
+        .open_path(info.path, None::<&str>)
+        .map_err(|e| format!("Failed to open notes folder: {e}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -636,5 +770,67 @@ mod tests {
         let excerpt = build_excerpt(body);
         assert!(excerpt.contains("Some rich text with Wiki Link"));
         assert!(!excerpt.contains('#'));
+    }
+
+    #[test]
+    fn default_vault_path_uses_visible_axis_notes_folder() {
+        let documents = Path::new("Documents");
+        let path = default_vault_path_from_documents(documents);
+
+        assert_eq!(path, documents.join("Axis Notes"));
+    }
+
+    #[test]
+    fn ensure_vault_structure_creates_required_directories() {
+        let suffix = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time should be after epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("axis-notes-vault-test-{suffix}"));
+
+        ensure_vault_structure(&root).expect("vault structure should be created");
+
+        assert!(root.join("inbox").is_dir());
+        assert!(root.join("archive").is_dir());
+        assert!(root.join("trash").is_dir());
+        assert!(root.join(".axis-notes").is_dir());
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn resolve_vault_root_prefers_configured_path() {
+        let configured_path = std::env::temp_dir().join("Axis Vault");
+        let preferences = AppPreferences {
+            notes_vault_path: Some(configured_path.to_string_lossy().to_string()),
+            ..AppPreferences::default()
+        };
+
+        let root = resolve_vault_root_from_preferences(Path::new("Documents"), &preferences)
+            .expect("absolute configured vault path should resolve");
+
+        assert_eq!(root, configured_path);
+    }
+
+    #[test]
+    fn resolve_vault_root_rejects_relative_configured_path() {
+        let preferences = AppPreferences {
+            notes_vault_path: Some("relative/vault".to_string()),
+            ..AppPreferences::default()
+        };
+
+        let result = resolve_vault_root_from_preferences(Path::new("Documents"), &preferences);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn resolve_vault_root_falls_back_to_default_documents_path() {
+        let preferences = AppPreferences::default();
+
+        let root = resolve_vault_root_from_preferences(Path::new("Documents"), &preferences)
+            .expect("default vault path should resolve");
+
+        assert_eq!(root, Path::new("Documents").join("Axis Notes"));
     }
 }

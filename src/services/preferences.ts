@@ -30,6 +30,7 @@ export function usePreferences() {
           start_of_week: 'sunday',
           daily_reset_time: '00:00',
           adaptive_dashboard_mode: 'full',
+          notes_vault_path: null,
         }
       }
 

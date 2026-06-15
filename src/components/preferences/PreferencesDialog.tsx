@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import {
   CalendarCheck2,
   Download,
+  NotebookPen,
   Settings,
   Timer,
   User as UserIcon,
@@ -34,10 +35,17 @@ import { useUIStore } from '@/store/ui-store'
 import { GeneralPane } from './panes/GeneralPane'
 import { FocusTimerPane } from './panes/FocusTimerPane'
 import { HabitsPane } from './panes/HabitsPane'
+import { NotesPane } from './panes/NotesPane'
 import { UserPane } from './panes/UserPane'
 import { UpdatesPane } from './panes/UpdatesPane'
 
-type PreferencePane = 'general' | 'focusTimer' | 'habits' | 'user' | 'updates'
+type PreferencePane =
+  | 'general'
+  | 'focusTimer'
+  | 'habits'
+  | 'notes'
+  | 'user'
+  | 'updates'
 
 const navigationItems = [
   {
@@ -54,6 +62,11 @@ const navigationItems = [
     id: 'habits' as const,
     labelKey: 'preferences.habits',
     icon: CalendarCheck2,
+  },
+  {
+    id: 'notes' as const,
+    labelKey: 'preferences.notes',
+    icon: NotebookPen,
   },
   {
     id: 'user' as const,
@@ -101,6 +114,7 @@ export function PreferencesDialog() {
                           isActive={activePane === item.id}
                         >
                           <button
+                            type="button"
                             onClick={() => setActivePane(item.id)}
                             className="w-full"
                           >
@@ -141,6 +155,7 @@ export function PreferencesDialog() {
               {activePane === 'general' && <GeneralPane />}
               {activePane === 'focusTimer' && <FocusTimerPane />}
               {activePane === 'habits' && <HabitsPane />}
+              {activePane === 'notes' && <NotesPane />}
               {activePane === 'user' && <UserPane />}
               {activePane === 'updates' && <UpdatesPane />}
             </div>

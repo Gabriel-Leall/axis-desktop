@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Editor as ToastEditor } from '@toast-ui/react-editor'
 import { useTranslation } from 'react-i18next'
 import {
@@ -13,9 +13,11 @@ import {
   Download,
   Upload,
   Copy,
+  FolderOpen,
 } from 'lucide-react'
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
+import { toast } from 'sonner'
 import { useNotesStore } from '@/store/notes-store'
 import {
   getNoteTitle,
@@ -30,6 +32,7 @@ import {
 import { cn } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 import { useUIStore } from '@/store/ui-store'
+import { commands } from '@/lib/tauri-bindings'
 import type { Note } from '@/lib/notes-domain'
 
 import '@toast-ui/editor/dist/toastui-editor.css'
@@ -146,6 +149,7 @@ function Sidebar({
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
             placeholder={t('notes.sidebar.searchPlaceholder')}
+            aria-label={t('notes.sidebar.searchPlaceholder')}
             className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
           />
         </div>
@@ -317,11 +321,13 @@ function EditorArea({
   isSaving,
   onDelete,
   onContentChange,
+  onOpenVaultFolder,
 }: {
   note: Note | null
   isSaving: boolean
   onDelete: () => Promise<void>
   onContentChange: (noteId: string, content: string) => void
+  onOpenVaultFolder: () => Promise<void>
 }) {
   const { t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
@@ -346,7 +352,7 @@ function EditorArea({
     }
   }, [showMenu])
 
-  const handleExport = useCallback(async () => {
+  async function handleExport() {
     if (!note) return
     const title = getNoteTitle(note.content)
     const path = await save({
@@ -357,9 +363,9 @@ function EditorArea({
       await writeTextFile(path, note.content)
     }
     setShowMenu(false)
-  }, [note])
+  }
 
-  const handleImport = useCallback(async () => {
+  async function handleImport() {
     const path = await open({
       filters: [{ name: 'Markdown', extensions: ['md'] }],
     })
@@ -369,37 +375,50 @@ function EditorArea({
       await store.createNote(content)
     }
     setShowMenu(false)
-  }, [])
+  }
 
-  const handleCopy = useCallback(async () => {
+  async function handleCopy() {
     if (!note) return
     await navigator.clipboard.writeText(note.content)
     setShowMenu(false)
-  }, [note])
+  }
 
-  const handleEditorChange = useCallback(() => {
+  function handleEditorChange() {
     if (!note) return
     const bodyMarkdown = editorRef.current?.getInstance().getMarkdown() ?? ''
     onContentChange(note.id, buildNoteContent(titleInput, bodyMarkdown))
-  }, [note, onContentChange, titleInput])
+  }
 
-  const handleTitleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      if (!note) return
-      const nextTitle = event.target.value
-      setTitleInput(nextTitle)
+  function handleTitleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    if (!note) return
+    const nextTitle = event.target.value
+    setTitleInput(nextTitle)
 
-      const bodyMarkdown = editorRef.current?.getInstance().getMarkdown() ?? ''
-      onContentChange(note.id, buildNoteContent(nextTitle, bodyMarkdown))
-    },
-    [note, onContentChange]
-  )
+    const bodyMarkdown = editorRef.current?.getInstance().getMarkdown() ?? ''
+    onContentChange(note.id, buildNoteContent(nextTitle, bodyMarkdown))
+  }
 
   if (!note) {
     return (
-      <div className="flex h-full flex-1 items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <p className="text-sm">{t('notes.editor.selectPrompt')}</p>
+      <div className="flex h-full flex-1 items-center justify-center bg-background px-8 text-muted-foreground">
+        <div className="max-w-md text-center">
+          <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-lg border border-border bg-card text-foreground shadow-sm">
+            <FolderOpen className="size-5" />
+          </div>
+          <h2 className="text-lg font-semibold text-foreground">
+            {t('notes.welcome.title')}
+          </h2>
+          <p className="mt-2 text-sm leading-6">
+            {t('notes.welcome.description')}
+          </p>
+          <button
+            type="button"
+            onClick={() => void onOpenVaultFolder()}
+            className="mt-5 inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <FolderOpen className="size-4" />
+            {t('notes.welcome.openFolder')}
+          </button>
         </div>
       </div>
     )
@@ -510,6 +529,7 @@ function EditorArea({
               value={titleInput}
               onChange={handleTitleChange}
               placeholder={t('notes.editor.titlePlaceholder')}
+              aria-label={t('notes.editor.titlePlaceholder')}
               spellCheck={false}
               className="w-full bg-transparent outline-none text-2xl font-semibold mb-8 text-foreground placeholder:text-muted-foreground/60"
             />
@@ -577,6 +597,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }, [loadNotes])
 
   useEffect(() => {
+    // react-doctor-disable-next-line react-doctor/no-event-handler -- Syncs external route data into the notes store; Tasks/Habits use the same page-entry pattern.
     if (initialSelectedNoteId) {
       selectNote(initialSelectedNoteId)
     }
@@ -606,30 +627,43 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     }
   }, [displayedNotes, selectedNoteId, selectNote])
 
-  const handleCreateNote = useCallback(async () => {
+  async function handleCreateNote() {
     try {
       setSelectedTag(null)
       await createNote('')
     } catch (error) {
       logger.error(`Failed to create note from UI: ${String(error)}`)
     }
-  }, [createNote, setSelectedTag])
+  }
 
-  const handleDeleteNote = useCallback(async () => {
+  async function handleDeleteNote() {
     if (!selectedNoteId) return
     try {
       await deleteNote(selectedNoteId)
     } catch (error) {
       logger.error(`Failed to delete note from UI: ${String(error)}`)
     }
-  }, [selectedNoteId, deleteNote])
+  }
 
-  const handleContentChange = useCallback(
-    (noteId: string, content: string) => {
-      updateNote(noteId, content)
-    },
-    [updateNote]
-  )
+  function handleContentChange(noteId: string, content: string) {
+    updateNote(noteId, content)
+  }
+
+  async function handleOpenVaultFolder() {
+    const result = await commands
+      .openNotesVaultFolder()
+      .catch(commandError => ({
+        status: 'error' as const,
+        error: String(commandError),
+      }))
+
+    if (result.status === 'error') {
+      logger.error(`Failed to open notes vault folder: ${result.error}`)
+      toast.error(t('notes.welcome.openFolderFailed'), {
+        description: result.error,
+      })
+    }
+  }
 
   if (isLoading) {
     return (
@@ -672,6 +706,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           isSaving={isSaving}
           onDelete={handleDeleteNote}
           onContentChange={handleContentChange}
+          onOpenVaultFolder={handleOpenVaultFolder}
         />
       </div>
     </div>
