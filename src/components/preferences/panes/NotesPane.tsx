@@ -18,12 +18,42 @@ async function reloadNotes() {
     })
 }
 
+function getVaultErrorMessage(
+  message: string,
+  t: (key: string) => string
+): string {
+  if (message === 'Notes vault path cannot be empty') {
+    return t('preferences.notes.vault.errors.emptyPath')
+  }
+
+  if (message === 'Notes vault path must be absolute') {
+    return t('preferences.notes.vault.errors.relativePath')
+  }
+
+  if (message === 'Configured notes vault path must be absolute') {
+    return t('preferences.notes.vault.errors.configuredRelativePath')
+  }
+
+  if (message === 'Selected notes vault path is not a directory') {
+    return t('preferences.notes.vault.errors.notDirectory')
+  }
+
+  return t('preferences.notes.vault.errors.generic')
+}
+
 export function NotesPane() {
   const { t } = useTranslation()
-  const [vaultInfo, setVaultInfo] = useState<NoteVaultInfo | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [vaultState, setVaultState] = useState<{
+    vaultInfo: NoteVaultInfo | null
+    error: string | null
+  }>({
+    vaultInfo: null,
+    error: null,
+  })
   const [isBusy, setIsBusy] = useState(false)
+  const { vaultInfo, error } = vaultState
 
+  // react-doctor-disable-next-line react-doctor/no-cascading-set-state -- Async vault load has mutually exclusive success/error paths updating one local state object.
   useEffect(() => {
     let isMounted = true
 
@@ -35,28 +65,45 @@ export function NotesPane() {
         }
 
         if (result.status === 'error') {
-          setError(result.error)
+          logger.warn('Failed to load notes vault info', {
+            error: result.error,
+          })
+          setVaultState({
+            vaultInfo: null,
+            error: getVaultErrorMessage(result.error, t),
+          })
           return
         }
 
-        setVaultInfo(result.data)
-        setError(null)
+        setVaultState({
+          vaultInfo: result.data,
+          error: null,
+        })
       })
       .catch(vaultError => {
         if (isMounted) {
-          setError(String(vaultError))
+          logger.warn('Failed to load notes vault info', { vaultError })
+          setVaultState({
+            vaultInfo: null,
+            error: getVaultErrorMessage(String(vaultError), t),
+          })
         }
       })
 
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [t])
 
   function showVaultError(message: string) {
-    setError(message)
+    logger.warn('Notes vault operation failed', { message })
+    const description = getVaultErrorMessage(message, t)
+    setVaultState(previous => ({
+      ...previous,
+      error: description,
+    }))
     toast.error(t('preferences.notes.vault.errorTitle'), {
-      description: message,
+      description,
     })
   }
 
@@ -89,8 +136,10 @@ export function NotesPane() {
       return
     }
 
-    setVaultInfo(result.data)
-    setError(null)
+    setVaultState({
+      vaultInfo: result.data,
+      error: null,
+    })
     await reloadNotes()
     toast.success(t('preferences.notes.vault.changed'))
     setIsBusy(false)
@@ -110,8 +159,10 @@ export function NotesPane() {
       return
     }
 
-    setVaultInfo(result.data)
-    setError(null)
+    setVaultState({
+      vaultInfo: result.data,
+      error: null,
+    })
     await reloadNotes()
     toast.success(t('preferences.notes.vault.defaultRestored'))
     setIsBusy(false)
