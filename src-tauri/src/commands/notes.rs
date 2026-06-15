@@ -21,6 +21,30 @@ const TRASH_DIR: &str = "trash";
 const VAULT_METADATA_DIR: &str = ".axis-notes";
 const SEARCH_MAX_RESULTS: usize = 80;
 
+#[derive(Debug, Clone, Copy)]
+struct VaultLayout {
+    required_dirs: [&'static str; 4],
+    internal_dirs: [&'static str; 1],
+}
+
+impl VaultLayout {
+    /// Defines the physical vault contract used by all notes file operations.
+    fn standard() -> Self {
+        Self {
+            required_dirs: [INBOX_DIR, ARCHIVE_DIR, TRASH_DIR, VAULT_METADATA_DIR],
+            internal_dirs: [VAULT_METADATA_DIR],
+        }
+    }
+
+    fn required_dirs(&self) -> [&'static str; 4] {
+        self.required_dirs
+    }
+
+    fn is_internal_dir_name(&self, name: &str) -> bool {
+        self.internal_dirs.contains(&name) || name.starts_with('.')
+    }
+}
+
 static TAG_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?:^|\s)#([A-Za-z][\w\-/]*)").expect("invalid tag regex"));
 static WIKILINK_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
@@ -143,7 +167,8 @@ fn ensure_vault_structure(root: &Path) -> Result<(), String> {
         return Err("Selected notes vault path is not a directory".to_string());
     }
 
-    for dir in [INBOX_DIR, ARCHIVE_DIR, TRASH_DIR, VAULT_METADATA_DIR] {
+    let layout = VaultLayout::standard();
+    for dir in layout.required_dirs() {
         std::fs::create_dir_all(root.join(dir))
             .map_err(|e| format!("Failed to create notes vault directory: {e}"))?;
     }
@@ -450,8 +475,14 @@ fn ensure_md_filename(input: &str) -> String {
 
 fn read_all_notes(root: &Path) -> Result<Vec<Note>, String> {
     let mut notes = Vec::new();
+    let layout = VaultLayout::standard();
 
-    fn walk(root: &Path, dir: &Path, out: &mut Vec<Note>) -> Result<(), String> {
+    fn walk(
+        root: &Path,
+        dir: &Path,
+        layout: &VaultLayout,
+        out: &mut Vec<Note>,
+    ) -> Result<(), String> {
         let entries =
             std::fs::read_dir(dir).map_err(|e| format!("Failed to list notes directory: {e}"))?;
         for entry in entries {
@@ -462,10 +493,12 @@ fn read_all_notes(root: &Path) -> Result<Vec<Note>, String> {
                 .map_err(|e| format!("Failed to read entry type: {e}"))?;
 
             if file_type.is_dir() {
-                if entry.file_name().to_string_lossy().starts_with('.') {
+                let dir_name = entry.file_name();
+                let dir_name = dir_name.to_string_lossy();
+                if layout.is_internal_dir_name(&dir_name) {
                     continue;
                 }
-                walk(root, &path, out)?;
+                walk(root, &path, layout, out)?;
                 continue;
             }
 
@@ -483,7 +516,7 @@ fn read_all_notes(root: &Path) -> Result<Vec<Note>, String> {
         Ok(())
     }
 
-    walk(root, root, &mut notes)?;
+    walk(root, root, &layout, &mut notes)?;
     notes.sort_by(|a, b| parse_iso_or_epoch(&b.updated_at).cmp(&parse_iso_or_epoch(&a.updated_at)));
     Ok(notes)
 }
@@ -781,6 +814,20 @@ mod tests {
     }
 
     #[test]
+    fn vault_layout_declares_required_and_internal_directories() {
+        let layout = VaultLayout::standard();
+
+        assert_eq!(
+            layout.required_dirs(),
+            [INBOX_DIR, ARCHIVE_DIR, TRASH_DIR, VAULT_METADATA_DIR]
+        );
+        assert!(layout.is_internal_dir_name(VAULT_METADATA_DIR));
+        assert!(!layout.is_internal_dir_name(INBOX_DIR));
+        assert!(!layout.is_internal_dir_name(ARCHIVE_DIR));
+        assert!(!layout.is_internal_dir_name(TRASH_DIR));
+    }
+
+    #[test]
     fn ensure_vault_structure_creates_required_directories() {
         let suffix = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -794,6 +841,28 @@ mod tests {
         assert!(root.join("archive").is_dir());
         assert!(root.join("trash").is_dir());
         assert!(root.join(".axis-notes").is_dir());
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn read_all_notes_ignores_vault_internal_metadata_dir() {
+        let suffix = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time should be after epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("axis-notes-read-test-{suffix}"));
+        ensure_vault_structure(&root).expect("vault structure should be created");
+
+        std::fs::write(root.join("inbox").join("visible.md"), "# Visible")
+            .expect("visible note should be writable");
+        std::fs::write(root.join(".axis-notes").join("hidden.md"), "# Hidden")
+            .expect("metadata note should be writable");
+
+        let notes = read_all_notes(&root).expect("notes should be readable");
+
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].path, "inbox/visible.md");
 
         std::fs::remove_dir_all(root).expect("test vault should be removable");
     }

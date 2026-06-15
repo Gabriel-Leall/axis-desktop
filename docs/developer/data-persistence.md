@@ -108,6 +108,7 @@ Rules:
 - The default vault is created automatically on first use.
 - The active vault path is persisted in `preferences.json` as `notes_vault_path`.
 - If `notes_vault_path` is not set, Axis uses `Documents/Axis Notes`.
+- The physical vault contract is defined in `VaultLayout` in `src-tauri/src/commands/notes.rs`; backend code should use that contract instead of duplicating directory names.
 - Selecting a different vault path validates and completes the vault structure, but does not move notes from the previous vault.
 - `.axis-notes/` is reserved for Axis metadata and must not be indexed as user notes.
 
