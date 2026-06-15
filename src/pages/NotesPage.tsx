@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Editor as ToastEditor } from '@toast-ui/react-editor'
 import { useTranslation } from 'react-i18next'
 import {
@@ -149,6 +149,7 @@ function Sidebar({
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
             placeholder={t('notes.sidebar.searchPlaceholder')}
+            aria-label={t('notes.sidebar.searchPlaceholder')}
             className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
           />
         </div>
@@ -351,7 +352,7 @@ function EditorArea({
     }
   }, [showMenu])
 
-  const handleExport = useCallback(async () => {
+  async function handleExport() {
     if (!note) return
     const title = getNoteTitle(note.content)
     const path = await save({
@@ -362,9 +363,9 @@ function EditorArea({
       await writeTextFile(path, note.content)
     }
     setShowMenu(false)
-  }, [note])
+  }
 
-  const handleImport = useCallback(async () => {
+  async function handleImport() {
     const path = await open({
       filters: [{ name: 'Markdown', extensions: ['md'] }],
     })
@@ -374,31 +375,28 @@ function EditorArea({
       await store.createNote(content)
     }
     setShowMenu(false)
-  }, [])
+  }
 
-  const handleCopy = useCallback(async () => {
+  async function handleCopy() {
     if (!note) return
     await navigator.clipboard.writeText(note.content)
     setShowMenu(false)
-  }, [note])
+  }
 
-  const handleEditorChange = useCallback(() => {
+  function handleEditorChange() {
     if (!note) return
     const bodyMarkdown = editorRef.current?.getInstance().getMarkdown() ?? ''
     onContentChange(note.id, buildNoteContent(titleInput, bodyMarkdown))
-  }, [note, onContentChange, titleInput])
+  }
 
-  const handleTitleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      if (!note) return
-      const nextTitle = event.target.value
-      setTitleInput(nextTitle)
+  function handleTitleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    if (!note) return
+    const nextTitle = event.target.value
+    setTitleInput(nextTitle)
 
-      const bodyMarkdown = editorRef.current?.getInstance().getMarkdown() ?? ''
-      onContentChange(note.id, buildNoteContent(nextTitle, bodyMarkdown))
-    },
-    [note, onContentChange]
-  )
+    const bodyMarkdown = editorRef.current?.getInstance().getMarkdown() ?? ''
+    onContentChange(note.id, buildNoteContent(nextTitle, bodyMarkdown))
+  }
 
   if (!note) {
     return (
@@ -531,6 +529,7 @@ function EditorArea({
               value={titleInput}
               onChange={handleTitleChange}
               placeholder={t('notes.editor.titlePlaceholder')}
+              aria-label={t('notes.editor.titlePlaceholder')}
               spellCheck={false}
               className="w-full bg-transparent outline-none text-2xl font-semibold mb-8 text-foreground placeholder:text-muted-foreground/60"
             />
@@ -598,6 +597,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }, [loadNotes])
 
   useEffect(() => {
+    // react-doctor-disable-next-line react-doctor/no-event-handler -- Syncs external route data into the notes store; Tasks/Habits use the same page-entry pattern.
     if (initialSelectedNoteId) {
       selectNote(initialSelectedNoteId)
     }
@@ -627,32 +627,29 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     }
   }, [displayedNotes, selectedNoteId, selectNote])
 
-  const handleCreateNote = useCallback(async () => {
+  async function handleCreateNote() {
     try {
       setSelectedTag(null)
       await createNote('')
     } catch (error) {
       logger.error(`Failed to create note from UI: ${String(error)}`)
     }
-  }, [createNote, setSelectedTag])
+  }
 
-  const handleDeleteNote = useCallback(async () => {
+  async function handleDeleteNote() {
     if (!selectedNoteId) return
     try {
       await deleteNote(selectedNoteId)
     } catch (error) {
       logger.error(`Failed to delete note from UI: ${String(error)}`)
     }
-  }, [selectedNoteId, deleteNote])
+  }
 
-  const handleContentChange = useCallback(
-    (noteId: string, content: string) => {
-      updateNote(noteId, content)
-    },
-    [updateNote]
-  )
+  function handleContentChange(noteId: string, content: string) {
+    updateNote(noteId, content)
+  }
 
-  const handleOpenVaultFolder = useCallback(async () => {
+  async function handleOpenVaultFolder() {
     const result = await commands.openNotesVaultFolder()
     if (result.status === 'error') {
       logger.error(`Failed to open notes vault folder: ${result.error}`)
@@ -660,7 +657,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
         description: result.error,
       })
     }
-  }, [t])
+  }
 
   if (isLoading) {
     return (

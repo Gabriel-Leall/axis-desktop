@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { open } from '@tauri-apps/plugin-dialog'
 import { FolderOpen, FolderSymlink, RotateCcw } from 'lucide-react'
@@ -9,101 +9,126 @@ import { logger } from '@/lib/logger'
 import { useNotesStore } from '@/store/notes-store'
 import { SettingsField, SettingsSection } from '../shared/SettingsComponents'
 
+async function reloadNotes() {
+  await useNotesStore
+    .getState()
+    .loadNotes()
+    .catch(loadError => {
+      logger.warn('Failed to reload notes after vault change', { loadError })
+    })
+}
+
 export function NotesPane() {
   const { t } = useTranslation()
   const [vaultInfo, setVaultInfo] = useState<NoteVaultInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isBusy, setIsBusy] = useState(false)
 
-  const refreshVaultInfo = useCallback(async () => {
-    const result = await commands.getNotesVaultInfo()
+  useEffect(() => {
+    let isMounted = true
+
+    void commands
+      .getNotesVaultInfo()
+      .then(result => {
+        if (!isMounted) {
+          return
+        }
+
+        if (result.status === 'error') {
+          setError(result.error)
+          return
+        }
+
+        setVaultInfo(result.data)
+        setError(null)
+      })
+      .catch(vaultError => {
+        if (isMounted) {
+          setError(String(vaultError))
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  function showVaultError(message: string) {
+    setError(message)
+    toast.error(t('preferences.notes.vault.errorTitle'), {
+      description: message,
+    })
+  }
+
+  async function handleChooseFolder() {
+    setIsBusy(true)
+
+    const selected = await open({
+      directory: true,
+      multiple: false,
+    }).catch(chooseError => {
+      showVaultError(String(chooseError))
+      return null
+    })
+
+    if (!selected || Array.isArray(selected)) {
+      setIsBusy(false)
+      return
+    }
+
+    const result = await commands
+      .setNotesVaultPath(selected)
+      .catch(commandError => ({
+        status: 'error' as const,
+        error: String(commandError),
+      }))
+
     if (result.status === 'error') {
-      setError(result.error)
+      showVaultError(result.error)
+      setIsBusy(false)
       return
     }
 
     setVaultInfo(result.data)
     setError(null)
-  }, [])
+    await reloadNotes()
+    toast.success(t('preferences.notes.vault.changed'))
+    setIsBusy(false)
+  }
 
-  useEffect(() => {
-    void refreshVaultInfo()
-  }, [refreshVaultInfo])
-
-  const reloadNotes = useCallback(async () => {
-    try {
-      await useNotesStore.getState().loadNotes()
-    } catch (loadError) {
-      logger.warn('Failed to reload notes after vault change', { loadError })
-    }
-  }, [])
-
-  const handleChooseFolder = useCallback(async () => {
+  async function handleUseDefault() {
     setIsBusy(true)
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-      })
 
-      if (!selected || Array.isArray(selected)) {
-        return
-      }
+    const result = await commands.resetNotesVaultPath().catch(commandError => ({
+      status: 'error' as const,
+      error: String(commandError),
+    }))
 
-      const result = await commands.setNotesVaultPath(selected)
-      if (result.status === 'error') {
-        setError(result.error)
-        toast.error(t('preferences.notes.vault.errorTitle'), {
-          description: result.error,
-        })
-        return
-      }
-
-      setVaultInfo(result.data)
-      setError(null)
-      await reloadNotes()
-      toast.success(t('preferences.notes.vault.changed'))
-    } catch (chooseError) {
-      const message = String(chooseError)
-      setError(message)
-      toast.error(t('preferences.notes.vault.errorTitle'), {
-        description: message,
-      })
-    } finally {
-      setIsBusy(false)
-    }
-  }, [reloadNotes, t])
-
-  const handleUseDefault = useCallback(async () => {
-    setIsBusy(true)
-    try {
-      const result = await commands.resetNotesVaultPath()
-      if (result.status === 'error') {
-        setError(result.error)
-        toast.error(t('preferences.notes.vault.errorTitle'), {
-          description: result.error,
-        })
-        return
-      }
-
-      setVaultInfo(result.data)
-      setError(null)
-      await reloadNotes()
-      toast.success(t('preferences.notes.vault.defaultRestored'))
-    } finally {
-      setIsBusy(false)
-    }
-  }, [reloadNotes, t])
-
-  const handleOpenFolder = useCallback(async () => {
-    const result = await commands.openNotesVaultFolder()
     if (result.status === 'error') {
-      setError(result.error)
-      toast.error(t('preferences.notes.vault.errorTitle'), {
-        description: result.error,
-      })
+      showVaultError(result.error)
+      setIsBusy(false)
+      return
     }
-  }, [t])
+
+    setVaultInfo(result.data)
+    setError(null)
+    await reloadNotes()
+    toast.success(t('preferences.notes.vault.defaultRestored'))
+    setIsBusy(false)
+  }
+
+  async function handleOpenFolder() {
+    const result = await commands
+      .openNotesVaultFolder()
+      .catch(commandError => ({
+        status: 'error' as const,
+        error: String(commandError),
+      }))
+
+    if (result.status === 'error') {
+      showVaultError(result.error)
+    }
+  }
 
   return (
     <div className="space-y-6">
