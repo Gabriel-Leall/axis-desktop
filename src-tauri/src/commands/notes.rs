@@ -22,25 +22,25 @@ const VAULT_METADATA_DIR: &str = ".axis-notes";
 const SEARCH_MAX_RESULTS: usize = 80;
 
 #[derive(Debug, Clone, Copy)]
-struct VaultLayout {
+pub(crate) struct VaultLayout {
     required_dirs: [&'static str; 4],
     internal_dirs: [&'static str; 1],
 }
 
 impl VaultLayout {
     /// Defines the physical vault contract used by all notes file operations.
-    fn standard() -> Self {
+    pub(crate) fn standard() -> Self {
         Self {
             required_dirs: [INBOX_DIR, ARCHIVE_DIR, TRASH_DIR, VAULT_METADATA_DIR],
             internal_dirs: [VAULT_METADATA_DIR],
         }
     }
 
-    fn required_dirs(&self) -> [&'static str; 4] {
+    pub(crate) fn required_dirs(&self) -> [&'static str; 4] {
         self.required_dirs
     }
 
-    fn is_internal_dir_name(&self, name: &str) -> bool {
+    pub(crate) fn is_internal_dir_name(&self, name: &str) -> bool {
         self.internal_dirs.contains(&name) || name.starts_with('.')
     }
 }
@@ -779,6 +779,20 @@ pub async fn open_notes_vault_folder(app: AppHandle) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static TEMP_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    fn test_vault_root(prefix: &str) -> PathBuf {
+        let suffix = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time should be after epoch")
+            .as_nanos();
+        let pid = std::process::id();
+        let counter = TEMP_DIR_COUNTER.fetch_add(1, Ordering::Relaxed);
+
+        std::env::temp_dir().join(format!("{prefix}-{pid}-{counter}-{suffix}"))
+    }
 
     #[test]
     fn extracts_tags_ignoring_code_blocks() {
@@ -829,11 +843,7 @@ mod tests {
 
     #[test]
     fn ensure_vault_structure_creates_required_directories() {
-        let suffix = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("system time should be after epoch")
-            .as_nanos();
-        let root = std::env::temp_dir().join(format!("axis-notes-vault-test-{suffix}"));
+        let root = test_vault_root("axis-notes-vault-test");
 
         ensure_vault_structure(&root).expect("vault structure should be created");
 
@@ -847,11 +857,7 @@ mod tests {
 
     #[test]
     fn read_all_notes_ignores_vault_internal_metadata_dir() {
-        let suffix = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("system time should be after epoch")
-            .as_nanos();
-        let root = std::env::temp_dir().join(format!("axis-notes-read-test-{suffix}"));
+        let root = test_vault_root("axis-notes-read-test");
         ensure_vault_structure(&root).expect("vault structure should be created");
 
         std::fs::write(root.join("inbox").join("visible.md"), "# Visible")
