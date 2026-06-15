@@ -13,9 +13,11 @@ import {
   Download,
   Upload,
   Copy,
+  FolderOpen,
 } from 'lucide-react'
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
+import { toast } from 'sonner'
 import { useNotesStore } from '@/store/notes-store'
 import {
   getNoteTitle,
@@ -30,6 +32,7 @@ import {
 import { cn } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 import { useUIStore } from '@/store/ui-store'
+import { commands } from '@/lib/tauri-bindings'
 import type { Note } from '@/lib/notes-domain'
 
 import '@toast-ui/editor/dist/toastui-editor.css'
@@ -317,11 +320,13 @@ function EditorArea({
   isSaving,
   onDelete,
   onContentChange,
+  onOpenVaultFolder,
 }: {
   note: Note | null
   isSaving: boolean
   onDelete: () => Promise<void>
   onContentChange: (noteId: string, content: string) => void
+  onOpenVaultFolder: () => Promise<void>
 }) {
   const { t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
@@ -397,9 +402,25 @@ function EditorArea({
 
   if (!note) {
     return (
-      <div className="flex h-full flex-1 items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <p className="text-sm">{t('notes.editor.selectPrompt')}</p>
+      <div className="flex h-full flex-1 items-center justify-center bg-background px-8 text-muted-foreground">
+        <div className="max-w-md text-center">
+          <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-lg border border-border bg-card text-foreground shadow-sm">
+            <FolderOpen className="size-5" />
+          </div>
+          <h2 className="text-lg font-semibold text-foreground">
+            {t('notes.welcome.title')}
+          </h2>
+          <p className="mt-2 text-sm leading-6">
+            {t('notes.welcome.description')}
+          </p>
+          <button
+            type="button"
+            onClick={() => void onOpenVaultFolder()}
+            className="mt-5 inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <FolderOpen className="size-4" />
+            {t('notes.welcome.openFolder')}
+          </button>
         </div>
       </div>
     )
@@ -631,6 +652,16 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     [updateNote]
   )
 
+  const handleOpenVaultFolder = useCallback(async () => {
+    const result = await commands.openNotesVaultFolder()
+    if (result.status === 'error') {
+      logger.error(`Failed to open notes vault folder: ${result.error}`)
+      toast.error(t('notes.welcome.openFolderFailed'), {
+        description: result.error,
+      })
+    }
+  }, [t])
+
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
@@ -672,6 +703,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           isSaving={isSaving}
           onDelete={handleDeleteNote}
           onContentChange={handleContentChange}
+          onOpenVaultFolder={handleOpenVaultFolder}
         />
       </div>
     </div>

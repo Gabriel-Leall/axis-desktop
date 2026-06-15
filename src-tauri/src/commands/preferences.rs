@@ -23,6 +23,47 @@ fn get_preferences_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app_data_dir.join("preferences.json"))
 }
 
+pub fn load_preferences_from_disk(app: &AppHandle) -> Result<AppPreferences, String> {
+    let prefs_path = get_preferences_path(app)?;
+
+    if !prefs_path.exists() {
+        return Ok(AppPreferences::default());
+    }
+
+    let contents = std::fs::read_to_string(&prefs_path)
+        .map_err(|e| format!("Failed to read preferences file: {e}"))?;
+
+    serde_json::from_str(&contents).map_err(|e| format!("Failed to parse preferences: {e}"))
+}
+
+pub fn save_preferences_to_disk(
+    app: &AppHandle,
+    preferences: &AppPreferences,
+) -> Result<(), String> {
+    validate_theme(&preferences.theme)?;
+    if let Some(mode) = &preferences.adaptive_dashboard_mode {
+        validate_dashboard_adaptation_mode(mode)?;
+    }
+
+    let prefs_path = get_preferences_path(app)?;
+    let json_content = serde_json::to_string_pretty(preferences)
+        .map_err(|e| format!("Failed to serialize preferences: {e}"))?;
+
+    let temp_path = prefs_path.with_extension("tmp");
+
+    std::fs::write(&temp_path, json_content)
+        .map_err(|e| format!("Failed to write preferences file: {e}"))?;
+
+    if let Err(rename_err) = std::fs::rename(&temp_path, &prefs_path) {
+        if let Err(remove_err) = std::fs::remove_file(&temp_path) {
+            log::warn!("Failed to remove temp file after rename failure: {remove_err}");
+        }
+        return Err(format!("Failed to finalize preferences file: {rename_err}"));
+    }
+
+    Ok(())
+}
+
 /// Load the saved quick pane shortcut from preferences, returning None on any failure.
 /// Used at startup before the full preferences system is available.
 pub fn load_quick_pane_shortcut(app: &AppHandle) -> Option<String> {
@@ -87,22 +128,7 @@ pub fn greet(name: &str) -> Result<String, String> {
 #[specta::specta]
 pub async fn load_preferences(app: AppHandle) -> Result<AppPreferences, String> {
     log::debug!("Loading preferences from disk");
-    let prefs_path = get_preferences_path(&app)?;
-
-    if !prefs_path.exists() {
-        log::info!("Preferences file not found, using defaults");
-        return Ok(AppPreferences::default());
-    }
-
-    let contents = std::fs::read_to_string(&prefs_path).map_err(|e| {
-        log::error!("Failed to read preferences file: {e}");
-        format!("Failed to read preferences file: {e}")
-    })?;
-
-    let preferences: AppPreferences = serde_json::from_str(&contents).map_err(|e| {
-        log::error!("Failed to parse preferences JSON: {e}");
-        format!("Failed to parse preferences: {e}")
-    })?;
+    let preferences = load_preferences_from_disk(&app)?;
 
     log::info!("Successfully loaded preferences");
     Ok(preferences)
@@ -113,37 +139,9 @@ pub async fn load_preferences(app: AppHandle) -> Result<AppPreferences, String> 
 #[tauri::command]
 #[specta::specta]
 pub async fn save_preferences(app: AppHandle, preferences: AppPreferences) -> Result<(), String> {
-    // Validate theme value
-    validate_theme(&preferences.theme)?;
-    if let Some(mode) = &preferences.adaptive_dashboard_mode {
-        validate_dashboard_adaptation_mode(mode)?;
-    }
-
     log::debug!("Saving preferences to disk: {preferences:?}");
-    let prefs_path = get_preferences_path(&app)?;
+    save_preferences_to_disk(&app, &preferences)?;
 
-    let json_content = serde_json::to_string_pretty(&preferences).map_err(|e| {
-        log::error!("Failed to serialize preferences: {e}");
-        format!("Failed to serialize preferences: {e}")
-    })?;
-
-    // Write to a temporary file first, then rename (atomic operation)
-    let temp_path = prefs_path.with_extension("tmp");
-
-    std::fs::write(&temp_path, json_content).map_err(|e| {
-        log::error!("Failed to write preferences file: {e}");
-        format!("Failed to write preferences file: {e}")
-    })?;
-
-    if let Err(rename_err) = std::fs::rename(&temp_path, &prefs_path) {
-        log::error!("Failed to finalize preferences file: {rename_err}");
-        // Clean up the temp file to avoid leaving orphaned files on disk
-        if let Err(remove_err) = std::fs::remove_file(&temp_path) {
-            log::warn!("Failed to remove temp file after rename failure: {remove_err}");
-        }
-        return Err(format!("Failed to finalize preferences file: {rename_err}"));
-    }
-
-    log::info!("Successfully saved preferences to {prefs_path:?}");
+    log::info!("Successfully saved preferences");
     Ok(())
 }

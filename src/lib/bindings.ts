@@ -662,6 +662,38 @@ async searchNotes(query: string) : Promise<Result<Note[], string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async getNotesVaultInfo() : Promise<Result<NoteVaultInfo, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_notes_vault_info") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async setNotesVaultPath(path: string) : Promise<Result<NoteVaultInfo, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_notes_vault_path", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async resetNotesVaultPath() : Promise<Result<NoteVaultInfo, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("reset_notes_vault_path") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async openNotesVaultFolder() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("open_notes_vault_folder") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Fetches the summary numbers for the top dashboard cards.
  */
@@ -740,7 +772,11 @@ daily_reset_time: string | null;
 /**
  * How strongly the dashboard should adapt to the current context
  */
-adaptive_dashboard_mode: string | null }
+adaptive_dashboard_mode: string | null; 
+/**
+ * Absolute path to the active local notes vault. If None, uses Documents/Axis Notes.
+ */
+notes_vault_path: string | null }
 export type CalendarEvent = { id: string; title: string; description: string | null; start_date: string; end_date: string; all_day: boolean; color: string | null; created_at: string; updated_at: string }
 export type CardOrderUpdate = { id: string; column_id: string; sort_order: number; updated_at: string }
 export type ColumnOrderUpdate = { id: string; sort_order: number; updated_at: string }
@@ -763,6 +799,7 @@ export type KanbanColumnWithCards = { column: KanbanColumn; cards: KanbanCard[] 
 export type KanbanSubtask = { id: string; card_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
 export type Note = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
 export type NoteSummary = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
+export type NoteVaultInfo = { path: string; is_default: boolean }
 export type OAuthLoopbackResult = { code: string; state: string | null; redirect_uri: string }
 export type PomodoroSession = { id: string; session_type: string; duration_seconds: number; completed: boolean; task_id: string | null; started_at: string; ended_at: string | null; created_at: string }
 export type PomodoroSettings = { focus_duration: number; short_break_duration: number; long_break_duration: number; pomos_until_long_break: number; auto_start_breaks: boolean; auto_start_focus: boolean; sound_notifications: boolean }

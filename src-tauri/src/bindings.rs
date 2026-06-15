@@ -83,6 +83,10 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         notes::rename_note,
         notes::delete_note,
         notes::search_notes,
+        notes::get_notes_vault_info,
+        notes::set_notes_vault_path,
+        notes::reset_notes_vault_path,
+        notes::open_notes_vault_folder,
         // Analytics
         analytics::get_analytics_summary,
         analytics::get_focus_time_by_day,

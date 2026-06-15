@@ -7,6 +7,7 @@ Patterns for saving and loading data to disk.
 | Need               | Solution           | When to Use                                                           |
 | ------------------ | ------------------ | --------------------------------------------------------------------- |
 | App preferences    | Preferences System | Strongly-typed settings (theme, shortcuts)                            |
+| Local notes        | Notes Vault        | User-owned Markdown files in a visible folder                         |
 | Emergency recovery | Recovery System    | Crash recovery, backup before risky operations                        |
 | Relational data    | SQLite             | User data requiring queries, relationships                            |
 | External API data  | TanStack Query     | Remote data with caching (see [external-apis.md](./external-apis.md)) |
@@ -14,6 +15,7 @@ Patterns for saving and loading data to disk.
 ```
 Need to persist data?
 ├─ App settings? → Preferences (Rust struct + TanStack Query)
+├─ Local notes? → Notes Vault (Documents/Axis Notes by default)
 ├─ User data with queries/relationships? → SQLite (see below)
 ├─ Remote API data? → external-apis.md
 └─ Emergency/crash recovery? → Recovery System
@@ -86,6 +88,30 @@ export function useUpdatePreferences() {
   })
 }
 ```
+
+## Notes Vault
+
+Notes are stored as local Markdown files in a user-visible vault folder.
+
+Default location:
+
+```text
+Documents/Axis Notes/
+├── inbox/
+├── archive/
+├── trash/
+└── .axis-notes/
+```
+
+Rules:
+
+- The default vault is created automatically on first use.
+- The active vault path is persisted in `preferences.json` as `notes_vault_path`.
+- If `notes_vault_path` is not set, Axis uses `Documents/Axis Notes`.
+- Selecting a different vault path validates and completes the vault structure, but does not move notes from the previous vault.
+- `.axis-notes/` is reserved for Axis metadata and must not be indexed as user notes.
+
+All note file operations go through Rust commands in `src-tauri/src/commands/notes.rs`.
 
 ## Emergency Recovery System
 
