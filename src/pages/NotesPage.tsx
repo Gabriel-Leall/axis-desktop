@@ -609,8 +609,6 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const loadNotes = useNotesStore(state => state.loadNotes)
   const createNote = useNotesStore(state => state.createNote)
   const updateNote = useNotesStore(state => state.updateNote)
-  const deleteNote = useNotesStore(state => state.deleteNote)
-  const archiveNote = useNotesStore(state => state.archiveNote)
   const selectNote = useNotesStore(state => state.selectNote)
   const setSearchQuery = useNotesStore(state => state.setSearchQuery)
   const setSelectedTag = useNotesStore(state => state.setSelectedTag)
@@ -662,18 +660,24 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }
 
   async function handleArchiveNote() {
-    if (!selectedNoteId) return
+    const {
+      selectedNoteId: currentSelectedNoteId,
+      archiveNote: runArchiveNote,
+    } = useNotesStore.getState()
+    if (!currentSelectedNoteId) return
     try {
-      await archiveNote(selectedNoteId)
+      await runArchiveNote(currentSelectedNoteId)
     } catch (error) {
       logger.error(`Failed to archive note from UI: ${String(error)}`)
     }
   }
 
   async function handleMoveNoteToTrash() {
-    if (!selectedNoteId) return
+    const { selectedNoteId: currentSelectedNoteId, deleteNote: runDeleteNote } =
+      useNotesStore.getState()
+    if (!currentSelectedNoteId) return
     try {
-      await deleteNote(selectedNoteId)
+      await runDeleteNote(currentSelectedNoteId)
     } catch (error) {
       logger.error(`Failed to move note to trash from UI: ${String(error)}`)
     }

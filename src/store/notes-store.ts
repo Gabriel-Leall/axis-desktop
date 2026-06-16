@@ -31,6 +31,7 @@ interface NotesState {
 }
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let debouncedNoteId: string | null = null
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 let searchRequestId = 0
 let loadNotesInFlight: Promise<void> | null = null
@@ -52,6 +53,14 @@ function nextSelectedNoteId(
   }
 
   return remainingNotes[0]?.id ?? null
+}
+
+function cancelPendingSearch() {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
+  searchRequestId += 1
 }
 
 function withTimeout<T>(
@@ -208,6 +217,7 @@ export const useNotesStore = create<NotesState>()(
           clearTimeout(debounceTimer)
         }
 
+        debouncedNoteId = id
         debounceTimer = setTimeout(async () => {
           try {
             const savedNote = mapBindingNote(
@@ -233,6 +243,9 @@ export const useNotesStore = create<NotesState>()(
             logger.error(`Failed to update note: ${String(error)}`)
             set({ isSaving: false }, undefined, 'updateNote/error')
             await get().loadNotes()
+          } finally {
+            debounceTimer = null
+            debouncedNoteId = null
           }
         }, DEBOUNCE_MS)
       },
@@ -243,33 +256,52 @@ export const useNotesStore = create<NotesState>()(
           searchResults: get().searchResults,
           selectedNoteId: get().selectedNoteId,
         }
-
-        if (debounceTimer) {
-          clearTimeout(debounceTimer)
-          debounceTimer = null
-        }
-
-        set(
-          state => ({
-            notes: removeNoteFromList(state.notes, id),
-            searchResults: state.searchResults
-              ? removeNoteFromList(state.searchResults, id)
-              : null,
-            selectedNoteId: nextSelectedNoteId(
-              state.selectedNoteId,
-              id,
-              removeNoteFromList(state.notes, id)
-            ),
-          }),
-          undefined,
-          'deleteNote/optimistic'
-        )
+        const pendingNote = snapshot.notes.find(note => note.id === id)
+        const shouldFlushPendingSave =
+          Boolean(debounceTimer) &&
+          debouncedNoteId === id &&
+          Boolean(pendingNote)
 
         try {
+          if (shouldFlushPendingSave && pendingNote && debounceTimer) {
+            clearTimeout(debounceTimer)
+            debounceTimer = null
+            debouncedNoteId = null
+            unwrapResult(
+              await commands.updateNote({
+                id,
+                content: pendingNote.content,
+              })
+            )
+            set({ isSaving: false }, undefined, 'deleteNote/flushPendingSave')
+          }
+
+          set(
+            state => ({
+              notes: removeNoteFromList(state.notes, id),
+              searchResults: state.searchResults
+                ? removeNoteFromList(state.searchResults, id)
+                : null,
+              selectedNoteId: nextSelectedNoteId(
+                state.selectedNoteId,
+                id,
+                removeNoteFromList(state.notes, id)
+              ),
+            }),
+            undefined,
+            'deleteNote/optimistic'
+          )
           unwrapResult(await commands.deleteNote(id))
         } catch (error) {
           logger.error(`Failed to delete note: ${String(error)}`)
-          set(snapshot, undefined, 'deleteNote/rollback')
+          set(
+            {
+              ...snapshot,
+              isSaving: shouldFlushPendingSave ? false : get().isSaving,
+            },
+            undefined,
+            'deleteNote/rollback'
+          )
           throw error
         }
       },
@@ -280,39 +312,59 @@ export const useNotesStore = create<NotesState>()(
           searchResults: get().searchResults,
           selectedNoteId: get().selectedNoteId,
         }
-
-        if (debounceTimer) {
-          clearTimeout(debounceTimer)
-          debounceTimer = null
-        }
-
-        set(
-          state => ({
-            notes: removeNoteFromList(state.notes, id),
-            searchResults: state.searchResults
-              ? removeNoteFromList(state.searchResults, id)
-              : null,
-            selectedNoteId: nextSelectedNoteId(
-              state.selectedNoteId,
-              id,
-              removeNoteFromList(state.notes, id)
-            ),
-          }),
-          undefined,
-          'archiveNote/optimistic'
-        )
+        const pendingNote = snapshot.notes.find(note => note.id === id)
+        const shouldFlushPendingSave =
+          Boolean(debounceTimer) &&
+          debouncedNoteId === id &&
+          Boolean(pendingNote)
 
         try {
+          if (shouldFlushPendingSave && pendingNote && debounceTimer) {
+            clearTimeout(debounceTimer)
+            debounceTimer = null
+            debouncedNoteId = null
+            unwrapResult(
+              await commands.updateNote({
+                id,
+                content: pendingNote.content,
+              })
+            )
+            set({ isSaving: false }, undefined, 'archiveNote/flushPendingSave')
+          }
+
+          set(
+            state => ({
+              notes: removeNoteFromList(state.notes, id),
+              searchResults: state.searchResults
+                ? removeNoteFromList(state.searchResults, id)
+                : null,
+              selectedNoteId: nextSelectedNoteId(
+                state.selectedNoteId,
+                id,
+                removeNoteFromList(state.notes, id)
+              ),
+            }),
+            undefined,
+            'archiveNote/optimistic'
+          )
           unwrapResult(await commands.archiveNote(id))
         } catch (error) {
           logger.error(`Failed to archive note: ${String(error)}`)
-          set(snapshot, undefined, 'archiveNote/rollback')
+          set(
+            {
+              ...snapshot,
+              isSaving: shouldFlushPendingSave ? false : get().isSaving,
+            },
+            undefined,
+            'archiveNote/rollback'
+          )
           throw error
         }
       },
 
       restoreNote: async id => {
         try {
+          cancelPendingSearch()
           const restoredNote = mapBindingNote(
             unwrapResult(await commands.restoreNote(id))
           )
@@ -327,6 +379,7 @@ export const useNotesStore = create<NotesState>()(
               searchQuery: '',
               searchResults: null,
               selectedTag: null,
+              isSearching: false,
             }),
             undefined,
             'restoreNote/done'
@@ -345,10 +398,7 @@ export const useNotesStore = create<NotesState>()(
         const trimmedQuery = query.trim()
         set({ searchQuery: query }, undefined, 'setSearchQuery')
 
-        if (searchDebounceTimer) {
-          clearTimeout(searchDebounceTimer)
-          searchDebounceTimer = null
-        }
+        cancelPendingSearch()
 
         if (!trimmedQuery) {
           set(
