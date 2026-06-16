@@ -203,16 +203,25 @@ fn ensure_vault_structure(root: &Path) -> Result<(), String> {
 
 fn ensure_vault_metadata_area(root: &Path) -> Result<(), String> {
     let metadata_root = root.join(VAULT_METADATA_DIR);
+    ensure_not_symlink(&metadata_root, "Notes vault metadata directory")?;
+
     let layout = VaultLayout::standard();
     for dir in layout.metadata_dirs() {
-        std::fs::create_dir_all(metadata_root.join(dir))
+        let metadata_dir = metadata_root.join(dir);
+        ensure_not_symlink(&metadata_dir, "Notes vault metadata subdirectory")?;
+        std::fs::create_dir_all(&metadata_dir)
             .map_err(|e| format!("Failed to create notes metadata directory: {e}"))?;
+        ensure_not_symlink(&metadata_dir, "Notes vault metadata subdirectory")?;
     }
 
     let manifest_path = metadata_root.join(VAULT_MANIFEST_FILE);
+    ensure_not_symlink(&manifest_path, "Notes vault manifest")?;
     if manifest_path.exists() {
         if !manifest_path.is_file() {
-            return Err("Notes vault manifest path is not a file".to_string());
+            return Err(format!(
+                "Notes vault manifest path is not a file: {}",
+                manifest_path.display()
+            ));
         }
         return Ok(());
     }
@@ -229,6 +238,18 @@ fn ensure_vault_metadata_area(root: &Path) -> Result<(), String> {
 
     write_atomic(&manifest_path, &content)?;
     Ok(())
+}
+
+fn ensure_not_symlink(path: &Path, context: &str) -> Result<(), String> {
+    match std::fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_symlink() => Err(format!(
+            "{context} must not be a symlink: {}",
+            path.display()
+        )),
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("Failed to inspect {context}: {error}")),
+    }
 }
 
 fn default_notes_vault_root(app: &AppHandle) -> Result<PathBuf, String> {
@@ -580,14 +601,13 @@ fn read_all_notes(root: &Path) -> Result<Vec<Note>, String> {
 
 fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
     let temp_path = path.with_extension("tmp");
-    std::fs::write(&temp_path, content)
-        .map_err(|e| format!("Failed to write temp note file: {e}"))?;
+    std::fs::write(&temp_path, content).map_err(|e| format!("Failed to write temp file: {e}"))?;
 
     if let Err(rename_err) = std::fs::rename(&temp_path, path) {
         if let Err(remove_err) = std::fs::remove_file(&temp_path) {
-            log::warn!("Failed to remove temp note file after rename failure: {remove_err}");
+            log::warn!("Failed to remove temp file after rename failure: {remove_err}");
         }
-        return Err(format!("Failed to finalize note file: {rename_err}"));
+        return Err(format!("Failed to finalize file: {rename_err}"));
     }
 
     Ok(())
@@ -921,6 +941,42 @@ mod tests {
         std::env::temp_dir().join(format!("{prefix}-{pid}-{counter}-{suffix}"))
     }
 
+    #[cfg(unix)]
+    fn create_dir_symlink(original: &Path, link: &Path) -> std::io::Result<()> {
+        std::os::unix::fs::symlink(original, link)
+    }
+
+    #[cfg(windows)]
+    fn create_dir_symlink(original: &Path, link: &Path) -> std::io::Result<()> {
+        std::os::windows::fs::symlink_dir(original, link)
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    fn create_dir_symlink(_original: &Path, _link: &Path) -> std::io::Result<()> {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "symlink tests are not supported on this platform",
+        ))
+    }
+
+    #[cfg(unix)]
+    fn create_file_symlink(original: &Path, link: &Path) -> std::io::Result<()> {
+        std::os::unix::fs::symlink(original, link)
+    }
+
+    #[cfg(windows)]
+    fn create_file_symlink(original: &Path, link: &Path) -> std::io::Result<()> {
+        std::os::windows::fs::symlink_file(original, link)
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    fn create_file_symlink(_original: &Path, _link: &Path) -> std::io::Result<()> {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "symlink tests are not supported on this platform",
+        ))
+    }
+
     #[test]
     fn extracts_tags_ignoring_code_blocks() {
         let body = "# Title\n#work\n`#inline`\n```ts\n#hidden\n```\n#project";
@@ -1044,6 +1100,95 @@ mod tests {
         assert!(result.is_err());
 
         std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn ensure_vault_structure_rejects_metadata_root_that_is_not_a_directory() {
+        let root = test_vault_root("axis-notes-invalid-metadata-root-test");
+        std::fs::create_dir_all(&root).expect("test vault root should be creatable");
+        std::fs::write(root.join(VAULT_METADATA_DIR), "not a directory")
+            .expect("metadata root file should be writable");
+
+        let result = ensure_vault_structure(&root);
+
+        assert!(result.is_err());
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn ensure_vault_structure_rejects_metadata_root_symlink_escape() {
+        let root = test_vault_root("axis-notes-symlink-metadata-root-test");
+        let external = test_vault_root("axis-notes-symlink-metadata-external-test");
+        std::fs::create_dir_all(&root).expect("test vault root should be creatable");
+        std::fs::create_dir_all(&external).expect("external directory should be creatable");
+
+        if create_dir_symlink(&external, &root.join(VAULT_METADATA_DIR)).is_err() {
+            std::fs::remove_dir_all(root).expect("test vault should be removable");
+            std::fs::remove_dir_all(external).expect("external directory should be removable");
+            return;
+        }
+
+        let result = ensure_vault_structure(&root);
+
+        assert!(result
+            .expect_err("metadata symlink should be rejected")
+            .contains("must not be a symlink"));
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+        std::fs::remove_dir_all(external).expect("external directory should be removable");
+    }
+
+    #[test]
+    fn ensure_vault_structure_rejects_manifest_symlink_escape() {
+        let root = test_vault_root("axis-notes-symlink-manifest-test");
+        let external = test_vault_root("axis-notes-symlink-manifest-external-test");
+        let metadata_root = root.join(VAULT_METADATA_DIR);
+        std::fs::create_dir_all(&metadata_root).expect("metadata root should be creatable");
+        std::fs::create_dir_all(&external).expect("external directory should be creatable");
+        let external_manifest = external.join(VAULT_MANIFEST_FILE);
+        std::fs::write(&external_manifest, "{}").expect("external manifest should be writable");
+
+        if create_file_symlink(&external_manifest, &metadata_root.join(VAULT_MANIFEST_FILE))
+            .is_err()
+        {
+            std::fs::remove_dir_all(root).expect("test vault should be removable");
+            std::fs::remove_dir_all(external).expect("external directory should be removable");
+            return;
+        }
+
+        let result = ensure_vault_structure(&root);
+
+        assert!(result
+            .expect_err("manifest symlink should be rejected")
+            .contains("must not be a symlink"));
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+        std::fs::remove_dir_all(external).expect("external directory should be removable");
+    }
+
+    #[test]
+    fn ensure_vault_structure_rejects_metadata_subdirectory_symlink_escape() {
+        let root = test_vault_root("axis-notes-symlink-subdir-test");
+        let external = test_vault_root("axis-notes-symlink-subdir-external-test");
+        let metadata_root = root.join(VAULT_METADATA_DIR);
+        std::fs::create_dir_all(&metadata_root).expect("metadata root should be creatable");
+        std::fs::create_dir_all(&external).expect("external directory should be creatable");
+
+        if create_dir_symlink(&external, &metadata_root.join(VAULT_SIDECARS_DIR)).is_err() {
+            std::fs::remove_dir_all(root).expect("test vault should be removable");
+            std::fs::remove_dir_all(external).expect("external directory should be removable");
+            return;
+        }
+
+        let result = ensure_vault_structure(&root);
+
+        assert!(result
+            .expect_err("metadata subdirectory symlink should be rejected")
+            .contains("must not be a symlink"));
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+        std::fs::remove_dir_all(external).expect("external directory should be removable");
     }
 
     #[test]
