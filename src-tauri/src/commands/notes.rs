@@ -19,12 +19,18 @@ const INBOX_DIR: &str = "inbox";
 const ARCHIVE_DIR: &str = "archive";
 const TRASH_DIR: &str = "trash";
 const VAULT_METADATA_DIR: &str = ".axis-notes";
+const VAULT_MANIFEST_FILE: &str = "manifest.json";
+const VAULT_SIDECARS_DIR: &str = "sidecars";
+const VAULT_CACHE_DIR: &str = "cache";
+const VAULT_CONFIG_DIR: &str = "config";
+const VAULT_METADATA_SCHEMA_VERSION: u32 = 1;
 const SEARCH_MAX_RESULTS: usize = 80;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct VaultLayout {
     required_dirs: [&'static str; 4],
     internal_dirs: [&'static str; 1],
+    metadata_dirs: [&'static str; 3],
 }
 
 impl VaultLayout {
@@ -33,11 +39,16 @@ impl VaultLayout {
         Self {
             required_dirs: [INBOX_DIR, ARCHIVE_DIR, TRASH_DIR, VAULT_METADATA_DIR],
             internal_dirs: [VAULT_METADATA_DIR],
+            metadata_dirs: [VAULT_SIDECARS_DIR, VAULT_CACHE_DIR, VAULT_CONFIG_DIR],
         }
     }
 
     pub(crate) fn required_dirs(&self) -> [&'static str; 4] {
         self.required_dirs
+    }
+
+    pub(crate) fn metadata_dirs(&self) -> [&'static str; 3] {
+        self.metadata_dirs
     }
 
     pub(crate) fn is_internal_dir_name(&self, name: &str) -> bool {
@@ -123,6 +134,14 @@ pub struct NoteVaultInfo {
     pub is_default: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct VaultManifest {
+    schema_version: u32,
+    application: String,
+    created_at: String,
+    updated_at: String,
+}
+
 fn notes_root(app: &AppHandle) -> Result<PathBuf, String> {
     let documents_dir = app
         .path()
@@ -177,6 +196,38 @@ fn ensure_vault_structure(root: &Path) -> Result<(), String> {
             .map_err(|e| format!("Failed to create notes vault directory: {e}"))?;
     }
 
+    ensure_vault_metadata_area(root)?;
+
+    Ok(())
+}
+
+fn ensure_vault_metadata_area(root: &Path) -> Result<(), String> {
+    let metadata_root = root.join(VAULT_METADATA_DIR);
+    let layout = VaultLayout::standard();
+    for dir in layout.metadata_dirs() {
+        std::fs::create_dir_all(metadata_root.join(dir))
+            .map_err(|e| format!("Failed to create notes metadata directory: {e}"))?;
+    }
+
+    let manifest_path = metadata_root.join(VAULT_MANIFEST_FILE);
+    if manifest_path.exists() {
+        if !manifest_path.is_file() {
+            return Err("Notes vault manifest path is not a file".to_string());
+        }
+        return Ok(());
+    }
+
+    let now = now_iso_string();
+    let manifest = VaultManifest {
+        schema_version: VAULT_METADATA_SCHEMA_VERSION,
+        application: "axis-desktop".to_string(),
+        created_at: now.clone(),
+        updated_at: now,
+    };
+    let content = serde_json::to_string_pretty(&manifest)
+        .map_err(|e| format!("Failed to serialize notes vault manifest: {e}"))?;
+
+    write_atomic(&manifest_path, &content)?;
     Ok(())
 }
 
@@ -911,6 +962,10 @@ mod tests {
             layout.required_dirs(),
             [INBOX_DIR, ARCHIVE_DIR, TRASH_DIR, VAULT_METADATA_DIR]
         );
+        assert_eq!(
+            layout.metadata_dirs(),
+            [VAULT_SIDECARS_DIR, VAULT_CACHE_DIR, VAULT_CONFIG_DIR]
+        );
         assert!(layout.is_internal_dir_name(VAULT_METADATA_DIR));
         assert!(!layout.is_internal_dir_name(INBOX_DIR));
         assert!(!layout.is_internal_dir_name(ARCHIVE_DIR));
@@ -932,6 +987,66 @@ mod tests {
     }
 
     #[test]
+    fn ensure_vault_structure_creates_metadata_manifest_and_reserved_subdirs() {
+        let root = test_vault_root("axis-notes-metadata-test");
+
+        ensure_vault_structure(&root).expect("vault structure should be created");
+
+        let metadata_root = root.join(VAULT_METADATA_DIR);
+        let manifest_path = metadata_root.join(VAULT_MANIFEST_FILE);
+        let manifest: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(&manifest_path).expect("manifest should be readable"),
+        )
+        .expect("manifest should be valid JSON");
+
+        assert!(metadata_root.join(VAULT_SIDECARS_DIR).is_dir());
+        assert!(metadata_root.join(VAULT_CACHE_DIR).is_dir());
+        assert!(metadata_root.join(VAULT_CONFIG_DIR).is_dir());
+        assert_eq!(manifest["schema_version"], VAULT_METADATA_SCHEMA_VERSION);
+        assert_eq!(manifest["application"], "axis-desktop");
+        assert!(manifest["created_at"]
+            .as_str()
+            .is_some_and(|v| !v.is_empty()));
+        assert!(manifest["updated_at"]
+            .as_str()
+            .is_some_and(|v| !v.is_empty()));
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn ensure_vault_structure_preserves_existing_metadata_manifest() {
+        let root = test_vault_root("axis-notes-existing-metadata-test");
+        let metadata_root = root.join(VAULT_METADATA_DIR);
+        std::fs::create_dir_all(&metadata_root).expect("metadata root should be creatable");
+        let manifest_path = metadata_root.join(VAULT_MANIFEST_FILE);
+        let existing_manifest = r#"{"schema_version":1,"application":"axis-desktop","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}"#;
+        std::fs::write(&manifest_path, existing_manifest).expect("manifest should be writable");
+
+        ensure_vault_structure(&root).expect("vault structure should be completed");
+
+        assert_eq!(
+            std::fs::read_to_string(&manifest_path).expect("manifest should be readable"),
+            existing_manifest
+        );
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn ensure_vault_structure_rejects_manifest_path_that_is_not_a_file() {
+        let root = test_vault_root("axis-notes-invalid-manifest-test");
+        let manifest_path = root.join(VAULT_METADATA_DIR).join(VAULT_MANIFEST_FILE);
+        std::fs::create_dir_all(&manifest_path).expect("manifest path directory should be created");
+
+        let result = ensure_vault_structure(&root);
+
+        assert!(result.is_err());
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
     fn read_all_notes_ignores_vault_internal_metadata_dir() {
         let root = test_vault_root("axis-notes-read-test");
         ensure_vault_structure(&root).expect("vault structure should be created");
@@ -940,6 +1055,13 @@ mod tests {
             .expect("visible note should be writable");
         std::fs::write(root.join(".axis-notes").join("hidden.md"), "# Hidden")
             .expect("metadata note should be writable");
+        std::fs::write(
+            root.join(".axis-notes")
+                .join(VAULT_SIDECARS_DIR)
+                .join("hidden-sidecar.md"),
+            "# Hidden sidecar",
+        )
+        .expect("metadata sidecar should be writable");
 
         let notes = read_all_notes(&root).expect("notes should be readable");
 

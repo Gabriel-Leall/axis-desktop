@@ -101,6 +101,10 @@ Documents/Axis Notes/
 ├── archive/
 ├── trash/
 └── .axis-notes/
+    ├── manifest.json
+    ├── sidecars/
+    ├── cache/
+    └── config/
 ```
 
 Rules:
@@ -111,6 +115,9 @@ Rules:
 - The physical vault contract is defined in `VaultLayout` in `src-tauri/src/commands/notes.rs`; backend code should use that contract instead of duplicating directory names.
 - Selecting a different vault path validates and completes the vault structure, but does not move notes from the previous vault.
 - `.axis-notes/` is reserved for Axis metadata and must not be indexed as user notes.
+- User-authored Markdown remains in note files; Axis-owned structured data belongs under `.axis-notes/`.
+- `.axis-notes/manifest.json` records the internal vault metadata schema and is created once, then preserved across later structure checks.
+- `.axis-notes/sidecars/` is reserved for per-note structured metadata, `.axis-notes/cache/` for rebuildable derived data, and `.axis-notes/config/` for vault-scoped settings.
 - The active notes workspace excludes top-level `archive/` and `trash/` folders from normal list/search results.
 - Deleting a note is a reversible lifecycle move into `trash/`, not a permanent file removal.
 - Archiving a note moves it into `archive/`; restoring a note from `archive/` or `trash/` moves it back to `inbox/`.
