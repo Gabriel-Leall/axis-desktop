@@ -614,6 +614,22 @@ async getNotes() : Promise<Result<NoteSummary[], string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async getArchivedNotes() : Promise<Result<NoteSummary[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_archived_notes") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getTrashedNotes() : Promise<Result<NoteSummary[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_trashed_notes") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getNote(id: string) : Promise<Result<Note, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_note", { id }) };
@@ -646,7 +662,7 @@ async renameNote(input: RenameNoteInput) : Promise<Result<Note, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async deleteNote(id: string) : Promise<Result<null, string>> {
+async deleteNote(id: string) : Promise<Result<NoteSummary, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("delete_note", { id }) };
 } catch (e) {

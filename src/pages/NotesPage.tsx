@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Editor as ToastEditor } from '@toast-ui/react-editor'
+import {
+  Editor as ToastEditor,
+  Viewer as ToastViewer,
+} from '@toast-ui/react-editor'
 import { useTranslation } from 'react-i18next'
 import {
   Plus,
@@ -11,15 +14,19 @@ import {
   MoreHorizontal,
   Trash2,
   Archive,
+  Inbox,
+  RotateCcw,
   Download,
   Upload,
   Copy,
   FolderOpen,
+  X,
 } from 'lucide-react'
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
 import { toast } from 'sonner'
 import { useNotesStore } from '@/store/notes-store'
+import type { NotesWorkspaceView } from '@/store/notes-store'
 import {
   getNoteTitle,
   getNotePreview,
@@ -96,26 +103,53 @@ const GROUP_LABEL_KEYS: Record<string, string> = {
   older: 'notes.groups.older',
 }
 
+const WORKSPACE_LABEL_KEYS: Record<NotesWorkspaceView, string> = {
+  inbox: 'notes.workspace.inbox',
+  archive: 'notes.workspace.archive',
+  trash: 'notes.workspace.trash',
+}
+
+const WORKSPACE_DESCRIPTION_KEYS: Record<NotesWorkspaceView, string> = {
+  inbox: 'notes.workspace.inboxDescription',
+  archive: 'notes.workspace.archiveDescription',
+  trash: 'notes.workspace.trashDescription',
+}
+
+const WORKSPACE_OPTIONS: {
+  view: NotesWorkspaceView
+  icon: typeof Inbox
+}[] = [
+  { view: 'inbox', icon: Inbox },
+  { view: 'archive', icon: Archive },
+  { view: 'trash', icon: Trash2 },
+]
+
 function Sidebar({
   allNotes,
   notes,
   selectedNoteId,
+  workspaceView,
   searchQuery,
   selectedTag,
   onSelectNote,
+  onWorkspaceChange,
   onSelectTag,
   onCreateNote,
   onSearchChange,
+  onClearFilters,
 }: {
   allNotes: Note[]
   notes: Note[]
   selectedNoteId: string | null
+  workspaceView: NotesWorkspaceView
   searchQuery: string
   selectedTag: string | null
   onSelectNote: (id: string) => void
+  onWorkspaceChange: (view: NotesWorkspaceView) => Promise<void>
   onSelectTag: (tag: string | null) => void
   onCreateNote: () => Promise<void>
   onSearchChange: (q: string) => void
+  onClearFilters: () => void
 }) {
   const { t } = useTranslation()
   const [tagsCollapsed, setTagsCollapsed] = useState(false)
@@ -124,6 +158,9 @@ function Sidebar({
   const tagCounts = countTags(allNotes)
   const visibleTags = showAllTags ? tagCounts : tagCounts.slice(0, 8)
   const hasHiddenTags = tagCounts.length > 8
+  const hasSearch = searchQuery.trim().length > 0
+  const hasActiveFilters = hasSearch || selectedTag !== null
+  const workspaceLabel = t(WORKSPACE_LABEL_KEYS[workspaceView])
 
   return (
     <div className="flex h-full w-64 shrink-0 flex-col bg-card text-card-foreground border-r border-border">
@@ -131,14 +168,61 @@ function Sidebar({
         <h2 className="text-sm font-semibold tracking-wide text-foreground/90">
           {t('notes.sidebar.title')}
         </h2>
-        <button
-          type="button"
-          onClick={() => void onCreateNote()}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          aria-label="New note"
-        >
-          <Plus className="size-4" />
-        </button>
+        {workspaceView === 'inbox' && (
+          <button
+            type="button"
+            onClick={() => void onCreateNote()}
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            aria-label={t('notes.sidebar.newNote')}
+          >
+            <Plus className="size-4" />
+          </button>
+        )}
+      </div>
+
+      <div className="px-2 pb-2.5">
+        <div className="mb-1.5 px-1 font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+          {t('notes.sidebar.vaultWorkspace')}
+        </div>
+        <div className="space-y-1">
+          {WORKSPACE_OPTIONS.map(option => {
+            const Icon = option.icon
+            const isActive = workspaceView === option.view
+
+            return (
+              <button
+                key={option.view}
+                type="button"
+                onClick={() => {
+                  if (!isActive) {
+                    void onWorkspaceChange(option.view).catch(error => {
+                      logger.error(
+                        `Failed to change notes workspace: ${String(error)}`
+                      )
+                    })
+                  }
+                }}
+                className={cn(
+                  'flex w-full items-start gap-2 rounded-md border px-2 py-2 text-start transition-colors',
+                  isActive
+                    ? 'border-border bg-accent text-accent-foreground'
+                    : 'border-transparent text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
+                )}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <Icon className="mt-0.5 size-3.5 shrink-0" />
+                <span className="min-w-0">
+                  <span className="block text-xs font-medium">
+                    {t(WORKSPACE_LABEL_KEYS[option.view])}
+                  </span>
+                  <span className="block truncate text-[10px] text-muted-foreground/75">
+                    {t(WORKSPACE_DESCRIPTION_KEYS[option.view])}
+                  </span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div className="px-2 pb-2.5">
@@ -152,6 +236,16 @@ function Sidebar({
             aria-label={t('notes.sidebar.searchPlaceholder')}
             className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
           />
+          {hasSearch && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+              aria-label={t('notes.sidebar.clearSearch')}
+            >
+              <X className="size-3" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -166,7 +260,11 @@ function Sidebar({
               : 'border-border bg-accent text-accent-foreground'
           )}
         >
-          <span>{t('notes.sidebar.allNotes')}</span>
+          <span>
+            {t('notes.sidebar.allNotesInWorkspace', {
+              workspace: workspaceLabel,
+            })}
+          </span>
           <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
             {allNotes.length}
           </span>
@@ -241,22 +339,42 @@ function Sidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto px-1">
-        {notes.length === 0 && searchQuery && (
+        {notes.length === 0 && hasActiveFilters && (
           <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-            {t('notes.empty.search', { query: searchQuery })}
+            <p>
+              {hasSearch && selectedTag
+                ? t('notes.empty.searchAndTagInWorkspace', {
+                    query: searchQuery,
+                    tag: selectedTag,
+                    workspace: workspaceLabel,
+                  })
+                : hasSearch
+                  ? t('notes.empty.searchInWorkspace', {
+                      query: searchQuery,
+                      workspace: workspaceLabel,
+                    })
+                  : t('notes.empty.tagInWorkspace', {
+                      tag: selectedTag,
+                      workspace: workspaceLabel,
+                    })}
+            </p>
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="mt-3 rounded-md border border-border px-2 py-1 text-[11px] text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              {t('notes.empty.clearFilters')}
+            </button>
           </div>
         )}
-        {notes.length === 0 && !searchQuery && selectedTag && (
+        {notes.length === 0 && !hasActiveFilters && (
           <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-            {t('notes.empty.tag', { tag: selectedTag })}
-          </div>
-        )}
-        {notes.length === 0 && !searchQuery && !selectedTag && (
-          <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-            {t('notes.empty.none')}
+            {t(`notes.empty.${workspaceView}`)}
             <br />
             <span className="text-muted-foreground/70">
-              {t('notes.empty.hint')}
+              {workspaceView === 'inbox'
+                ? t('notes.empty.hint')
+                : t('notes.empty.lifecycleHint')}
             </span>
           </div>
         )}
@@ -318,16 +436,20 @@ function Sidebar({
 
 function EditorArea({
   note,
+  workspaceView,
   isSaving,
   onArchive,
   onMoveToTrash,
+  onRestore,
   onContentChange,
   onOpenVaultFolder,
 }: {
   note: Note | null
+  workspaceView: NotesWorkspaceView
   isSaving: boolean
   onArchive: () => Promise<void>
   onMoveToTrash: () => Promise<void>
+  onRestore: () => Promise<void>
   onContentChange: (noteId: string, content: string) => void
   onOpenVaultFolder: () => Promise<void>
 }) {
@@ -399,7 +521,7 @@ function EditorArea({
   }
 
   function handleTitleChange(event: React.ChangeEvent<HTMLInputElement>) {
-    if (!note) return
+    if (!note || workspaceView !== 'inbox') return
     const nextTitle = event.target.value
     setTitleInput(nextTitle)
 
@@ -435,6 +557,7 @@ function EditorArea({
 
   const parsed = parseNoteContent(note.content)
   const wordCount = countWords(parsed.body)
+  const isReadOnly = workspaceView !== 'inbox'
 
   return (
     <div
@@ -465,14 +588,16 @@ function EditorArea({
                 <Download className="size-3" />
                 {t('notes.editor.menu.export')}
               </button>
-              <button
-                type="button"
-                onClick={handleImport}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-popover-foreground hover:bg-accent"
-              >
-                <Upload className="size-3" />
-                {t('notes.editor.menu.import')}
-              </button>
+              {workspaceView === 'inbox' && (
+                <button
+                  type="button"
+                  onClick={handleImport}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-popover-foreground hover:bg-accent"
+                >
+                  <Upload className="size-3" />
+                  {t('notes.editor.menu.import')}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleCopy}
@@ -481,63 +606,90 @@ function EditorArea({
                 <Copy className="size-3" />
                 {t('notes.editor.menu.copy')}
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  void handleArchive().catch(error => {
-                    logger.error(
-                      `Failed to archive note from UI: ${String(error)}`
-                    )
-                  })
-                }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-popover-foreground hover:bg-accent"
-              >
-                <Archive className="size-3" />
-                {t('notes.editor.menu.archive')}
-              </button>
-              <div className="my-1 border-t border-border" />
-              {confirmDelete ? (
-                <div className="px-3 py-1.5">
-                  <p className="mb-1.5 text-[10px] text-destructive">
-                    {t('notes.editor.menu.moveToTrashConfirm')}
-                  </p>
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void onMoveToTrash()
-                          .catch(error => {
-                            logger.error(
-                              `Failed to move note to trash from UI: ${String(error)}`
-                            )
-                          })
-                          .finally(() => {
-                            setShowMenu(false)
-                            setConfirmDelete(false)
-                          })
-                      }}
-                      className="rounded bg-destructive px-2 py-0.5 text-[10px] text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {t('notes.editor.menu.moveToTrash')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDelete(false)}
-                      className="rounded bg-secondary px-2 py-0.5 text-[10px] text-secondary-foreground hover:bg-secondary/80"
-                    >
-                      {t('common.cancel')}
-                    </button>
-                  </div>
-                </div>
-              ) : (
+              {workspaceView === 'inbox' && (
                 <button
                   type="button"
-                  onClick={() => setConfirmDelete(true)}
-                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-destructive hover:bg-accent"
+                  onClick={() => {
+                    void handleArchive().catch(error => {
+                      logger.error(
+                        `Failed to archive note from UI: ${String(error)}`
+                      )
+                    })
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-popover-foreground hover:bg-accent"
                 >
-                  <Trash2 className="size-3" />
-                  {t('notes.editor.menu.moveToTrash')}
+                  <Archive className="size-3" />
+                  {t('notes.editor.menu.archive')}
                 </button>
+              )}
+              {workspaceView !== 'inbox' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void onRestore()
+                      .catch(error => {
+                        logger.error(
+                          `Failed to restore note from UI: ${String(error)}`
+                        )
+                      })
+                      .finally(() => {
+                        setShowMenu(false)
+                        setConfirmDelete(false)
+                      })
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-popover-foreground hover:bg-accent"
+                >
+                  <RotateCcw className="size-3" />
+                  {t('notes.editor.menu.restore')}
+                </button>
+              )}
+              {workspaceView !== 'trash' && (
+                <>
+                  <div className="my-1 border-t border-border" />
+                  {confirmDelete ? (
+                    <div className="px-3 py-1.5">
+                      <p className="mb-1.5 text-[10px] text-destructive">
+                        {t('notes.editor.menu.moveToTrashConfirm')}
+                      </p>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void onMoveToTrash()
+                              .catch(error => {
+                                logger.error(
+                                  `Failed to move note to trash from UI: ${String(error)}`
+                                )
+                              })
+                              .finally(() => {
+                                setShowMenu(false)
+                                setConfirmDelete(false)
+                              })
+                          }}
+                          className="rounded bg-destructive px-2 py-0.5 text-[10px] text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {t('notes.editor.menu.moveToTrash')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDelete(false)}
+                          className="rounded bg-secondary px-2 py-0.5 text-[10px] text-secondary-foreground hover:bg-secondary/80"
+                        >
+                          {t('common.cancel')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(true)}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-destructive hover:bg-accent"
+                    >
+                      <Trash2 className="size-3" />
+                      {t('notes.editor.menu.moveToTrash')}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -547,78 +699,74 @@ function EditorArea({
       <div className="flex-1 overflow-hidden bg-background text-left">
         <div className="max-w-3xl mx-auto w-full h-full text-left">
           <div className="h-full px-8 pt-8 pb-10 font-sans antialiased text-foreground text-left flex flex-col">
-            <input
-              type="text"
-              value={titleInput}
-              onChange={handleTitleChange}
-              placeholder={t('notes.editor.titlePlaceholder')}
-              aria-label={t('notes.editor.titlePlaceholder')}
-              spellCheck={false}
-              className="w-full bg-transparent outline-none text-2xl font-semibold mb-8 text-foreground placeholder:text-muted-foreground/60"
-            />
-
-            <div
-              ref={editorShellRef}
-              className="notes-inline-editor min-h-0 flex-1 text-left"
-            >
-              <ToastEditor
-                key={note.id}
-                ref={editorRef}
-                initialValue={parsed.body}
-                initialEditType="wysiwyg"
-                hideModeSwitch
-                height="100%"
-                placeholder={t('notes.editor.placeholder')}
-                usageStatistics={false}
-                toolbarItems={[
-                  ['heading', 'bold', 'italic', 'strike'],
-                  ['ul', 'ol', 'task', 'quote'],
-                  ['link', 'code', 'codeblock'],
-                ]}
-                onChange={handleEditorChange}
+            {isReadOnly ? (
+              <h1 className="mb-8 text-2xl font-semibold text-foreground">
+                {parsed.title || getNoteTitle(note.content)}
+              </h1>
+            ) : (
+              <input
+                type="text"
+                value={titleInput}
+                onChange={handleTitleChange}
+                placeholder={t('notes.editor.titlePlaceholder')}
+                aria-label={t('notes.editor.titlePlaceholder')}
+                spellCheck={false}
+                className="w-full bg-transparent outline-none text-2xl font-semibold mb-8 text-foreground placeholder:text-muted-foreground/60"
               />
-            </div>
+            )}
+
+            {isReadOnly ? (
+              <div className="notes-inline-editor prose prose-sm max-w-none min-h-0 flex-1 overflow-y-auto text-left text-foreground">
+                <ToastViewer initialValue={parsed.body || note.content} />
+              </div>
+            ) : (
+              <div
+                ref={editorShellRef}
+                className="notes-inline-editor min-h-0 flex-1 text-left"
+              >
+                <ToastEditor
+                  key={note.id}
+                  ref={editorRef}
+                  initialValue={parsed.body}
+                  initialEditType="wysiwyg"
+                  hideModeSwitch
+                  height="100%"
+                  placeholder={t('notes.editor.placeholder')}
+                  usageStatistics={false}
+                  toolbarItems={[
+                    ['heading', 'bold', 'italic', 'strike'],
+                    ['ul', 'ol', 'task', 'quote'],
+                    ['link', 'code', 'codeblock'],
+                  ]}
+                  onChange={handleEditorChange}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <div className="flex items-center justify-between border-t border-border px-4 py-2">
         <span className="font-mono text-[10px] text-muted-foreground">
-          {t('notes.editor.footer.hint')}
+          {isReadOnly
+            ? t('notes.editor.footer.readonly')
+            : t('notes.editor.footer.hint')}
         </span>
         <span className="font-mono text-[10px] text-muted-foreground">
-          {t('notes.editor.footer.words', { count: wordCount })} ·{' '}
-          {isSaving
-            ? t('notes.editor.footer.saving')
-            : t('notes.editor.footer.saved')}
+          {t('notes.editor.footer.words', { count: wordCount })}
+          {!isReadOnly && (
+            <>
+              {' '}
+              ·{' '}
+              {isSaving
+                ? t('notes.editor.footer.saving')
+                : t('notes.editor.footer.saved')}
+            </>
+          )}
         </span>
       </div>
     </div>
   )
-}
-
-async function archiveSelectedNoteFromStore() {
-  const { selectedNoteId: currentSelectedNoteId, archiveNote: runArchiveNote } =
-    useNotesStore.getState()
-  if (!currentSelectedNoteId) return
-
-  try {
-    await runArchiveNote(currentSelectedNoteId)
-  } catch (error) {
-    logger.error(`Failed to archive note from UI: ${String(error)}`)
-  }
-}
-
-async function moveSelectedNoteToTrashFromStore() {
-  const { selectedNoteId: currentSelectedNoteId, deleteNote: runDeleteNote } =
-    useNotesStore.getState()
-  if (!currentSelectedNoteId) return
-
-  try {
-    await runDeleteNote(currentSelectedNoteId)
-  } catch (error) {
-    logger.error(`Failed to move note to trash from UI: ${String(error)}`)
-  }
 }
 
 async function openNotesVaultFolderFromStore() {
@@ -629,13 +777,18 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const { t } = useTranslation()
   const notes = useNotesStore(state => state.notes)
   const selectedNoteId = useNotesStore(state => state.selectedNoteId)
+  const workspaceView = useNotesStore(state => state.workspaceView)
   const searchQuery = useNotesStore(state => state.searchQuery)
   const selectedTag = useNotesStore(state => state.selectedTag)
   const isSaving = useNotesStore(state => state.isSaving)
   const isLoading = useNotesStore(state => state.isLoading)
   const loadNotes = useNotesStore(state => state.loadNotes)
+  const setWorkspaceView = useNotesStore(state => state.setWorkspaceView)
   const createNote = useNotesStore(state => state.createNote)
   const updateNote = useNotesStore(state => state.updateNote)
+  const deleteNote = useNotesStore(state => state.deleteNote)
+  const archiveNote = useNotesStore(state => state.archiveNote)
+  const restoreNote = useNotesStore(state => state.restoreNote)
   const selectNote = useNotesStore(state => state.selectNote)
   const setSearchQuery = useNotesStore(state => state.setSearchQuery)
   const setSelectedTag = useNotesStore(state => state.setSelectedTag)
@@ -659,21 +812,11 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     : null
 
   useEffect(() => {
-    if (displayedNotes.length === 0) {
-      if (selectedNoteId !== null) {
-        selectNote(null)
-      }
-      return
-    }
-
     if (
-      !selectedNoteId ||
+      selectedNoteId !== null &&
       !displayedNotes.some(note => note.id === selectedNoteId)
     ) {
-      const nextNote = displayedNotes[0]
-      if (nextNote) {
-        selectNote(nextNote.id)
-      }
+      selectNote(null)
     }
   }, [displayedNotes, selectedNoteId, selectNote])
 
@@ -687,7 +830,134 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }
 
   function handleContentChange(noteId: string, content: string) {
+    if (workspaceView !== 'inbox') return
     updateNote(noteId, content)
+  }
+
+  function handleClearFilters() {
+    setSearchQuery('')
+    setSelectedTag(null)
+  }
+
+  async function goToWorkspaceNote(
+    view: NotesWorkspaceView,
+    noteId: string | null
+  ) {
+    await setWorkspaceView(view)
+    if (noteId) {
+      selectNote(noteId)
+    }
+  }
+
+  async function reloadWorkspaceIfVisible(view: NotesWorkspaceView) {
+    if (useNotesStore.getState().workspaceView === view) {
+      await setWorkspaceView(view)
+    }
+  }
+
+  function showLifecycleError(error: unknown) {
+    toast.error(t('notes.snackbar.actionFailed'), {
+      description: String(error),
+    })
+  }
+
+  async function handleArchiveNote() {
+    if (!selectedNoteId) return
+
+    try {
+      const archivedId = await archiveNote(selectedNoteId)
+      toast.success(t('notes.snackbar.archived'), {
+        action: {
+          label: t('common.undo'),
+          onClick: () => {
+            void (async () => {
+              await restoreNote(archivedId)
+            })().catch(showLifecycleError)
+          },
+        },
+        cancel: {
+          label: t('notes.snackbar.viewArchive'),
+          onClick: () => {
+            void goToWorkspaceNote('archive', archivedId).catch(
+              showLifecycleError
+            )
+          },
+        },
+      })
+    } catch (error) {
+      showLifecycleError(error)
+      throw error
+    }
+  }
+
+  async function handleMoveNoteToTrash() {
+    if (!selectedNoteId) return
+
+    const sourceView = workspaceView
+
+    try {
+      const trashedId = await deleteNote(selectedNoteId)
+      toast.success(t('notes.snackbar.movedToTrash'), {
+        action: {
+          label: t('common.undo'),
+          onClick: () => {
+            void (async () => {
+              const restoredId = await restoreNote(trashedId)
+              if (sourceView === 'archive') {
+                await archiveNote(restoredId)
+                await reloadWorkspaceIfVisible('archive')
+              }
+            })().catch(showLifecycleError)
+          },
+        },
+        cancel: {
+          label: t('notes.snackbar.viewTrash'),
+          onClick: () => {
+            void goToWorkspaceNote('trash', trashedId).catch(showLifecycleError)
+          },
+        },
+      })
+    } catch (error) {
+      showLifecycleError(error)
+      throw error
+    }
+  }
+
+  async function handleRestoreNote() {
+    if (!selectedNoteId || workspaceView === 'inbox') return
+
+    const sourceView = workspaceView
+
+    try {
+      const restoredId = await restoreNote(selectedNoteId)
+      toast.success(t('notes.snackbar.restored'), {
+        action: {
+          label: t('common.undo'),
+          onClick: () => {
+            void (async () => {
+              if (sourceView === 'archive') {
+                await archiveNote(restoredId)
+                await reloadWorkspaceIfVisible('archive')
+              } else {
+                await deleteNote(restoredId)
+                await reloadWorkspaceIfVisible('trash')
+              }
+            })().catch(showLifecycleError)
+          },
+        },
+        cancel: {
+          label: t('notes.snackbar.goToNote'),
+          onClick: () => {
+            void goToWorkspaceNote('inbox', restoredId).catch(
+              showLifecycleError
+            )
+          },
+        },
+      })
+    } catch (error) {
+      showLifecycleError(error)
+      throw error
+    }
   }
 
   async function handleOpenVaultFolder() {
@@ -728,19 +998,24 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           allNotes={notes}
           notes={displayedNotes}
           selectedNoteId={selectedNoteId}
+          workspaceView={workspaceView}
           searchQuery={searchQuery}
           selectedTag={selectedTag}
           onSelectNote={selectNote}
+          onWorkspaceChange={setWorkspaceView}
           onSelectTag={setSelectedTag}
           onCreateNote={handleCreateNote}
           onSearchChange={setSearchQuery}
+          onClearFilters={handleClearFilters}
         />
         <EditorArea
-          key={activeNote?.id ?? 'no-note-selected'}
+          key={`${workspaceView}-${activeNote?.id ?? 'no-note-selected'}`}
           note={activeNote}
+          workspaceView={workspaceView}
           isSaving={isSaving}
-          onArchive={archiveSelectedNoteFromStore}
-          onMoveToTrash={moveSelectedNoteToTrashFromStore}
+          onArchive={handleArchiveNote}
+          onMoveToTrash={handleMoveNoteToTrash}
+          onRestore={handleRestoreNote}
           onContentChange={handleContentChange}
           onOpenVaultFolder={handleOpenVaultFolder}
         />

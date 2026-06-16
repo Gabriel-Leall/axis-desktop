@@ -599,6 +599,37 @@ fn read_all_notes(root: &Path) -> Result<Vec<Note>, String> {
     Ok(notes)
 }
 
+fn read_notes_in_vault_dir(root: &Path, dir_name: &str) -> Result<Vec<Note>, String> {
+    let dir_path = resolve_note_path(root, dir_name)?;
+    if !dir_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut notes = Vec::new();
+    for entry in
+        std::fs::read_dir(&dir_path).map_err(|e| format!("Failed to list notes directory: {e}"))?
+    {
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {e}"))?;
+        let path = entry.path();
+        let file_type = entry
+            .file_type()
+            .map_err(|e| format!("Failed to read entry type: {e}"))?;
+
+        if file_type.is_file()
+            && path
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .map(|ext| ext.eq_ignore_ascii_case("md"))
+                .unwrap_or(false)
+        {
+            notes.push(note_from_file(root, &path)?);
+        }
+    }
+
+    notes.sort_by(|a, b| parse_iso_or_epoch(&b.updated_at).cmp(&parse_iso_or_epoch(&a.updated_at)));
+    Ok(notes)
+}
+
 fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
     let temp_path = path.with_extension("tmp");
     std::fs::write(&temp_path, content).map_err(|e| format!("Failed to write temp file: {e}"))?;
@@ -729,6 +760,30 @@ pub async fn get_notes(app: AppHandle) -> Result<Vec<NoteSummary>, String> {
 
 #[tauri::command]
 #[specta::specta]
+pub async fn get_archived_notes(app: AppHandle) -> Result<Vec<NoteSummary>, String> {
+    let root = notes_root(&app)?;
+    let notes = read_notes_in_vault_dir(&root, ARCHIVE_DIR)?;
+    let summaries: Vec<NoteSummary> = notes
+        .into_iter()
+        .map(|note| summary_from_note(&note))
+        .collect();
+    Ok(summaries)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_trashed_notes(app: AppHandle) -> Result<Vec<NoteSummary>, String> {
+    let root = notes_root(&app)?;
+    let notes = read_notes_in_vault_dir(&root, TRASH_DIR)?;
+    let summaries: Vec<NoteSummary> = notes
+        .into_iter()
+        .map(|note| summary_from_note(&note))
+        .collect();
+    Ok(summaries)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn get_note(app: AppHandle, id: String) -> Result<Note, String> {
     let root = notes_root(&app)?;
     let abs = resolve_note_path(&root, &id)?;
@@ -814,10 +869,10 @@ pub async fn rename_note(app: AppHandle, input: RenameNoteInput) -> Result<Note,
 
 #[tauri::command]
 #[specta::specta]
-pub async fn delete_note(app: AppHandle, id: String) -> Result<(), String> {
+pub async fn delete_note(app: AppHandle, id: String) -> Result<NoteSummary, String> {
     let root = notes_root(&app)?;
-    move_note_to_lifecycle_dir(&root, &id, TRASH_DIR)?;
-    Ok(())
+    let note = move_note_to_lifecycle_dir(&root, &id, TRASH_DIR)?;
+    Ok(summary_from_note(&note))
 }
 
 #[tauri::command]
@@ -1232,6 +1287,31 @@ mod tests {
 
         assert_eq!(notes.len(), 1);
         assert_eq!(notes[0].path, "inbox/visible.md");
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn read_notes_in_vault_dir_lists_archive_and_trash_independently() {
+        let root = test_vault_root("axis-notes-lifecycle-dir-list-test");
+        ensure_vault_structure(&root).expect("vault structure should be created");
+
+        std::fs::write(root.join("inbox").join("visible.md"), "# Visible")
+            .expect("visible note should be writable");
+        std::fs::write(root.join("archive").join("archived.md"), "# Archived")
+            .expect("archived note should be writable");
+        std::fs::write(root.join("trash").join("trashed.md"), "# Trashed")
+            .expect("trashed note should be writable");
+
+        let archived_notes =
+            read_notes_in_vault_dir(&root, ARCHIVE_DIR).expect("archive notes should be readable");
+        let trashed_notes =
+            read_notes_in_vault_dir(&root, TRASH_DIR).expect("trash notes should be readable");
+
+        assert_eq!(archived_notes.len(), 1);
+        assert_eq!(archived_notes[0].path, "archive/archived.md");
+        assert_eq!(trashed_notes.len(), 1);
+        assert_eq!(trashed_notes[0].path, "trash/trashed.md");
 
         std::fs::remove_dir_all(root).expect("test vault should be removable");
     }

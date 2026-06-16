@@ -188,7 +188,24 @@ vi.mock('@/lib/tauri-bindings', () => ({
         excerpt: 'Note 1',
       },
     }),
-    deleteNote: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
+    deleteNote: vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'trash/note-1.md',
+        path: 'trash/note-1.md',
+        title: 'Note 1',
+        content: '# Note 1',
+        created_at: '2026-06-15T00:00:00.000Z',
+        updated_at: '2026-06-15T00:00:00.000Z',
+        word_count: 2,
+        tags: [],
+        wiki_links: [],
+        has_attachments: false,
+        excerpt: 'Note 1',
+      },
+    }),
+    getArchivedNotes: vi.fn().mockResolvedValue({ status: 'ok', data: [] }),
+    getTrashedNotes: vi.fn().mockResolvedValue({ status: 'ok', data: [] }),
     archiveNote: vi.fn().mockResolvedValue({
       status: 'ok',
       data: {
