@@ -622,12 +622,7 @@ async function moveSelectedNoteToTrashFromStore() {
 }
 
 async function openNotesVaultFolderFromStore() {
-  try {
-    await useNotesStore.getState().openVaultFolder()
-  } catch (error) {
-    logger.error(`Failed to open notes vault folder: ${String(error)}`)
-    throw error
-  }
+  await useNotesStore.getState().openVaultFolder()
 }
 
 export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
