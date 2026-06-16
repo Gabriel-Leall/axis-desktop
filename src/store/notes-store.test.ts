@@ -239,6 +239,91 @@ describe('useNotesStore lifecycle actions', () => {
     expect(commands.getNotes).not.toHaveBeenCalled()
   })
 
+  it('flushes pending debounced saves before switching vaults', async () => {
+    vi.useFakeTimers()
+    try {
+      useNotesStore.getState().updateNote('inbox/alpha.md', '# Alpha changed')
+
+      await useNotesStore.getState().setVaultPath('D:\\Axis Vault')
+      await vi.advanceTimersByTimeAsync(900)
+
+      expect(commands.updateNote).toHaveBeenCalledWith({
+        id: 'inbox/alpha.md',
+        content: '# Alpha changed',
+      })
+      expect(
+        vi.mocked(commands.updateNote).mock.invocationCallOrder[0]
+      ).toBeLessThan(
+        vi.mocked(commands.setNotesVaultPath).mock.invocationCallOrder[0] ?? 0
+      )
+      expect(useNotesStore.getState().isSaving).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps the new vault info when notes reload fails after switching vaults', async () => {
+    vi.mocked(commands.getNotes).mockResolvedValue({
+      status: 'error',
+      error: 'notes reload failed',
+    })
+
+    await expect(
+      useNotesStore.getState().setVaultPath('D:\\Axis Vault')
+    ).rejects.toThrow('notes reload failed')
+
+    expect(useNotesStore.getState().vaultInfo).toEqual({
+      path: 'D:\\Axis Vault',
+      is_default: false,
+    })
+    expect(useNotesStore.getState().notes).toEqual([])
+    expect(useNotesStore.getState().selectedNoteId).toBeNull()
+  })
+
+  it('times out stalled notes reloads after switching vaults', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.mocked(commands.getNotes).mockReturnValue(
+        new Promise(() => {
+          // Intentionally never resolves to exercise the timeout branch.
+        })
+      )
+
+      const switchPromise = useNotesStore
+        .getState()
+        .setVaultPath('D:\\Axis Vault')
+      const outcome = Promise.race([
+        switchPromise.then(
+          () => 'resolved',
+          error => String(error)
+        ),
+        new Promise<string>(resolve => {
+          setTimeout(() => resolve('still pending'), 10_001)
+        }),
+      ])
+
+      await vi.advanceTimersByTimeAsync(10_001)
+
+      await expect(outcome).resolves.toContain('Timed out while loading notes')
+      expect(useNotesStore.getState().isLoading).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not store open-folder failures as vault validation errors', async () => {
+    vi.mocked(commands.openNotesVaultFolder).mockResolvedValue({
+      status: 'error',
+      error: 'open failed',
+    })
+
+    await expect(useNotesStore.getState().openVaultFolder()).rejects.toThrow(
+      'open failed'
+    )
+
+    expect(useNotesStore.getState().vaultError).toBeNull()
+  })
+
   it('resets to the default vault and reloads the active notes workspace', async () => {
     const vaultInfo = await useNotesStore.getState().resetVaultPath()
 
