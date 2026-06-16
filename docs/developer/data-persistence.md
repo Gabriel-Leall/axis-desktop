@@ -126,6 +126,14 @@ Rules:
 
 All note file operations go through Rust commands in `src-tauri/src/commands/notes.rs`.
 
+Frontend state for the active notes workspace is centralized in
+`src/store/notes-store.ts`:
+
+- `vaultInfo` represents the active local vault path exposed by the backend.
+- `loadNotes()` loads both the active vault metadata and the active note list.
+- `setVaultPath()` and `resetVaultPath()` change the vault through typed Tauri commands, reload active notes, and clear selection/search/tag state so UI surfaces do not mix notes from different vaults.
+- Notes Page, Preferences, and widgets should use `useNotesStore` actions instead of calling notes vault commands directly.
+
 ## Emergency Recovery System
 
 For saving data before crashes or risky operations:

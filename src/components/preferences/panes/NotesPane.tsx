@@ -4,19 +4,9 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { FolderOpen, FolderSymlink, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { commands, type NoteVaultInfo } from '@/lib/tauri-bindings'
 import { logger } from '@/lib/logger'
 import { useNotesStore } from '@/store/notes-store'
 import { SettingsField, SettingsSection } from '../shared/SettingsComponents'
-
-async function reloadNotes() {
-  await useNotesStore
-    .getState()
-    .loadNotes()
-    .catch(loadError => {
-      logger.warn('Failed to reload notes after vault change', { loadError })
-    })
-}
 
 function getVaultErrorMessage(
   message: string,
@@ -43,65 +33,32 @@ function getVaultErrorMessage(
 
 export function NotesPane() {
   const { t } = useTranslation()
-  const [vaultState, setVaultState] = useState<{
-    vaultInfo: NoteVaultInfo | null
-    error: string | null
-  }>({
-    vaultInfo: null,
-    error: null,
-  })
+  const vaultInfo = useNotesStore(state => state.vaultInfo)
+  const vaultError = useNotesStore(state => state.vaultError)
+  const loadVaultInfo = useNotesStore(state => state.loadVaultInfo)
+  const setVaultPath = useNotesStore(state => state.setVaultPath)
+  const resetVaultPath = useNotesStore(state => state.resetVaultPath)
+  const openVaultFolder = useNotesStore(state => state.openVaultFolder)
   const [isBusy, setIsBusy] = useState(false)
-  const { vaultInfo, error } = vaultState
+  const error = vaultError ? getVaultErrorMessage(vaultError, t) : null
 
-  // react-doctor-disable-next-line react-doctor/no-cascading-set-state -- Async vault load has mutually exclusive success/error paths updating one local state object.
   useEffect(() => {
     let isMounted = true
 
-    void commands
-      .getNotesVaultInfo()
-      .then(result => {
-        if (!isMounted) {
-          return
-        }
-
-        if (result.status === 'error') {
-          logger.warn('Failed to load notes vault info', {
-            error: result.error,
-          })
-          setVaultState({
-            vaultInfo: null,
-            error: getVaultErrorMessage(result.error, t),
-          })
-          return
-        }
-
-        setVaultState({
-          vaultInfo: result.data,
-          error: null,
-        })
-      })
-      .catch(vaultError => {
-        if (isMounted) {
-          logger.warn('Failed to load notes vault info', { vaultError })
-          setVaultState({
-            vaultInfo: null,
-            error: getVaultErrorMessage(String(vaultError), t),
-          })
-        }
-      })
+    void loadVaultInfo().catch(vaultError => {
+      if (isMounted) {
+        logger.warn('Failed to load notes vault info', { vaultError })
+      }
+    })
 
     return () => {
       isMounted = false
     }
-  }, [t])
+  }, [loadVaultInfo])
 
   function showVaultError(message: string) {
     logger.warn('Notes vault operation failed', { message })
     const description = getVaultErrorMessage(message, t)
-    setVaultState(previous => ({
-      ...previous,
-      error: description,
-    }))
     toast.error(t('preferences.notes.vault.errorTitle'), {
       description,
     })
@@ -123,61 +80,38 @@ export function NotesPane() {
       return
     }
 
-    const result = await commands
-      .setNotesVaultPath(selected)
-      .catch(commandError => ({
-        status: 'error' as const,
-        error: String(commandError),
-      }))
-
-    if (result.status === 'error') {
-      showVaultError(result.error)
+    try {
+      await setVaultPath(selected)
+      toast.success(t('preferences.notes.vault.changed'))
+    } catch (commandError) {
+      showVaultError(String(commandError))
       setIsBusy(false)
       return
     }
 
-    setVaultState({
-      vaultInfo: result.data,
-      error: null,
-    })
-    await reloadNotes()
-    toast.success(t('preferences.notes.vault.changed'))
     setIsBusy(false)
   }
 
   async function handleUseDefault() {
     setIsBusy(true)
 
-    const result = await commands.resetNotesVaultPath().catch(commandError => ({
-      status: 'error' as const,
-      error: String(commandError),
-    }))
-
-    if (result.status === 'error') {
-      showVaultError(result.error)
+    try {
+      await resetVaultPath()
+      toast.success(t('preferences.notes.vault.defaultRestored'))
+    } catch (commandError) {
+      showVaultError(String(commandError))
       setIsBusy(false)
       return
     }
 
-    setVaultState({
-      vaultInfo: result.data,
-      error: null,
-    })
-    await reloadNotes()
-    toast.success(t('preferences.notes.vault.defaultRestored'))
     setIsBusy(false)
   }
 
   async function handleOpenFolder() {
-    const result = await commands
-      .openNotesVaultFolder()
-      .catch(commandError => ({
-        status: 'error' as const,
-        error: String(commandError),
-      }))
-
-    if (result.status === 'error') {
-      showVaultError(result.error)
+    try {
+      await openVaultFolder()
+    } catch (commandError) {
+      showVaultError(String(commandError))
     }
   }
 

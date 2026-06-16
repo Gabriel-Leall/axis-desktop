@@ -3,10 +3,12 @@ import { devtools } from 'zustand/middleware'
 import { commands, unwrapResult } from '@/lib/tauri-bindings'
 import { countWords, noteHasTag } from '@/lib/notes-domain'
 import { logger } from '@/lib/logger'
-import type { Note as BindingNote } from '@/lib/tauri-bindings'
+import type { Note as BindingNote, NoteVaultInfo } from '@/lib/tauri-bindings'
 import type { Note } from '@/lib/notes-domain'
 
 interface NotesState {
+  vaultInfo: NoteVaultInfo | null
+  vaultError: string | null
   notes: Note[]
   searchResults: Note[] | null
   selectedNoteId: string | null
@@ -17,6 +19,10 @@ interface NotesState {
   isSearching: boolean
 
   loadNotes: () => Promise<void>
+  loadVaultInfo: () => Promise<NoteVaultInfo | null>
+  setVaultPath: (path: string) => Promise<NoteVaultInfo>
+  resetVaultPath: () => Promise<NoteVaultInfo>
+  openVaultFolder: () => Promise<void>
   createNote: (content?: string) => Promise<string>
   updateNote: (id: string, content: string) => void
   deleteNote: (id: string) => Promise<void>
@@ -38,6 +44,7 @@ let loadNotesInFlight: Promise<void> | null = null
 const DEBOUNCE_MS = 800
 const SEARCH_DEBOUNCE_MS = 220
 const NOTES_LOAD_TIMEOUT_MS = 10_000
+const VAULT_LOAD_TIMEOUT_MS = 10_000
 
 function removeNoteFromList(notes: Note[], id: string): Note[] {
   return notes.filter(note => note.id !== id)
@@ -95,9 +102,84 @@ function mapBindingNote(note: BindingNote): Note {
   }
 }
 
+function workspaceStateFromNotes(
+  notes: Note[],
+  selectedNoteId: string | null
+): Pick<NotesState, 'notes' | 'selectedNoteId'> {
+  return {
+    notes,
+    selectedNoteId:
+      selectedNoteId && notes.some(note => note.id === selectedNoteId)
+        ? selectedNoteId
+        : (notes[0]?.id ?? null),
+  }
+}
+
+function resetWorkspaceForVault(
+  vaultInfo: NoteVaultInfo,
+  notes: Note[]
+): Pick<
+  NotesState,
+  | 'vaultInfo'
+  | 'vaultError'
+  | 'notes'
+  | 'selectedNoteId'
+  | 'searchQuery'
+  | 'searchResults'
+  | 'selectedTag'
+  | 'isSearching'
+> {
+  return {
+    vaultInfo,
+    vaultError: null,
+    notes,
+    selectedNoteId: notes[0]?.id ?? null,
+    searchQuery: '',
+    searchResults: null,
+    selectedTag: null,
+    isSearching: false,
+  }
+}
+
+async function loadActiveNotes(): Promise<Note[]> {
+  return unwrapResult(
+    await withTimeout(
+      commands.getNotes(),
+      NOTES_LOAD_TIMEOUT_MS,
+      'Timed out while loading notes (Tauri IPC)'
+    )
+  ).map(mapBindingNote)
+}
+
+async function flushPendingSave(notes: Note[]): Promise<boolean> {
+  if (!debounceTimer || !debouncedNoteId) {
+    return false
+  }
+
+  clearTimeout(debounceTimer)
+  debounceTimer = null
+
+  const noteId = debouncedNoteId
+  debouncedNoteId = null
+  const pendingNote = notes.find(note => note.id === noteId)
+  if (!pendingNote) {
+    return false
+  }
+
+  unwrapResult(
+    await commands.updateNote({
+      id: noteId,
+      content: pendingNote.content,
+    })
+  )
+  return true
+}
+
 export const useNotesStore = create<NotesState>()(
   devtools(
     (set, get) => ({
+      vaultInfo: null,
+      vaultError: null,
       notes: [],
       searchResults: null,
       selectedNoteId: null,
@@ -115,21 +197,26 @@ export const useNotesStore = create<NotesState>()(
         loadNotesInFlight = (async () => {
           set({ isLoading: true }, undefined, 'loadNotes/start')
           try {
-            const result = await withTimeout(
-              commands.getNotes(),
-              NOTES_LOAD_TIMEOUT_MS,
-              'Timed out while loading notes (Tauri IPC)'
-            )
-            const notes = unwrapResult(result).map(mapBindingNote)
+            const [vaultResult, notesResult] = await Promise.all([
+              withTimeout(
+                commands.getNotesVaultInfo(),
+                VAULT_LOAD_TIMEOUT_MS,
+                'Timed out while loading notes vault info (Tauri IPC)'
+              ),
+              withTimeout(
+                commands.getNotes(),
+                NOTES_LOAD_TIMEOUT_MS,
+                'Timed out while loading notes (Tauri IPC)'
+              ),
+            ])
+            const vaultInfo = unwrapResult(vaultResult)
+            const notes = unwrapResult(notesResult).map(mapBindingNote)
 
             set(
               state => ({
-                notes,
-                selectedNoteId:
-                  state.selectedNoteId &&
-                  notes.some(note => note.id === state.selectedNoteId)
-                    ? state.selectedNoteId
-                    : (notes[0]?.id ?? null),
+                vaultInfo,
+                vaultError: null,
+                ...workspaceStateFromNotes(notes, state.selectedNoteId),
                 searchResults: state.searchQuery.trim()
                   ? state.searchResults
                   : null,
@@ -139,7 +226,7 @@ export const useNotesStore = create<NotesState>()(
             )
           } catch (error) {
             logger.error(`Failed to load notes: ${String(error)}`)
-            set({}, undefined, 'loadNotes/error')
+            set({ vaultError: String(error) }, undefined, 'loadNotes/error')
           } finally {
             set({ isLoading: false }, undefined, 'loadNotes/finalize')
             loadNotesInFlight = null
@@ -147,6 +234,141 @@ export const useNotesStore = create<NotesState>()(
         })()
 
         return loadNotesInFlight
+      },
+
+      loadVaultInfo: async () => {
+        try {
+          const vaultInfo = unwrapResult(await commands.getNotesVaultInfo())
+          set({ vaultInfo, vaultError: null }, undefined, 'loadVaultInfo/done')
+          return vaultInfo
+        } catch (error) {
+          logger.error(`Failed to load notes vault info: ${String(error)}`)
+          set(
+            { vaultInfo: null, vaultError: String(error) },
+            undefined,
+            'loadVaultInfo/error'
+          )
+          throw error
+        }
+      },
+
+      setVaultPath: async path => {
+        cancelPendingSearch()
+        set({ isLoading: true }, undefined, 'setVaultPath/start')
+        let vaultChanged = false
+        let nextVaultInfo: NoteVaultInfo | null = null
+
+        try {
+          const flushedPendingSave = await flushPendingSave(get().notes)
+          if (flushedPendingSave) {
+            set({ isSaving: false }, undefined, 'setVaultPath/flushPendingSave')
+          }
+
+          const vaultInfo = unwrapResult(await commands.setNotesVaultPath(path))
+          nextVaultInfo = vaultInfo
+          vaultChanged = true
+          const notes = await loadActiveNotes()
+
+          set(
+            {
+              ...resetWorkspaceForVault(vaultInfo, notes),
+              isLoading: false,
+            },
+            undefined,
+            'setVaultPath/done'
+          )
+
+          return vaultInfo
+        } catch (error) {
+          logger.error(`Failed to set notes vault path: ${String(error)}`)
+          set(
+            vaultChanged
+              ? {
+                  vaultInfo: nextVaultInfo,
+                  vaultError: String(error),
+                  notes: [],
+                  selectedNoteId: null,
+                  searchQuery: '',
+                  searchResults: null,
+                  selectedTag: null,
+                  isSearching: false,
+                  isLoading: false,
+                }
+              : {
+                  vaultError: String(error),
+                  isLoading: false,
+                },
+            undefined,
+            'setVaultPath/error'
+          )
+          throw error
+        }
+      },
+
+      resetVaultPath: async () => {
+        cancelPendingSearch()
+        set({ isLoading: true }, undefined, 'resetVaultPath/start')
+        let vaultChanged = false
+        let nextVaultInfo: NoteVaultInfo | null = null
+
+        try {
+          const flushedPendingSave = await flushPendingSave(get().notes)
+          if (flushedPendingSave) {
+            set(
+              { isSaving: false },
+              undefined,
+              'resetVaultPath/flushPendingSave'
+            )
+          }
+
+          const vaultInfo = unwrapResult(await commands.resetNotesVaultPath())
+          nextVaultInfo = vaultInfo
+          vaultChanged = true
+          const notes = await loadActiveNotes()
+
+          set(
+            {
+              ...resetWorkspaceForVault(vaultInfo, notes),
+              isLoading: false,
+            },
+            undefined,
+            'resetVaultPath/done'
+          )
+
+          return vaultInfo
+        } catch (error) {
+          logger.error(`Failed to reset notes vault path: ${String(error)}`)
+          set(
+            vaultChanged
+              ? {
+                  vaultInfo: nextVaultInfo,
+                  vaultError: String(error),
+                  notes: [],
+                  selectedNoteId: null,
+                  searchQuery: '',
+                  searchResults: null,
+                  selectedTag: null,
+                  isSearching: false,
+                  isLoading: false,
+                }
+              : {
+                  vaultError: String(error),
+                  isLoading: false,
+                },
+            undefined,
+            'resetVaultPath/error'
+          )
+          throw error
+        }
+      },
+
+      openVaultFolder: async () => {
+        try {
+          unwrapResult(await commands.openNotesVaultFolder())
+        } catch (error) {
+          logger.error(`Failed to open notes vault folder: ${String(error)}`)
+          throw error
+        }
       },
 
       createNote: async (content = '') => {
