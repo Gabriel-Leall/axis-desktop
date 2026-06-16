@@ -598,6 +598,30 @@ function EditorArea({
   )
 }
 
+async function archiveSelectedNoteFromStore() {
+  const { selectedNoteId: currentSelectedNoteId, archiveNote: runArchiveNote } =
+    useNotesStore.getState()
+  if (!currentSelectedNoteId) return
+
+  try {
+    await runArchiveNote(currentSelectedNoteId)
+  } catch (error) {
+    logger.error(`Failed to archive note from UI: ${String(error)}`)
+  }
+}
+
+async function moveSelectedNoteToTrashFromStore() {
+  const { selectedNoteId: currentSelectedNoteId, deleteNote: runDeleteNote } =
+    useNotesStore.getState()
+  if (!currentSelectedNoteId) return
+
+  try {
+    await runDeleteNote(currentSelectedNoteId)
+  } catch (error) {
+    logger.error(`Failed to move note to trash from UI: ${String(error)}`)
+  }
+}
+
 export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const { t } = useTranslation()
   const notes = useNotesStore(state => state.notes)
@@ -656,30 +680,6 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
       await createNote('')
     } catch (error) {
       logger.error(`Failed to create note from UI: ${String(error)}`)
-    }
-  }
-
-  async function handleArchiveNote() {
-    const {
-      selectedNoteId: currentSelectedNoteId,
-      archiveNote: runArchiveNote,
-    } = useNotesStore.getState()
-    if (!currentSelectedNoteId) return
-    try {
-      await runArchiveNote(currentSelectedNoteId)
-    } catch (error) {
-      logger.error(`Failed to archive note from UI: ${String(error)}`)
-    }
-  }
-
-  async function handleMoveNoteToTrash() {
-    const { selectedNoteId: currentSelectedNoteId, deleteNote: runDeleteNote } =
-      useNotesStore.getState()
-    if (!currentSelectedNoteId) return
-    try {
-      await runDeleteNote(currentSelectedNoteId)
-    } catch (error) {
-      logger.error(`Failed to move note to trash from UI: ${String(error)}`)
     }
   }
 
@@ -742,8 +742,8 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           key={activeNote?.id ?? 'no-note-selected'}
           note={activeNote}
           isSaving={isSaving}
-          onArchive={handleArchiveNote}
-          onMoveToTrash={handleMoveNoteToTrash}
+          onArchive={archiveSelectedNoteFromStore}
+          onMoveToTrash={moveSelectedNoteToTrashFromStore}
           onContentChange={handleContentChange}
           onOpenVaultFolder={handleOpenVaultFolder}
         />
