@@ -33,7 +33,6 @@ import {
 import { cn } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 import { useUIStore } from '@/store/ui-store'
-import { commands } from '@/lib/tauri-bindings'
 import type { Note } from '@/lib/notes-domain'
 
 import '@toast-ui/editor/dist/toastui-editor.css'
@@ -622,6 +621,15 @@ async function moveSelectedNoteToTrashFromStore() {
   }
 }
 
+async function openNotesVaultFolderFromStore() {
+  try {
+    await useNotesStore.getState().openVaultFolder()
+  } catch (error) {
+    logger.error(`Failed to open notes vault folder: ${String(error)}`)
+    throw error
+  }
+}
+
 export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const { t } = useTranslation()
   const notes = useNotesStore(state => state.notes)
@@ -688,17 +696,11 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }
 
   async function handleOpenVaultFolder() {
-    const result = await commands
-      .openNotesVaultFolder()
-      .catch(commandError => ({
-        status: 'error' as const,
-        error: String(commandError),
-      }))
-
-    if (result.status === 'error') {
-      logger.error(`Failed to open notes vault folder: ${result.error}`)
+    try {
+      await openNotesVaultFolderFromStore()
+    } catch (error) {
       toast.error(t('notes.welcome.openFolderFailed'), {
-        description: result.error,
+        description: String(error),
       })
     }
   }

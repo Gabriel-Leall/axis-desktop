@@ -4,6 +4,12 @@ import { useNotesStore } from './notes-store'
 
 vi.mock('@/lib/tauri-bindings', () => ({
   commands: {
+    getNotes: vi.fn(),
+    getNotesVaultInfo: vi.fn(),
+    setNotesVaultPath: vi.fn(),
+    resetNotesVaultPath: vi.fn(),
+    openNotesVaultFolder: vi.fn(),
+    createNote: vi.fn(),
     updateNote: vi.fn(),
     deleteNote: vi.fn(),
     archiveNote: vi.fn(),
@@ -83,7 +89,52 @@ describe('useNotesStore lifecycle actions', () => {
       status: 'ok',
       data: [],
     })
+    vi.mocked(commands.getNotesVaultInfo).mockResolvedValue({
+      status: 'ok',
+      data: {
+        path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+        is_default: true,
+      },
+    })
+    vi.mocked(commands.setNotesVaultPath).mockResolvedValue({
+      status: 'ok',
+      data: {
+        path: 'D:\\Axis Vault',
+        is_default: false,
+      },
+    })
+    vi.mocked(commands.resetNotesVaultPath).mockResolvedValue({
+      status: 'ok',
+      data: {
+        path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+        is_default: true,
+      },
+    })
+    vi.mocked(commands.openNotesVaultFolder).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
+    vi.mocked(commands.getNotes).mockResolvedValue({
+      status: 'ok',
+      data: [
+        {
+          id: 'inbox/loaded.md',
+          path: 'inbox/loaded.md',
+          title: 'Loaded',
+          content: '# Loaded',
+          created_at: '2026-06-15T09:00:00.000Z',
+          updated_at: '2026-06-15T09:00:00.000Z',
+          word_count: 2,
+          tags: [],
+          wiki_links: [],
+          has_attachments: false,
+          excerpt: 'Loaded',
+        },
+      ],
+    })
     useNotesStore.setState({
+      vaultInfo: null,
+      vaultError: null,
       notes: [
         {
           id: 'inbox/alpha.md',
@@ -108,6 +159,99 @@ describe('useNotesStore lifecycle actions', () => {
       isLoading: false,
       isSearching: false,
     })
+  })
+
+  it('loads active vault info together with the active notes workspace', async () => {
+    await useNotesStore.getState().loadNotes()
+
+    expect(commands.getNotesVaultInfo).toHaveBeenCalled()
+    expect(commands.getNotes).toHaveBeenCalled()
+    expect(useNotesStore.getState().vaultInfo).toEqual({
+      path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+      is_default: true,
+    })
+    expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
+      'inbox/loaded.md',
+    ])
+    expect(useNotesStore.getState().selectedNoteId).toBe('inbox/loaded.md')
+    expect(useNotesStore.getState().vaultError).toBeNull()
+  })
+
+  it('switches vault path and reloads notes without carrying old workspace filters', async () => {
+    const alphaNote = useNotesStore.getState().notes[0]
+    if (!alphaNote) {
+      throw new Error('Expected alpha note fixture')
+    }
+
+    useNotesStore.setState({
+      searchQuery: 'old',
+      searchResults: [alphaNote],
+      selectedTag: 'project',
+      isSearching: true,
+    })
+
+    const vaultInfo = await useNotesStore
+      .getState()
+      .setVaultPath('D:\\Axis Vault')
+
+    expect(commands.setNotesVaultPath).toHaveBeenCalledWith('D:\\Axis Vault')
+    expect(commands.getNotes).toHaveBeenCalled()
+    expect(vaultInfo).toEqual({
+      path: 'D:\\Axis Vault',
+      is_default: false,
+    })
+    expect(useNotesStore.getState().vaultInfo).toEqual(vaultInfo)
+    expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
+      'inbox/loaded.md',
+    ])
+    expect(useNotesStore.getState().selectedNoteId).toBe('inbox/loaded.md')
+    expect(useNotesStore.getState().searchQuery).toBe('')
+    expect(useNotesStore.getState().searchResults).toBeNull()
+    expect(useNotesStore.getState().selectedTag).toBeNull()
+    expect(useNotesStore.getState().isSearching).toBe(false)
+  })
+
+  it('keeps the current workspace when switching vault path fails validation', async () => {
+    vi.mocked(commands.setNotesVaultPath).mockResolvedValue({
+      status: 'error',
+      error: 'Selected notes vault path is not a directory',
+    })
+    useNotesStore.setState({
+      vaultInfo: {
+        path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+        is_default: true,
+      },
+    })
+
+    await expect(
+      useNotesStore.getState().setVaultPath('Z:\\invalid')
+    ).rejects.toThrow('Selected notes vault path is not a directory')
+
+    expect(useNotesStore.getState().vaultInfo).toEqual({
+      path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+      is_default: true,
+    })
+    expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
+      'inbox/alpha.md',
+      'inbox/beta.md',
+    ])
+    expect(useNotesStore.getState().selectedNoteId).toBe('inbox/alpha.md')
+    expect(commands.getNotes).not.toHaveBeenCalled()
+  })
+
+  it('resets to the default vault and reloads the active notes workspace', async () => {
+    const vaultInfo = await useNotesStore.getState().resetVaultPath()
+
+    expect(commands.resetNotesVaultPath).toHaveBeenCalled()
+    expect(commands.getNotes).toHaveBeenCalled()
+    expect(vaultInfo).toEqual({
+      path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+      is_default: true,
+    })
+    expect(useNotesStore.getState().vaultInfo).toEqual(vaultInfo)
+    expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
+      'inbox/loaded.md',
+    ])
   })
 
   it('moves deleted notes out of the active list through trash lifecycle', async () => {
