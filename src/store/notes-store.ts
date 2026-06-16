@@ -20,6 +20,8 @@ interface NotesState {
   createNote: (content?: string) => Promise<string>
   updateNote: (id: string, content: string) => void
   deleteNote: (id: string) => Promise<void>
+  archiveNote: (id: string) => Promise<void>
+  restoreNote: (id: string) => Promise<string>
   selectNote: (id: string | null) => void
   setSearchQuery: (query: string) => void
   setSelectedTag: (tag: string | null) => void
@@ -35,6 +37,22 @@ let loadNotesInFlight: Promise<void> | null = null
 const DEBOUNCE_MS = 800
 const SEARCH_DEBOUNCE_MS = 220
 const NOTES_LOAD_TIMEOUT_MS = 10_000
+
+function removeNoteFromList(notes: Note[], id: string): Note[] {
+  return notes.filter(note => note.id !== id)
+}
+
+function nextSelectedNoteId(
+  previousSelectedNoteId: string | null,
+  removedNoteId: string,
+  remainingNotes: Note[]
+): string | null {
+  if (previousSelectedNoteId !== removedNoteId) {
+    return previousSelectedNoteId
+  }
+
+  return remainingNotes[0]?.id ?? null
+}
 
 function withTimeout<T>(
   promise: Promise<T>,
@@ -220,8 +238,11 @@ export const useNotesStore = create<NotesState>()(
       },
 
       deleteNote: async id => {
-        const snapshot = get().notes
-        const remaining = snapshot.filter(note => note.id !== id)
+        const snapshot = {
+          notes: get().notes,
+          searchResults: get().searchResults,
+          selectedNoteId: get().selectedNoteId,
+        }
 
         if (debounceTimer) {
           clearTimeout(debounceTimer)
@@ -230,11 +251,15 @@ export const useNotesStore = create<NotesState>()(
 
         set(
           state => ({
-            notes: state.notes.filter(n => n.id !== id),
-            selectedNoteId:
-              state.selectedNoteId === id
-                ? (remaining[0]?.id ?? null)
-                : state.selectedNoteId,
+            notes: removeNoteFromList(state.notes, id),
+            searchResults: state.searchResults
+              ? removeNoteFromList(state.searchResults, id)
+              : null,
+            selectedNoteId: nextSelectedNoteId(
+              state.selectedNoteId,
+              id,
+              removeNoteFromList(state.notes, id)
+            ),
           }),
           undefined,
           'deleteNote/optimistic'
@@ -244,7 +269,72 @@ export const useNotesStore = create<NotesState>()(
           unwrapResult(await commands.deleteNote(id))
         } catch (error) {
           logger.error(`Failed to delete note: ${String(error)}`)
-          set({ notes: snapshot }, undefined, 'deleteNote/rollback')
+          set(snapshot, undefined, 'deleteNote/rollback')
+          throw error
+        }
+      },
+
+      archiveNote: async id => {
+        const snapshot = {
+          notes: get().notes,
+          searchResults: get().searchResults,
+          selectedNoteId: get().selectedNoteId,
+        }
+
+        if (debounceTimer) {
+          clearTimeout(debounceTimer)
+          debounceTimer = null
+        }
+
+        set(
+          state => ({
+            notes: removeNoteFromList(state.notes, id),
+            searchResults: state.searchResults
+              ? removeNoteFromList(state.searchResults, id)
+              : null,
+            selectedNoteId: nextSelectedNoteId(
+              state.selectedNoteId,
+              id,
+              removeNoteFromList(state.notes, id)
+            ),
+          }),
+          undefined,
+          'archiveNote/optimistic'
+        )
+
+        try {
+          unwrapResult(await commands.archiveNote(id))
+        } catch (error) {
+          logger.error(`Failed to archive note: ${String(error)}`)
+          set(snapshot, undefined, 'archiveNote/rollback')
+          throw error
+        }
+      },
+
+      restoreNote: async id => {
+        try {
+          const restoredNote = mapBindingNote(
+            unwrapResult(await commands.restoreNote(id))
+          )
+
+          set(
+            state => ({
+              notes: [
+                restoredNote,
+                ...state.notes.filter(note => note.id !== restoredNote.id),
+              ],
+              selectedNoteId: restoredNote.id,
+              searchQuery: '',
+              searchResults: null,
+              selectedTag: null,
+            }),
+            undefined,
+            'restoreNote/done'
+          )
+
+          return restoredNote.id
+        } catch (error) {
+          logger.error(`Failed to restore note: ${String(error)}`)
           throw error
         }
       },

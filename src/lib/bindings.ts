@@ -654,6 +654,22 @@ async deleteNote(id: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async archiveNote(id: string) : Promise<Result<NoteSummary, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("archive_note", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async restoreNote(id: string) : Promise<Result<NoteSummary, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("restore_note", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async searchNotes(query: string) : Promise<Result<Note[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("search_notes", { query }) };

@@ -43,6 +43,10 @@ impl VaultLayout {
     pub(crate) fn is_internal_dir_name(&self, name: &str) -> bool {
         self.internal_dirs.contains(&name) || name.starts_with('.')
     }
+
+    pub(crate) fn is_lifecycle_dir_name(&self, name: &str) -> bool {
+        matches!(name, ARCHIVE_DIR | TRASH_DIR)
+    }
 }
 
 static TAG_PATTERN: LazyLock<Regex> =
@@ -495,7 +499,9 @@ fn read_all_notes(root: &Path) -> Result<Vec<Note>, String> {
             if file_type.is_dir() {
                 let dir_name = entry.file_name();
                 let dir_name = dir_name.to_string_lossy();
-                if layout.is_internal_dir_name(&dir_name) {
+                let is_top_level_lifecycle_dir =
+                    path.parent() == Some(root) && layout.is_lifecycle_dir_name(&dir_name);
+                if layout.is_internal_dir_name(&dir_name) || is_top_level_lifecycle_dir {
                     continue;
                 }
                 walk(root, &path, layout, out)?;
@@ -534,6 +540,14 @@ fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn note_top_level_dir_name(rel_path: &str) -> Option<String> {
+    normalize_rel_path(rel_path)
+        .split('/')
+        .next()
+        .filter(|part| !part.is_empty())
+        .map(ToString::to_string)
 }
 
 fn next_unique_path(root: &Path, folder: &str, base_file_name: &str) -> Result<PathBuf, String> {
@@ -577,6 +591,57 @@ fn merge_title_body(title: &str, body: &str) -> String {
         return format!("# {t}");
     }
     format!("# {t}\n\n{b}")
+}
+
+fn move_note_to_vault_dir(root: &Path, id: &str, destination_dir: &str) -> Result<Note, String> {
+    let src_abs = resolve_note_path(root, id)?;
+    if !src_abs.is_file() {
+        return Err("Note not found".to_string());
+    }
+
+    if note_top_level_dir_name(id).as_deref() == Some(destination_dir) {
+        return note_from_file(root, &src_abs);
+    }
+
+    let file_name = src_abs
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| "Invalid note path".to_string())?;
+    let target_abs = next_unique_path(root, destination_dir, file_name)?;
+
+    std::fs::rename(&src_abs, &target_abs).map_err(|e| format!("Failed to move note: {e}"))?;
+    note_from_file(root, &target_abs)
+}
+
+fn move_note_to_lifecycle_dir(
+    root: &Path,
+    id: &str,
+    destination_dir: &str,
+) -> Result<Note, String> {
+    let layout = VaultLayout::standard();
+    if !layout.is_lifecycle_dir_name(destination_dir) {
+        return Err("Invalid lifecycle destination".to_string());
+    }
+
+    move_note_to_vault_dir(root, id, destination_dir)
+}
+
+fn restore_note_to_inbox(root: &Path, id: &str) -> Result<Note, String> {
+    let layout = VaultLayout::standard();
+    let top_level_dir = note_top_level_dir_name(id);
+
+    if top_level_dir
+        .as_deref()
+        .is_some_and(|dir| layout.is_lifecycle_dir_name(dir))
+    {
+        return move_note_to_vault_dir(root, id, INBOX_DIR);
+    }
+
+    let abs = resolve_note_path(root, id)?;
+    if !abs.is_file() {
+        return Err("Note not found".to_string());
+    }
+    note_from_file(root, &abs)
 }
 
 #[tauri::command]
@@ -680,13 +745,24 @@ pub async fn rename_note(app: AppHandle, input: RenameNoteInput) -> Result<Note,
 #[specta::specta]
 pub async fn delete_note(app: AppHandle, id: String) -> Result<(), String> {
     let root = notes_root(&app)?;
-    let abs = resolve_note_path(&root, &id)?;
-    if !abs.exists() {
-        return Err("Note not found".to_string());
-    }
-
-    std::fs::remove_file(&abs).map_err(|e| format!("Failed to delete note: {e}"))?;
+    move_note_to_lifecycle_dir(&root, &id, TRASH_DIR)?;
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn archive_note(app: AppHandle, id: String) -> Result<NoteSummary, String> {
+    let root = notes_root(&app)?;
+    let note = move_note_to_lifecycle_dir(&root, &id, ARCHIVE_DIR)?;
+    Ok(summary_from_note(&note))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn restore_note(app: AppHandle, id: String) -> Result<NoteSummary, String> {
+    let root = notes_root(&app)?;
+    let note = restore_note_to_inbox(&root, &id)?;
+    Ok(summary_from_note(&note))
 }
 
 #[tauri::command]
@@ -869,6 +945,66 @@ mod tests {
 
         assert_eq!(notes.len(), 1);
         assert_eq!(notes[0].path, "inbox/visible.md");
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn read_all_notes_excludes_archive_and_trash_from_active_listing() {
+        let root = test_vault_root("axis-notes-lifecycle-list-test");
+        ensure_vault_structure(&root).expect("vault structure should be created");
+
+        std::fs::write(root.join("inbox").join("visible.md"), "# Visible")
+            .expect("visible note should be writable");
+        std::fs::write(root.join("archive").join("archived.md"), "# Archived")
+            .expect("archived note should be writable");
+        std::fs::write(root.join("trash").join("trashed.md"), "# Trashed")
+            .expect("trashed note should be writable");
+
+        let notes = read_all_notes(&root).expect("notes should be readable");
+
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].path, "inbox/visible.md");
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn move_note_to_lifecycle_dir_preserves_note_in_destination() {
+        let root = test_vault_root("axis-notes-lifecycle-move-test");
+        ensure_vault_structure(&root).expect("vault structure should be created");
+        let source = root.join("inbox").join("plan.md");
+        std::fs::write(&source, "# Plan").expect("source note should be writable");
+
+        let moved = move_note_to_lifecycle_dir(&root, "inbox/plan.md", ARCHIVE_DIR)
+            .expect("note should move to archive");
+
+        assert!(!source.exists());
+        assert!(root.join("archive").join("plan.md").is_file());
+        assert_eq!(moved.path, "archive/plan.md");
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn restore_note_to_inbox_uses_unique_path_without_overwriting() {
+        let root = test_vault_root("axis-notes-lifecycle-restore-test");
+        ensure_vault_structure(&root).expect("vault structure should be created");
+        std::fs::write(root.join("inbox").join("plan.md"), "# Existing")
+            .expect("existing note should be writable");
+        std::fs::write(root.join("trash").join("plan.md"), "# Restored")
+            .expect("trashed note should be writable");
+
+        let restored = restore_note_to_inbox(&root, "trash/plan.md")
+            .expect("trashed note should restore to inbox");
+
+        assert_eq!(restored.path, "inbox/plan 2.md");
+        assert_eq!(
+            std::fs::read_to_string(root.join("inbox").join("plan 2.md"))
+                .expect("restored note should be readable"),
+            "# Restored"
+        );
+        assert!(!root.join("trash").join("plan.md").exists());
 
         std::fs::remove_dir_all(root).expect("test vault should be removable");
     }

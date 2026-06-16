@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   MoreHorizontal,
   Trash2,
+  Archive,
   Download,
   Upload,
   Copy,
@@ -319,13 +320,15 @@ function Sidebar({
 function EditorArea({
   note,
   isSaving,
-  onDelete,
+  onArchive,
+  onMoveToTrash,
   onContentChange,
   onOpenVaultFolder,
 }: {
   note: Note | null
   isSaving: boolean
-  onDelete: () => Promise<void>
+  onArchive: () => Promise<void>
+  onMoveToTrash: () => Promise<void>
   onContentChange: (noteId: string, content: string) => void
   onOpenVaultFolder: () => Promise<void>
 }) {
@@ -381,6 +384,13 @@ function EditorArea({
     if (!note) return
     await navigator.clipboard.writeText(note.content)
     setShowMenu(false)
+  }
+
+  async function handleArchive() {
+    if (!note) return
+    await onArchive()
+    setShowMenu(false)
+    setConfirmDelete(false)
   }
 
   function handleEditorChange() {
@@ -472,20 +482,34 @@ function EditorArea({
                 <Copy className="size-3" />
                 {t('notes.editor.menu.copy')}
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleArchive().catch(error => {
+                    logger.error(
+                      `Failed to archive note from UI: ${String(error)}`
+                    )
+                  })
+                }}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-popover-foreground hover:bg-accent"
+              >
+                <Archive className="size-3" />
+                {t('notes.editor.menu.archive')}
+              </button>
               <div className="my-1 border-t border-border" />
               {confirmDelete ? (
                 <div className="px-3 py-1.5">
                   <p className="mb-1.5 text-[10px] text-destructive">
-                    {t('notes.editor.menu.deleteConfirm')}
+                    {t('notes.editor.menu.moveToTrashConfirm')}
                   </p>
                   <div className="flex gap-1">
                     <button
                       type="button"
                       onClick={() => {
-                        void onDelete()
+                        void onMoveToTrash()
                           .catch(error => {
                             logger.error(
-                              `Failed to delete note from UI: ${String(error)}`
+                              `Failed to move note to trash from UI: ${String(error)}`
                             )
                           })
                           .finally(() => {
@@ -495,7 +519,7 @@ function EditorArea({
                       }}
                       className="rounded bg-destructive px-2 py-0.5 text-[10px] text-destructive-foreground hover:bg-destructive/90"
                     >
-                      {t('common.delete')}
+                      {t('notes.editor.menu.moveToTrash')}
                     </button>
                     <button
                       type="button"
@@ -513,7 +537,7 @@ function EditorArea({
                   className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-destructive hover:bg-accent"
                 >
                   <Trash2 className="size-3" />
-                  {t('notes.editor.menu.delete')}
+                  {t('notes.editor.menu.moveToTrash')}
                 </button>
               )}
             </div>
@@ -586,6 +610,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const createNote = useNotesStore(state => state.createNote)
   const updateNote = useNotesStore(state => state.updateNote)
   const deleteNote = useNotesStore(state => state.deleteNote)
+  const archiveNote = useNotesStore(state => state.archiveNote)
   const selectNote = useNotesStore(state => state.selectNote)
   const setSearchQuery = useNotesStore(state => state.setSearchQuery)
   const setSelectedTag = useNotesStore(state => state.setSelectedTag)
@@ -636,12 +661,21 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     }
   }
 
-  async function handleDeleteNote() {
+  async function handleArchiveNote() {
+    if (!selectedNoteId) return
+    try {
+      await archiveNote(selectedNoteId)
+    } catch (error) {
+      logger.error(`Failed to archive note from UI: ${String(error)}`)
+    }
+  }
+
+  async function handleMoveNoteToTrash() {
     if (!selectedNoteId) return
     try {
       await deleteNote(selectedNoteId)
     } catch (error) {
-      logger.error(`Failed to delete note from UI: ${String(error)}`)
+      logger.error(`Failed to move note to trash from UI: ${String(error)}`)
     }
   }
 
@@ -704,7 +738,8 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           key={activeNote?.id ?? 'no-note-selected'}
           note={activeNote}
           isSaving={isSaving}
-          onDelete={handleDeleteNote}
+          onArchive={handleArchiveNote}
+          onMoveToTrash={handleMoveNoteToTrash}
           onContentChange={handleContentChange}
           onOpenVaultFolder={handleOpenVaultFolder}
         />
