@@ -111,6 +111,11 @@ Rules:
 - The physical vault contract is defined in `VaultLayout` in `src-tauri/src/commands/notes.rs`; backend code should use that contract instead of duplicating directory names.
 - Selecting a different vault path validates and completes the vault structure, but does not move notes from the previous vault.
 - `.axis-notes/` is reserved for Axis metadata and must not be indexed as user notes.
+- The active notes workspace excludes top-level `archive/` and `trash/` folders from normal list/search results.
+- Deleting a note is a reversible lifecycle move into `trash/`, not a permanent file removal.
+- Archiving a note moves it into `archive/`; restoring a note from `archive/` or `trash/` moves it back to `inbox/`.
+- Lifecycle moves preserve the Markdown file and choose a unique filename in the destination when a collision exists.
+- Permanent deletion is intentionally not exposed yet; add it only with explicit UX and retention rules.
 
 All note file operations go through Rust commands in `src-tauri/src/commands/notes.rs`.
 

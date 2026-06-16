@@ -82,6 +82,8 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         notes::update_note,
         notes::rename_note,
         notes::delete_note,
+        notes::archive_note,
+        notes::restore_note,
         notes::search_notes,
         notes::get_notes_vault_info,
         notes::set_notes_vault_path,
