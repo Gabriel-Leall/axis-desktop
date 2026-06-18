@@ -22,6 +22,7 @@ interface NotesState {
   isSearching: boolean
 
   loadNotes: () => Promise<void>
+  loadWidgetNotes: () => Promise<void>
   setWorkspaceView: (view: NotesWorkspaceView) => Promise<void>
   loadVaultInfo: () => Promise<NoteVaultInfo | null>
   setVaultPath: (path: string) => Promise<NoteVaultInfo>
@@ -281,6 +282,48 @@ export const useNotesStore = create<NotesState>()(
         })()
 
         return loadNotesInFlight
+      },
+
+      loadWidgetNotes: async () => {
+        cancelPendingSearch()
+        set({ isLoading: true }, undefined, 'loadWidgetNotes/start')
+
+        try {
+          const [vaultResult, notes] = await Promise.all([
+            withTimeout(
+              commands.getNotesVaultInfo(),
+              VAULT_LOAD_TIMEOUT_MS,
+              'Timed out while loading notes vault info (Tauri IPC)'
+            ),
+            loadNotesForWorkspace('inbox'),
+          ])
+          const vaultInfo = unwrapResult(vaultResult)
+
+          set(
+            state => ({
+              vaultInfo,
+              vaultError: null,
+              workspaceView: 'inbox',
+              ...workspaceStateFromNotes(notes, state.selectedNoteId),
+              searchQuery: '',
+              searchResults: null,
+              selectedTag: null,
+              isSearching: false,
+              isLoading: false,
+            }),
+            undefined,
+            'loadWidgetNotes/done'
+          )
+        } catch (error) {
+          logger.error(
+            `Failed to load notes widget workspace: ${String(error)}`
+          )
+          set(
+            { vaultError: String(error), isLoading: false },
+            undefined,
+            'loadWidgetNotes/error'
+          )
+        }
       },
 
       setWorkspaceView: async view => {

@@ -357,6 +357,42 @@ describe('useNotesStore lifecycle actions', () => {
     expect(useNotesStore.getState().selectedNoteId).toBe('inbox/new.md')
   })
 
+  it('loads widget notes from the active vault inbox even when a lifecycle workspace is active', async () => {
+    useNotesStore.setState({
+      workspaceView: 'trash',
+      notes: [
+        {
+          id: 'trash/trashed.md',
+          content: '# Trashed',
+          created_at: '2026-06-13T09:00:00.000Z',
+          updated_at: '2026-06-13T09:00:00.000Z',
+          word_count: 2,
+        },
+      ],
+      selectedNoteId: 'trash/trashed.md',
+      searchQuery: 'removed',
+      selectedTag: 'draft',
+      searchResults: [],
+      isSearching: true,
+    })
+
+    await useNotesStore.getState().loadWidgetNotes()
+
+    expect(commands.getNotesVaultInfo).toHaveBeenCalled()
+    expect(commands.getNotes).toHaveBeenCalled()
+    expect(commands.getTrashedNotes).not.toHaveBeenCalled()
+    expect(commands.getArchivedNotes).not.toHaveBeenCalled()
+    expect(useNotesStore.getState().workspaceView).toBe('inbox')
+    expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
+      'inbox/loaded.md',
+    ])
+    expect(useNotesStore.getState().selectedNoteId).toBe('inbox/loaded.md')
+    expect(useNotesStore.getState().searchQuery).toBe('')
+    expect(useNotesStore.getState().selectedTag).toBeNull()
+    expect(useNotesStore.getState().searchResults).toBeNull()
+    expect(useNotesStore.getState().isSearching).toBe(false)
+  })
+
   it('keeps the current workspace when restoring a note from archive', async () => {
     useNotesStore.setState({
       workspaceView: 'archive',
