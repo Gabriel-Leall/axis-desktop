@@ -154,6 +154,24 @@ describe('BrainDumpWidget', () => {
     expect(commands.updateNote).not.toHaveBeenCalled()
   })
 
+  it('keeps navigation stable when moving down with an empty widget note list', () => {
+    vi.mocked(commands.getNotes).mockReturnValue(
+      new Promise(() => {
+        // Keep the list empty while exercising keyboard navigation.
+      })
+    )
+    const onNavigateToNotes = vi.fn()
+
+    render(<BrainDumpWidget onNavigateToNotes={onNavigateToNotes} />)
+
+    const editor = screen.getByPlaceholderText('Dump it here...')
+
+    fireEvent.keyDown(editor, { key: 'ArrowDown', ctrlKey: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Open notes page' }))
+
+    expect(onNavigateToNotes).toHaveBeenCalledWith()
+  })
+
   it('opens the notes page with the loaded inbox note selected', async () => {
     const onNavigateToNotes = vi.fn()
 

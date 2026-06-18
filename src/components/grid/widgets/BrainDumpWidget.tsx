@@ -55,6 +55,7 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
   }
 
   function navigateDown() {
+    if (widgetNotes.length === 0) return
     setCurrentIndex(prev => Math.min(widgetNotes.length - 1, prev + 1))
   }
 
@@ -101,7 +102,7 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
         <button
           type="button"
           onClick={handleOpenPage}
-          className="rounded p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground"
+          className="rounded p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
           aria-label={t('widgets.brainDump.openNotesAria')}
         >
           <ArrowUpRight className="size-3" />
@@ -109,7 +110,7 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
         <button
           type="button"
           onClick={() => void handleCreateNote()}
-          className="rounded p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground"
+          className="rounded p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
           aria-label={t('widgets.brainDump.newNoteAria')}
         >
           <Plus className="size-3" />
