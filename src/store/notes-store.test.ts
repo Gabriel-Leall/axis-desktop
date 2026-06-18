@@ -5,6 +5,8 @@ import { useNotesStore } from './notes-store'
 vi.mock('@/lib/tauri-bindings', () => ({
   commands: {
     getNotes: vi.fn(),
+    getArchivedNotes: vi.fn(),
+    getTrashedNotes: vi.fn(),
     getNotesVaultInfo: vi.fn(),
     setNotesVaultPath: vi.fn(),
     resetNotesVaultPath: vi.fn(),
@@ -51,7 +53,19 @@ describe('useNotesStore lifecycle actions', () => {
     })
     vi.mocked(commands.deleteNote).mockResolvedValue({
       status: 'ok',
-      data: null,
+      data: {
+        id: 'trash/alpha.md',
+        path: 'trash/alpha.md',
+        title: 'Alpha',
+        content: '# Alpha',
+        created_at: '2026-06-15T10:00:00.000Z',
+        updated_at: '2026-06-15T10:00:00.000Z',
+        word_count: 2,
+        tags: [],
+        wiki_links: [],
+        has_attachments: false,
+        excerpt: 'Alpha',
+      },
     })
     vi.mocked(commands.archiveNote).mockResolvedValue({
       status: 'ok',
@@ -88,6 +102,22 @@ describe('useNotesStore lifecycle actions', () => {
     vi.mocked(commands.searchNotes).mockResolvedValue({
       status: 'ok',
       data: [],
+    })
+    vi.mocked(commands.createNote).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'inbox/new.md',
+        path: 'inbox/new.md',
+        title: 'New',
+        content: '# New',
+        created_at: '2026-06-15T13:00:00.000Z',
+        updated_at: '2026-06-15T13:00:00.000Z',
+        word_count: 2,
+        tags: [],
+        wiki_links: [],
+        has_attachments: false,
+        excerpt: 'New',
+      },
     })
     vi.mocked(commands.getNotesVaultInfo).mockResolvedValue({
       status: 'ok',
@@ -132,6 +162,42 @@ describe('useNotesStore lifecycle actions', () => {
         },
       ],
     })
+    vi.mocked(commands.getArchivedNotes).mockResolvedValue({
+      status: 'ok',
+      data: [
+        {
+          id: 'archive/archived.md',
+          path: 'archive/archived.md',
+          title: 'Archived',
+          content: '# Archived\n\n#work Cold storage',
+          created_at: '2026-06-14T09:00:00.000Z',
+          updated_at: '2026-06-14T09:00:00.000Z',
+          word_count: 4,
+          tags: ['work'],
+          wiki_links: [],
+          has_attachments: false,
+          excerpt: 'Cold storage',
+        },
+      ],
+    })
+    vi.mocked(commands.getTrashedNotes).mockResolvedValue({
+      status: 'ok',
+      data: [
+        {
+          id: 'trash/trashed.md',
+          path: 'trash/trashed.md',
+          title: 'Trashed',
+          content: '# Trashed\n\n#draft Removed note',
+          created_at: '2026-06-13T09:00:00.000Z',
+          updated_at: '2026-06-13T09:00:00.000Z',
+          word_count: 4,
+          tags: ['draft'],
+          wiki_links: [],
+          has_attachments: false,
+          excerpt: 'Removed note',
+        },
+      ],
+    })
     useNotesStore.setState({
       vaultInfo: null,
       vaultError: null,
@@ -155,6 +221,7 @@ describe('useNotesStore lifecycle actions', () => {
       selectedNoteId: 'inbox/alpha.md',
       searchQuery: '',
       selectedTag: null,
+      workspaceView: 'inbox',
       isSaving: false,
       isLoading: false,
       isSearching: false,
@@ -175,6 +242,149 @@ describe('useNotesStore lifecycle actions', () => {
     ])
     expect(useNotesStore.getState().selectedNoteId).toBe('inbox/loaded.md')
     expect(useNotesStore.getState().vaultError).toBeNull()
+  })
+
+  it('switches to the archived workspace without resetting active filters', async () => {
+    useNotesStore.setState({
+      searchQuery: 'cold',
+      selectedTag: 'work',
+      selectedNoteId: 'inbox/alpha.md',
+    })
+
+    await useNotesStore.getState().setWorkspaceView('archive')
+
+    expect(commands.getArchivedNotes).toHaveBeenCalled()
+    expect(commands.searchNotes).not.toHaveBeenCalled()
+    expect(useNotesStore.getState().workspaceView).toBe('archive')
+    expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
+      'archive/archived.md',
+    ])
+    expect(useNotesStore.getState().selectedNoteId).toBeNull()
+    expect(useNotesStore.getState().searchQuery).toBe('cold')
+    expect(useNotesStore.getState().selectedTag).toBe('work')
+    expect(
+      useNotesStore
+        .getState()
+        .filteredNotes()
+        .map(note => note.id)
+    ).toEqual(['archive/archived.md'])
+  })
+
+  it('switches to the trash workspace and scopes search to trashed notes', async () => {
+    useNotesStore.setState({
+      searchQuery: 'removed',
+      selectedTag: 'draft',
+    })
+
+    await useNotesStore.getState().setWorkspaceView('trash')
+
+    expect(commands.getTrashedNotes).toHaveBeenCalled()
+    expect(commands.searchNotes).not.toHaveBeenCalled()
+    expect(useNotesStore.getState().workspaceView).toBe('trash')
+    expect(
+      useNotesStore
+        .getState()
+        .filteredNotes()
+        .map(note => note.id)
+    ).toEqual(['trash/trashed.md'])
+  })
+
+  it('scopes local workspace search across title tags and wiki links', async () => {
+    vi.mocked(commands.getArchivedNotes).mockResolvedValue({
+      status: 'ok',
+      data: [
+        {
+          id: 'archive/metadata.md',
+          path: 'archive/metadata.md',
+          title: 'Metadata Only Match',
+          content: 'Body without the query',
+          created_at: '2026-06-14T09:00:00.000Z',
+          updated_at: '2026-06-14T09:00:00.000Z',
+          word_count: 4,
+          tags: ['reviewtag'],
+          wiki_links: ['reviewlink'],
+          has_attachments: false,
+          excerpt: 'Body without the query',
+        },
+      ],
+    })
+
+    useNotesStore.setState({ searchQuery: 'reviewlink' })
+
+    await useNotesStore.getState().setWorkspaceView('archive')
+
+    expect(
+      useNotesStore
+        .getState()
+        .filteredNotes()
+        .map(note => note.id)
+    ).toEqual(['archive/metadata.md'])
+
+    useNotesStore.getState().setSearchQuery('reviewtag')
+
+    expect(
+      useNotesStore
+        .getState()
+        .filteredNotes()
+        .map(note => note.id)
+    ).toEqual(['archive/metadata.md'])
+  })
+
+  it('creates inbox notes from lifecycle views without mixing stale workspace notes', async () => {
+    useNotesStore.setState({
+      workspaceView: 'archive',
+      notes: [
+        {
+          id: 'archive/archived.md',
+          content: '# Archived',
+          created_at: '2026-06-14T09:00:00.000Z',
+          updated_at: '2026-06-14T09:00:00.000Z',
+          word_count: 2,
+        },
+      ],
+      selectedNoteId: 'archive/archived.md',
+    })
+
+    const createdId = await useNotesStore.getState().createNote('# New')
+
+    expect(createdId).toBe('inbox/new.md')
+    expect(commands.getNotes).toHaveBeenCalled()
+    expect(useNotesStore.getState().workspaceView).toBe('inbox')
+    expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
+      'inbox/new.md',
+      'inbox/loaded.md',
+    ])
+    expect(useNotesStore.getState().selectedNoteId).toBe('inbox/new.md')
+  })
+
+  it('keeps the current workspace when restoring a note from archive', async () => {
+    useNotesStore.setState({
+      workspaceView: 'archive',
+      notes: [
+        {
+          id: 'archive/archived.md',
+          content: '# Archived',
+          created_at: '2026-06-14T09:00:00.000Z',
+          updated_at: '2026-06-14T09:00:00.000Z',
+          word_count: 2,
+        },
+      ],
+      selectedNoteId: 'archive/archived.md',
+      searchQuery: 'archived',
+      selectedTag: 'work',
+    })
+
+    const restoredId = await useNotesStore
+      .getState()
+      .restoreNote('archive/archived.md')
+
+    expect(restoredId).toBe('inbox/restored.md')
+    expect(commands.restoreNote).toHaveBeenCalledWith('archive/archived.md')
+    expect(useNotesStore.getState().workspaceView).toBe('archive')
+    expect(useNotesStore.getState().notes).toEqual([])
+    expect(useNotesStore.getState().selectedNoteId).toBeNull()
+    expect(useNotesStore.getState().searchQuery).toBe('archived')
+    expect(useNotesStore.getState().selectedTag).toBe('work')
   })
 
   it('switches vault path and reloads notes without carrying old workspace filters', async () => {
@@ -340,9 +550,12 @@ describe('useNotesStore lifecycle actions', () => {
   })
 
   it('moves deleted notes out of the active list through trash lifecycle', async () => {
-    await useNotesStore.getState().deleteNote('inbox/alpha.md')
+    const trashedId = await useNotesStore
+      .getState()
+      .deleteNote('inbox/alpha.md')
 
     expect(commands.deleteNote).toHaveBeenCalledWith('inbox/alpha.md')
+    expect(trashedId).toBe('trash/alpha.md')
     expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
       'inbox/beta.md',
     ])
@@ -419,7 +632,7 @@ describe('useNotesStore lifecycle actions', () => {
     expect(useNotesStore.getState().selectedNoteId).toBe('inbox/alpha.md')
   })
 
-  it('restores notes into the active list and resets filters', async () => {
+  it('restores notes into the active list while preserving filters', async () => {
     const betaNote = useNotesStore.getState().notes[1]
     if (!betaNote) {
       throw new Error('Expected beta note fixture')
@@ -441,13 +654,13 @@ describe('useNotesStore lifecycle actions', () => {
       'inbox/beta.md',
     ])
     expect(useNotesStore.getState().selectedNoteId).toBe('inbox/restored.md')
-    expect(useNotesStore.getState().searchQuery).toBe('')
+    expect(useNotesStore.getState().searchQuery).toBe('old query')
     expect(useNotesStore.getState().searchResults).toBeNull()
-    expect(useNotesStore.getState().selectedTag).toBeNull()
+    expect(useNotesStore.getState().selectedTag).toBe('work')
     expect(useNotesStore.getState().isSearching).toBe(false)
   })
 
-  it('cancels pending search debounce when restoring a note', async () => {
+  it('cancels pending search debounce when restoring a note without clearing filters', async () => {
     vi.useFakeTimers()
     try {
       useNotesStore.getState().setSearchQuery('alpha')
@@ -456,7 +669,7 @@ describe('useNotesStore lifecycle actions', () => {
       await vi.advanceTimersByTimeAsync(250)
 
       expect(commands.searchNotes).not.toHaveBeenCalled()
-      expect(useNotesStore.getState().searchQuery).toBe('')
+      expect(useNotesStore.getState().searchQuery).toBe('alpha')
       expect(useNotesStore.getState().searchResults).toBeNull()
     } finally {
       vi.useRealTimers()

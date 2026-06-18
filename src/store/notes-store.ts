@@ -6,9 +6,12 @@ import { logger } from '@/lib/logger'
 import type { Note as BindingNote, NoteVaultInfo } from '@/lib/tauri-bindings'
 import type { Note } from '@/lib/notes-domain'
 
+export type NotesWorkspaceView = 'inbox' | 'archive' | 'trash'
+
 interface NotesState {
   vaultInfo: NoteVaultInfo | null
   vaultError: string | null
+  workspaceView: NotesWorkspaceView
   notes: Note[]
   searchResults: Note[] | null
   selectedNoteId: string | null
@@ -19,14 +22,15 @@ interface NotesState {
   isSearching: boolean
 
   loadNotes: () => Promise<void>
+  setWorkspaceView: (view: NotesWorkspaceView) => Promise<void>
   loadVaultInfo: () => Promise<NoteVaultInfo | null>
   setVaultPath: (path: string) => Promise<NoteVaultInfo>
   resetVaultPath: () => Promise<NoteVaultInfo>
   openVaultFolder: () => Promise<void>
   createNote: (content?: string) => Promise<string>
   updateNote: (id: string, content: string) => void
-  deleteNote: (id: string) => Promise<void>
-  archiveNote: (id: string) => Promise<void>
+  deleteNote: (id: string) => Promise<string>
+  archiveNote: (id: string) => Promise<string>
   restoreNote: (id: string) => Promise<string>
   selectNote: (id: string | null) => void
   setSearchQuery: (query: string) => void
@@ -95,11 +99,36 @@ function withTimeout<T>(
 function mapBindingNote(note: BindingNote): Note {
   return {
     id: note.id,
+    title: note.title,
     content: note.content,
     created_at: note.created_at,
     updated_at: note.updated_at,
     word_count: note.word_count,
+    tags: note.tags,
+    wiki_links: note.wiki_links,
   }
+}
+
+function noteMatchesQuery(note: Note, query: string): boolean {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery) {
+    return true
+  }
+
+  if (note.content.toLowerCase().includes(normalizedQuery)) {
+    return true
+  }
+  if (note.title?.toLowerCase().includes(normalizedQuery)) {
+    return true
+  }
+  if (note.tags?.some(tag => tag.toLowerCase().includes(normalizedQuery))) {
+    return true
+  }
+  return (
+    note.wiki_links?.some(link =>
+      link.toLowerCase().includes(normalizedQuery)
+    ) ?? false
+  )
 }
 
 function workspaceStateFromNotes(
@@ -122,6 +151,7 @@ function resetWorkspaceForVault(
   NotesState,
   | 'vaultInfo'
   | 'vaultError'
+  | 'workspaceView'
   | 'notes'
   | 'selectedNoteId'
   | 'searchQuery'
@@ -132,6 +162,7 @@ function resetWorkspaceForVault(
   return {
     vaultInfo,
     vaultError: null,
+    workspaceView: 'inbox',
     notes,
     selectedNoteId: notes[0]?.id ?? null,
     searchQuery: '',
@@ -145,6 +176,25 @@ async function loadActiveNotes(): Promise<Note[]> {
   return unwrapResult(
     await withTimeout(
       commands.getNotes(),
+      NOTES_LOAD_TIMEOUT_MS,
+      'Timed out while loading notes (Tauri IPC)'
+    )
+  ).map(mapBindingNote)
+}
+
+async function loadNotesForWorkspace(
+  view: NotesWorkspaceView
+): Promise<Note[]> {
+  const command =
+    view === 'archive'
+      ? commands.getArchivedNotes()
+      : view === 'trash'
+        ? commands.getTrashedNotes()
+        : commands.getNotes()
+
+  return unwrapResult(
+    await withTimeout(
+      command,
       NOTES_LOAD_TIMEOUT_MS,
       'Timed out while loading notes (Tauri IPC)'
     )
@@ -180,6 +230,7 @@ export const useNotesStore = create<NotesState>()(
     (set, get) => ({
       vaultInfo: null,
       vaultError: null,
+      workspaceView: 'inbox',
       notes: [],
       searchResults: null,
       selectedNoteId: null,
@@ -197,26 +248,22 @@ export const useNotesStore = create<NotesState>()(
         loadNotesInFlight = (async () => {
           set({ isLoading: true }, undefined, 'loadNotes/start')
           try {
+            const currentView = get().workspaceView
             const [vaultResult, notesResult] = await Promise.all([
               withTimeout(
                 commands.getNotesVaultInfo(),
                 VAULT_LOAD_TIMEOUT_MS,
                 'Timed out while loading notes vault info (Tauri IPC)'
               ),
-              withTimeout(
-                commands.getNotes(),
-                NOTES_LOAD_TIMEOUT_MS,
-                'Timed out while loading notes (Tauri IPC)'
-              ),
+              loadNotesForWorkspace(currentView),
             ])
             const vaultInfo = unwrapResult(vaultResult)
-            const notes = unwrapResult(notesResult).map(mapBindingNote)
 
             set(
               state => ({
                 vaultInfo,
                 vaultError: null,
-                ...workspaceStateFromNotes(notes, state.selectedNoteId),
+                ...workspaceStateFromNotes(notesResult, state.selectedNoteId),
                 searchResults: state.searchQuery.trim()
                   ? state.searchResults
                   : null,
@@ -234,6 +281,36 @@ export const useNotesStore = create<NotesState>()(
         })()
 
         return loadNotesInFlight
+      },
+
+      setWorkspaceView: async view => {
+        cancelPendingSearch()
+        set({ isLoading: true }, undefined, 'setWorkspaceView/start')
+
+        try {
+          const notes = await loadNotesForWorkspace(view)
+
+          set(
+            {
+              workspaceView: view,
+              notes,
+              selectedNoteId: null,
+              searchResults: null,
+              isSearching: false,
+              isLoading: false,
+            },
+            undefined,
+            'setWorkspaceView/done'
+          )
+        } catch (error) {
+          logger.error(`Failed to load notes workspace: ${String(error)}`)
+          set(
+            { vaultError: String(error), isLoading: false },
+            undefined,
+            'setWorkspaceView/error'
+          )
+          throw error
+        }
       },
 
       loadVaultInfo: async () => {
@@ -375,6 +452,7 @@ export const useNotesStore = create<NotesState>()(
         set({ isSaving: true }, undefined, 'createNote/start')
 
         try {
+          const currentView = get().workspaceView
           const createdNote = mapBindingNote(
             unwrapResult(
               await commands.createNote({
@@ -384,19 +462,24 @@ export const useNotesStore = create<NotesState>()(
               })
             )
           )
+          const inboxNotes =
+            currentView === 'inbox'
+              ? get().notes
+              : await loadNotesForWorkspace('inbox')
 
           set(
-            state => ({
+            {
+              workspaceView: 'inbox',
               notes: [
                 createdNote,
-                ...state.notes.filter(note => note.id !== createdNote.id),
+                ...inboxNotes.filter(note => note.id !== createdNote.id),
               ],
               selectedNoteId: createdNote.id,
               searchQuery: '',
               searchResults: null,
               selectedTag: null,
               isSaving: false,
-            }),
+            },
             undefined,
             'createNote/done'
           )
@@ -513,7 +596,10 @@ export const useNotesStore = create<NotesState>()(
             undefined,
             'deleteNote/optimistic'
           )
-          unwrapResult(await commands.deleteNote(id))
+          const trashedNote = mapBindingNote(
+            unwrapResult(await commands.deleteNote(id))
+          )
+          return trashedNote.id
         } catch (error) {
           logger.error(`Failed to delete note: ${String(error)}`)
           set(
@@ -569,7 +655,10 @@ export const useNotesStore = create<NotesState>()(
             undefined,
             'archiveNote/optimistic'
           )
-          unwrapResult(await commands.archiveNote(id))
+          const archivedNote = mapBindingNote(
+            unwrapResult(await commands.archiveNote(id))
+          )
+          return archivedNote.id
         } catch (error) {
           logger.error(`Failed to archive note: ${String(error)}`)
           set(
@@ -586,6 +675,7 @@ export const useNotesStore = create<NotesState>()(
 
       restoreNote: async id => {
         try {
+          const currentView = get().workspaceView
           cancelPendingSearch()
           const restoredNote = mapBindingNote(
             unwrapResult(await commands.restoreNote(id))
@@ -593,14 +683,17 @@ export const useNotesStore = create<NotesState>()(
 
           set(
             state => ({
-              notes: [
-                restoredNote,
-                ...state.notes.filter(note => note.id !== restoredNote.id),
-              ],
-              selectedNoteId: restoredNote.id,
-              searchQuery: '',
+              notes:
+                currentView === 'inbox'
+                  ? [
+                      restoredNote,
+                      ...state.notes.filter(
+                        note => note.id !== restoredNote.id
+                      ),
+                    ]
+                  : removeNoteFromList(state.notes, id),
+              selectedNoteId: currentView === 'inbox' ? restoredNote.id : null,
               searchResults: null,
-              selectedTag: null,
               isSearching: false,
             }),
             undefined,
@@ -621,6 +714,15 @@ export const useNotesStore = create<NotesState>()(
         set({ searchQuery: query }, undefined, 'setSearchQuery')
 
         cancelPendingSearch()
+
+        if (get().workspaceView !== 'inbox') {
+          set(
+            { searchResults: null, isSearching: false },
+            undefined,
+            'searchNotes/localWorkspace'
+          )
+          return
+        }
 
         if (!trimmedQuery) {
           set(
@@ -668,11 +770,26 @@ export const useNotesStore = create<NotesState>()(
         set({ selectedTag: tag }, undefined, 'setSelectedTag'),
 
       filteredNotes: () => {
-        const { notes, searchQuery, searchResults, selectedTag } = get()
+        const {
+          notes,
+          searchQuery,
+          searchResults,
+          selectedTag,
+          workspaceView,
+        } = get()
         const hasSearch = searchQuery.trim().length > 0
-        const base = hasSearch ? (searchResults ?? []) : notes
+        const usesRemoteSearch =
+          workspaceView === 'inbox' && hasSearch && searchResults !== null
+        const base = usesRemoteSearch ? searchResults : notes
 
         return base.filter(note => {
+          if (
+            hasSearch &&
+            !usesRemoteSearch &&
+            !noteMatchesQuery(note, searchQuery)
+          ) {
+            return false
+          }
           if (selectedTag && !noteHasTag(note, selectedTag)) {
             return false
           }
