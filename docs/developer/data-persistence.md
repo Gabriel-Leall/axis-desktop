@@ -131,6 +131,7 @@ Frontend state for the active notes workspace is centralized in
 
 - `vaultInfo` represents the active local vault path exposed by the backend.
 - `loadNotes()` loads both the active vault metadata and the active note list.
+- `loadWidgetNotes()` is the dashboard widget entrypoint; it always loads the active vault `inbox/`, clears Notes Page filters, and prevents quick-capture widgets from exposing `archive/` or `trash/` notes as editable content.
 - `setVaultPath()` and `resetVaultPath()` change the vault through typed Tauri commands, reload active notes, and clear selection/search/tag state so UI surfaces do not mix notes from different vaults.
 - Notes Page, Preferences, and widgets should use `useNotesStore` actions instead of calling notes vault commands directly.
 

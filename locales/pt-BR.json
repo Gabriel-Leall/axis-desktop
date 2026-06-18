@@ -504,6 +504,7 @@
   "widgets.brainDump.title": "Brain Dump",
   "widgets.brainDump.openNotesAria": "Abrir página de notas",
   "widgets.brainDump.newNoteAria": "Nova nota",
+  "widgets.brainDump.editorAria": "Editor rápido de notas",
   "widgets.brainDump.placeholder": "Despeje aqui...",
   "widgets.brainDump.notesCount_one": "{{count}} nota",
   "widgets.brainDump.notesCount_other": "{{count}} notas",
