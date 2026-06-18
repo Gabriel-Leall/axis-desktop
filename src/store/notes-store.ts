@@ -99,10 +99,13 @@ function withTimeout<T>(
 function mapBindingNote(note: BindingNote): Note {
   return {
     id: note.id,
+    title: note.title,
     content: note.content,
     created_at: note.created_at,
     updated_at: note.updated_at,
     word_count: note.word_count,
+    tags: note.tags,
+    wiki_links: note.wiki_links,
   }
 }
 
@@ -112,7 +115,20 @@ function noteMatchesQuery(note: Note, query: string): boolean {
     return true
   }
 
-  return note.content.toLowerCase().includes(normalizedQuery)
+  if (note.content.toLowerCase().includes(normalizedQuery)) {
+    return true
+  }
+  if (note.title?.toLowerCase().includes(normalizedQuery)) {
+    return true
+  }
+  if (note.tags?.some(tag => tag.toLowerCase().includes(normalizedQuery))) {
+    return true
+  }
+  return (
+    note.wiki_links?.some(link =>
+      link.toLowerCase().includes(normalizedQuery)
+    ) ?? false
+  )
 }
 
 function workspaceStateFromNotes(
@@ -436,6 +452,7 @@ export const useNotesStore = create<NotesState>()(
         set({ isSaving: true }, undefined, 'createNote/start')
 
         try {
+          const currentView = get().workspaceView
           const createdNote = mapBindingNote(
             unwrapResult(
               await commands.createNote({
@@ -445,20 +462,24 @@ export const useNotesStore = create<NotesState>()(
               })
             )
           )
+          const inboxNotes =
+            currentView === 'inbox'
+              ? get().notes
+              : await loadNotesForWorkspace('inbox')
 
           set(
-            state => ({
+            {
               workspaceView: 'inbox',
               notes: [
                 createdNote,
-                ...state.notes.filter(note => note.id !== createdNote.id),
+                ...inboxNotes.filter(note => note.id !== createdNote.id),
               ],
               selectedNoteId: createdNote.id,
               searchQuery: '',
               searchResults: null,
               selectedTag: null,
               isSaving: false,
-            }),
+            },
             undefined,
             'createNote/done'
           )

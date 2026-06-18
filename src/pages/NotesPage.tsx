@@ -208,7 +208,7 @@ function SidebarSearch({
 
   return (
     <div className="px-2 pb-2.5">
-      <div className="flex items-center gap-1.5 rounded-md bg-muted/50 border border-border/50 px-2 py-1.5">
+      <div className="flex items-center gap-1.5 rounded-md bg-muted/50 border border-border/50 px-2 py-1.5 focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
         <Search className="size-3 shrink-0 text-muted-foreground" />
         <input
           type="text"
@@ -216,7 +216,7 @@ function SidebarSearch({
           onChange={e => onSearchChange(e.target.value)}
           placeholder={t('notes.sidebar.searchPlaceholder')}
           aria-label={t('notes.sidebar.searchPlaceholder')}
-          className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+          className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         {hasSearch && (
           <button
@@ -637,7 +637,7 @@ function NoteActionsMenu({
         <MoreHorizontal className="size-4" />
       </button>
       {showMenu && (
-        <div className="absolute inset-e-0 top-full z-10 mt-1 min-w-40 rounded-md border border-border bg-popover py-1 shadow-md">
+        <div className="absolute end-0 top-full z-10 mt-1 min-w-40 rounded-md border border-border bg-popover py-1 shadow-md">
           <button
             type="button"
             onClick={handleExport}
@@ -845,9 +845,9 @@ function EditorArea({
         />
       </div>
 
-      <div className="flex-1 overflow-hidden bg-background text-left">
-        <div className="max-w-3xl mx-auto w-full h-full text-left">
-          <div className="h-full px-8 pt-8 pb-10 font-sans antialiased text-foreground text-left flex flex-col">
+      <div className="flex-1 overflow-hidden bg-background text-start">
+        <div className="max-w-3xl mx-auto w-full h-full text-start">
+          <div className="h-full px-8 pt-8 pb-10 font-sans antialiased text-foreground text-start flex flex-col">
             {isReadOnly ? (
               <h1 className="mb-8 text-2xl font-semibold text-foreground">
                 {parsed.title || getNoteTitle(note.content)}
@@ -860,18 +860,18 @@ function EditorArea({
                 placeholder={t('notes.editor.titlePlaceholder')}
                 aria-label={t('notes.editor.titlePlaceholder')}
                 spellCheck={false}
-                className="w-full bg-transparent outline-none text-2xl font-semibold mb-8 text-foreground placeholder:text-muted-foreground/60"
+                className="mb-8 w-full rounded bg-transparent text-2xl font-semibold text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-1 focus-visible:ring-ring"
               />
             )}
 
             {isReadOnly ? (
-              <div className="notes-inline-editor prose prose-sm max-w-none min-h-0 flex-1 overflow-y-auto text-left text-foreground">
-                <ToastViewer initialValue={parsed.body || note.content} />
+              <div className="notes-inline-editor prose prose-sm max-w-none min-h-0 flex-1 overflow-y-auto text-start text-foreground">
+                <ToastViewer initialValue={parsed.body} />
               </div>
             ) : (
               <div
                 ref={editorShellRef}
-                className="notes-inline-editor min-h-0 flex-1 text-left"
+                className="notes-inline-editor min-h-0 flex-1 text-start"
               >
                 <ToastEditor
                   key={note.id}

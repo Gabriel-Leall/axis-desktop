@@ -103,6 +103,22 @@ describe('useNotesStore lifecycle actions', () => {
       status: 'ok',
       data: [],
     })
+    vi.mocked(commands.createNote).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'inbox/new.md',
+        path: 'inbox/new.md',
+        title: 'New',
+        content: '# New',
+        created_at: '2026-06-15T13:00:00.000Z',
+        updated_at: '2026-06-15T13:00:00.000Z',
+        word_count: 2,
+        tags: [],
+        wiki_links: [],
+        has_attachments: false,
+        excerpt: 'New',
+      },
+    })
     vi.mocked(commands.getNotesVaultInfo).mockResolvedValue({
       status: 'ok',
       data: {
@@ -271,6 +287,74 @@ describe('useNotesStore lifecycle actions', () => {
         .filteredNotes()
         .map(note => note.id)
     ).toEqual(['trash/trashed.md'])
+  })
+
+  it('scopes local workspace search across title tags and wiki links', async () => {
+    vi.mocked(commands.getArchivedNotes).mockResolvedValue({
+      status: 'ok',
+      data: [
+        {
+          id: 'archive/metadata.md',
+          path: 'archive/metadata.md',
+          title: 'Metadata Only Match',
+          content: 'Body without the query',
+          created_at: '2026-06-14T09:00:00.000Z',
+          updated_at: '2026-06-14T09:00:00.000Z',
+          word_count: 4,
+          tags: ['reviewtag'],
+          wiki_links: ['reviewlink'],
+          has_attachments: false,
+          excerpt: 'Body without the query',
+        },
+      ],
+    })
+
+    useNotesStore.setState({ searchQuery: 'reviewlink' })
+
+    await useNotesStore.getState().setWorkspaceView('archive')
+
+    expect(
+      useNotesStore
+        .getState()
+        .filteredNotes()
+        .map(note => note.id)
+    ).toEqual(['archive/metadata.md'])
+
+    useNotesStore.getState().setSearchQuery('reviewtag')
+
+    expect(
+      useNotesStore
+        .getState()
+        .filteredNotes()
+        .map(note => note.id)
+    ).toEqual(['archive/metadata.md'])
+  })
+
+  it('creates inbox notes from lifecycle views without mixing stale workspace notes', async () => {
+    useNotesStore.setState({
+      workspaceView: 'archive',
+      notes: [
+        {
+          id: 'archive/archived.md',
+          content: '# Archived',
+          created_at: '2026-06-14T09:00:00.000Z',
+          updated_at: '2026-06-14T09:00:00.000Z',
+          word_count: 2,
+        },
+      ],
+      selectedNoteId: 'archive/archived.md',
+    })
+
+    const createdId = await useNotesStore.getState().createNote('# New')
+
+    expect(createdId).toBe('inbox/new.md')
+    expect(commands.getNotes).toHaveBeenCalled()
+    expect(useNotesStore.getState().workspaceView).toBe('inbox')
+    expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
+      'inbox/new.md',
+      'inbox/loaded.md',
+    ])
+    expect(useNotesStore.getState().selectedNoteId).toBe('inbox/new.md')
   })
 
   it('keeps the current workspace when restoring a note from archive', async () => {

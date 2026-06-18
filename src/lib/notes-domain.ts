@@ -12,10 +12,13 @@ export interface NoteTagCount {
 
 export interface Note {
   id: string
+  title?: string
   content: string
   created_at: string
   updated_at: string
   word_count: number
+  tags?: string[]
+  wiki_links?: string[]
 }
 
 const TAG_PATTERN = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]{0,31})/gu
