@@ -204,10 +204,17 @@ export function NotesPane() {
             )}
 
             {pendingMigrationSourcePath && (
-              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-3">
+              <div
+                role="region"
+                aria-labelledby="notes-vault-migration-title"
+                className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-3"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">
+                    <p
+                      id="notes-vault-migration-title"
+                      className="text-sm font-medium text-foreground"
+                    >
                       {t('preferences.notes.vault.migration.title')}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">

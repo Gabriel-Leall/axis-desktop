@@ -815,7 +815,13 @@ fn collect_vault_migration_files_in_dir(
                 let relative_path = path
                     .strip_prefix(root)
                     .map_err(|e| format!("Failed to compute migration file path: {e}"))?
-                    .to_string_lossy()
+                    .to_str()
+                    .ok_or_else(|| {
+                        format!(
+                            "Notes vault migration file path is not valid UTF-8: {}",
+                            path.display()
+                        )
+                    })?
                     .replace('\\', "/");
                 out.push(VaultMigrationFile {
                     source_abs: path,
