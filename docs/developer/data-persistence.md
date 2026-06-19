@@ -92,6 +92,8 @@ export function useUpdatePreferences() {
 ## Notes Vault
 
 Notes are stored as local Markdown files in a user-visible vault folder.
+See [notes-architecture.md](./notes-architecture.md) for the full domain
+contract across backend, store, Notes Page, widget, and Preferences.
 
 Default location:
 
