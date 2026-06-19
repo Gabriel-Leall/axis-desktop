@@ -718,6 +718,14 @@ async resetNotesVaultPath() : Promise<Result<NoteVaultInfo, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async migrateNotesVault(input: MigrateNotesVaultInput) : Promise<Result<NoteVaultMigrationResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("migrate_notes_vault", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async openNotesVaultFolder() : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("open_notes_vault_folder") };
@@ -829,9 +837,12 @@ export type KanbanCard = { id: string; column_id: string; title: string; descrip
 export type KanbanColumn = { id: string; board_id: string; name: string; sort_order: number; created_at: string; updated_at: string }
 export type KanbanColumnWithCards = { column: KanbanColumn; cards: KanbanCard[] }
 export type KanbanSubtask = { id: string; card_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
+export type MigrateNotesVaultInput = { source_path: string; mode: NoteVaultMigrationMode }
 export type Note = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
 export type NoteSummary = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
 export type NoteVaultInfo = { path: string; is_default: boolean }
+export type NoteVaultMigrationMode = "copy" | "move"
+export type NoteVaultMigrationResult = { source_path: string; destination_path: string; mode: NoteVaultMigrationMode; notes_migrated: number; metadata_files_migrated: number; conflicts: string[] }
 export type OAuthLoopbackResult = { code: string; state: string | null; redirect_uri: string }
 export type PomodoroSession = { id: string; session_type: string; duration_seconds: number; completed: boolean; task_id: string | null; started_at: string; ended_at: string | null; created_at: string }
 export type PomodoroSettings = { focus_duration: number; short_break_duration: number; long_break_duration: number; pomos_until_long_break: number; auto_start_breaks: boolean; auto_start_focus: boolean; sound_notifications: boolean }

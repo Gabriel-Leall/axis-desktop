@@ -10,6 +10,7 @@ vi.mock('@/lib/tauri-bindings', () => ({
     getNotesVaultInfo: vi.fn(),
     setNotesVaultPath: vi.fn(),
     resetNotesVaultPath: vi.fn(),
+    migrateNotesVault: vi.fn(),
     openNotesVaultFolder: vi.fn(),
     createNote: vi.fn(),
     updateNote: vi.fn(),
@@ -144,6 +145,17 @@ describe('useNotesStore lifecycle actions', () => {
       status: 'ok',
       data: null,
     })
+    vi.mocked(commands.migrateNotesVault).mockResolvedValue({
+      status: 'ok',
+      data: {
+        source_path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+        destination_path: 'D:\\Axis Vault',
+        mode: 'copy',
+        notes_migrated: 2,
+        metadata_files_migrated: 1,
+        conflicts: [],
+      },
+    })
     vi.mocked(commands.getNotes).mockResolvedValue({
       status: 'ok',
       data: [
@@ -201,6 +213,7 @@ describe('useNotesStore lifecycle actions', () => {
     useNotesStore.setState({
       vaultInfo: null,
       vaultError: null,
+      pendingMigrationSourcePath: null,
       notes: [
         {
           id: 'inbox/alpha.md',
@@ -457,6 +470,92 @@ describe('useNotesStore lifecycle actions', () => {
     expect(useNotesStore.getState().isSearching).toBe(false)
   })
 
+  it('remembers the previous vault path after switching vaults so migration stays explicit', async () => {
+    useNotesStore.setState({
+      vaultInfo: {
+        path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+        is_default: true,
+      },
+    })
+
+    await useNotesStore.getState().setVaultPath('D:\\Axis Vault')
+
+    expect(useNotesStore.getState().pendingMigrationSourcePath).toBe(
+      'C:\\Users\\Gabriel\\Documents\\Axis Notes'
+    )
+  })
+
+  it('migrates notes from the remembered vault path and reloads the active vault', async () => {
+    useNotesStore.setState({
+      vaultInfo: {
+        path: 'D:\\Axis Vault',
+        is_default: false,
+      },
+      pendingMigrationSourcePath: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+      searchQuery: 'old',
+      selectedTag: 'project',
+      searchResults: [],
+      isSearching: true,
+    })
+
+    const result = await useNotesStore.getState().migratePendingVault('copy')
+
+    expect(commands.migrateNotesVault).toHaveBeenCalledWith({
+      source_path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+      mode: 'copy',
+    })
+    expect(result.notes_migrated).toBe(2)
+    expect(commands.getNotes).toHaveBeenCalled()
+    expect(useNotesStore.getState().pendingMigrationSourcePath).toBeNull()
+    expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
+      'inbox/loaded.md',
+    ])
+    expect(useNotesStore.getState().searchQuery).toBe('')
+    expect(useNotesStore.getState().selectedTag).toBeNull()
+    expect(useNotesStore.getState().searchResults).toBeNull()
+    expect(useNotesStore.getState().isSearching).toBe(false)
+  })
+
+  it('keeps the pending migration source when migration fails', async () => {
+    vi.mocked(commands.migrateNotesVault).mockResolvedValue({
+      status: 'error',
+      error: 'Notes vault migration has file conflicts: inbox/plan.md',
+    })
+    useNotesStore.setState({
+      pendingMigrationSourcePath: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+    })
+
+    await expect(
+      useNotesStore.getState().migratePendingVault('move')
+    ).rejects.toThrow('Notes vault migration has file conflicts')
+
+    expect(commands.migrateNotesVault).toHaveBeenCalledWith({
+      source_path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+      mode: 'move',
+    })
+    expect(useNotesStore.getState().pendingMigrationSourcePath).toBe(
+      'C:\\Users\\Gabriel\\Documents\\Axis Notes'
+    )
+  })
+
+  it('dismisses a pending vault migration prompt without changing the active vault', () => {
+    useNotesStore.setState({
+      vaultInfo: {
+        path: 'D:\\Axis Vault',
+        is_default: false,
+      },
+      pendingMigrationSourcePath: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+    })
+
+    useNotesStore.getState().dismissPendingVaultMigration()
+
+    expect(useNotesStore.getState().pendingMigrationSourcePath).toBeNull()
+    expect(useNotesStore.getState().vaultInfo).toEqual({
+      path: 'D:\\Axis Vault',
+      is_default: false,
+    })
+  })
+
   it('keeps the current workspace when switching vault path fails validation', async () => {
     vi.mocked(commands.setNotesVaultPath).mockResolvedValue({
       status: 'error',
@@ -513,6 +612,12 @@ describe('useNotesStore lifecycle actions', () => {
       status: 'error',
       error: 'notes reload failed',
     })
+    useNotesStore.setState({
+      vaultInfo: {
+        path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
+        is_default: true,
+      },
+    })
 
     await expect(
       useNotesStore.getState().setVaultPath('D:\\Axis Vault')
@@ -524,6 +629,9 @@ describe('useNotesStore lifecycle actions', () => {
     })
     expect(useNotesStore.getState().notes).toEqual([])
     expect(useNotesStore.getState().selectedNoteId).toBeNull()
+    expect(useNotesStore.getState().pendingMigrationSourcePath).toBe(
+      'C:\\Users\\Gabriel\\Documents\\Axis Notes'
+    )
   })
 
   it('times out stalled notes reloads after switching vaults', async () => {

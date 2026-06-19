@@ -134,12 +134,48 @@ pub struct NoteVaultInfo {
     pub is_default: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize, Type, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum NoteVaultMigrationMode {
+    Copy,
+    Move,
+}
+
+#[derive(Debug, Serialize, Deserialize, Type)]
+pub struct MigrateNotesVaultInput {
+    pub source_path: String,
+    pub mode: NoteVaultMigrationMode,
+}
+
+#[derive(Debug, Serialize, Deserialize, Type, Clone)]
+pub struct NoteVaultMigrationResult {
+    pub source_path: String,
+    pub destination_path: String,
+    pub mode: NoteVaultMigrationMode,
+    pub notes_migrated: u32,
+    pub metadata_files_migrated: u32,
+    pub conflicts: Vec<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct VaultManifest {
     schema_version: u32,
     application: String,
     created_at: String,
     updated_at: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum VaultMigrationFileKind {
+    Note,
+    Metadata,
+}
+
+#[derive(Debug, Clone)]
+struct VaultMigrationFile {
+    source_abs: PathBuf,
+    relative_path: String,
+    kind: VaultMigrationFileKind,
 }
 
 fn notes_root(app: &AppHandle) -> Result<PathBuf, String> {
@@ -715,6 +751,194 @@ fn move_note_to_vault_dir(root: &Path, id: &str, destination_dir: &str) -> Resul
     note_from_file(root, &target_abs)
 }
 
+fn collect_vault_migration_files(root: &Path) -> Result<Vec<VaultMigrationFile>, String> {
+    let mut files = Vec::new();
+
+    for dir in [INBOX_DIR, ARCHIVE_DIR, TRASH_DIR] {
+        collect_vault_migration_files_in_dir(root, dir, VaultMigrationFileKind::Note, &mut files)?;
+    }
+
+    for dir in [VAULT_SIDECARS_DIR, VAULT_CONFIG_DIR] {
+        let metadata_dir = format!("{VAULT_METADATA_DIR}/{dir}");
+        collect_vault_migration_files_in_dir(
+            root,
+            &metadata_dir,
+            VaultMigrationFileKind::Metadata,
+            &mut files,
+        )?;
+    }
+
+    files.sort_by(|a, b| a.relative_path.cmp(&b.relative_path));
+    Ok(files)
+}
+
+fn collect_vault_migration_files_in_dir(
+    root: &Path,
+    relative_dir: &str,
+    kind: VaultMigrationFileKind,
+    out: &mut Vec<VaultMigrationFile>,
+) -> Result<(), String> {
+    let base_dir = resolve_note_path(root, relative_dir)?;
+    if !base_dir.exists() {
+        return Ok(());
+    }
+
+    fn walk(
+        root: &Path,
+        dir: &Path,
+        kind: VaultMigrationFileKind,
+        out: &mut Vec<VaultMigrationFile>,
+    ) -> Result<(), String> {
+        let entries = std::fs::read_dir(dir)
+            .map_err(|e| format!("Failed to list notes vault migration directory: {e}"))?;
+        for entry in entries {
+            let entry =
+                entry.map_err(|e| format!("Failed to read migration directory entry: {e}"))?;
+            let path = entry.path();
+            let file_type = entry
+                .file_type()
+                .map_err(|e| format!("Failed to inspect migration file type: {e}"))?;
+
+            if file_type.is_symlink() {
+                return Err(format!(
+                    "Notes vault migration does not support symlinks: {}",
+                    path.display()
+                ));
+            }
+
+            if file_type.is_dir() {
+                walk(root, &path, kind, out)?;
+                continue;
+            }
+
+            if file_type.is_file() {
+                let relative_path = path
+                    .strip_prefix(root)
+                    .map_err(|e| format!("Failed to compute migration file path: {e}"))?
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                out.push(VaultMigrationFile {
+                    source_abs: path,
+                    relative_path,
+                    kind,
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    walk(root, &base_dir, kind, out)
+}
+
+fn rollback_copied_migration_files(paths: &[PathBuf]) {
+    for path in paths.iter().rev() {
+        if let Err(error) = std::fs::remove_file(path) {
+            log::warn!(
+                "Failed to rollback copied notes vault migration file {}: {error}",
+                path.display()
+            );
+        }
+    }
+}
+
+fn migrate_notes_vault_contents(
+    source_root: &Path,
+    destination_root: &Path,
+    mode: NoteVaultMigrationMode,
+) -> Result<NoteVaultMigrationResult, String> {
+    if !source_root.is_absolute() {
+        return Err("Source notes vault path must be absolute".to_string());
+    }
+
+    if !destination_root.is_absolute() {
+        return Err("Destination notes vault path must be absolute".to_string());
+    }
+
+    if !source_root.is_dir() {
+        return Err("Source notes vault path is not a directory".to_string());
+    }
+
+    ensure_vault_structure(source_root)?;
+    ensure_vault_structure(destination_root)?;
+
+    let canonical_source = source_root
+        .canonicalize()
+        .map_err(|e| format!("Failed to inspect source notes vault: {e}"))?;
+    let canonical_destination = destination_root
+        .canonicalize()
+        .map_err(|e| format!("Failed to inspect destination notes vault: {e}"))?;
+
+    if canonical_source == canonical_destination {
+        return Err("Source and destination notes vaults must be different".to_string());
+    }
+
+    let files = collect_vault_migration_files(source_root)?;
+    let conflicts: Vec<String> = files
+        .iter()
+        .filter(|file| destination_root.join(&file.relative_path).exists())
+        .map(|file| file.relative_path.clone())
+        .collect();
+
+    if !conflicts.is_empty() {
+        return Err(format!(
+            "Notes vault migration has file conflicts: {}",
+            conflicts.join(", ")
+        ));
+    }
+
+    let notes_migrated = files
+        .iter()
+        .filter(|file| file.kind == VaultMigrationFileKind::Note)
+        .count() as u32;
+    let metadata_files_migrated = files
+        .iter()
+        .filter(|file| file.kind == VaultMigrationFileKind::Metadata)
+        .count() as u32;
+    let mut copied_paths = Vec::new();
+
+    for file in &files {
+        let destination_abs = destination_root.join(&file.relative_path);
+        if let Some(parent) = destination_abs.parent() {
+            if let Err(error) = std::fs::create_dir_all(parent) {
+                rollback_copied_migration_files(&copied_paths);
+                return Err(format!(
+                    "Failed to create migration destination folder: {error}"
+                ));
+            }
+        }
+
+        if let Err(error) = std::fs::copy(&file.source_abs, &destination_abs) {
+            rollback_copied_migration_files(&copied_paths);
+            return Err(format!(
+                "Failed to copy notes vault migration file {}: {error}",
+                file.relative_path
+            ));
+        }
+        copied_paths.push(destination_abs);
+    }
+
+    if mode == NoteVaultMigrationMode::Move {
+        for file in &files {
+            std::fs::remove_file(&file.source_abs).map_err(|e| {
+                format!(
+                    "Failed to remove source notes vault file after copy {}: {e}",
+                    file.relative_path
+                )
+            })?;
+        }
+    }
+
+    Ok(NoteVaultMigrationResult {
+        source_path: source_root.to_string_lossy().to_string(),
+        destination_path: destination_root.to_string_lossy().to_string(),
+        mode,
+        notes_migrated,
+        metadata_files_migrated,
+        conflicts: Vec::new(),
+    })
+}
+
 fn move_note_to_lifecycle_dir(
     root: &Path,
     id: &str,
@@ -967,6 +1191,26 @@ pub async fn reset_notes_vault_path(app: AppHandle) -> Result<NoteVaultInfo, Str
     preferences::save_preferences_to_disk(&app, &app_preferences)?;
 
     Ok(vault_info_from_path(&root, true))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn migrate_notes_vault(
+    app: AppHandle,
+    input: MigrateNotesVaultInput,
+) -> Result<NoteVaultMigrationResult, String> {
+    let source_path = input.source_path.trim();
+    if source_path.is_empty() {
+        return Err("Source notes vault path cannot be empty".to_string());
+    }
+
+    let source_root = PathBuf::from(source_path);
+    if !source_root.is_absolute() {
+        return Err("Source notes vault path must be absolute".to_string());
+    }
+
+    let destination_root = notes_root(&app)?;
+    migrate_notes_vault_contents(&source_root, &destination_root, input.mode)
 }
 
 #[tauri::command]
@@ -1354,6 +1598,154 @@ mod tests {
         assert!(!root.join("trash").join("plan.md").exists());
 
         std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn copy_notes_vault_contents_preserves_notes_and_metadata_without_removing_source() {
+        let source = test_vault_root("axis-notes-migration-copy-source-test");
+        let destination = test_vault_root("axis-notes-migration-copy-destination-test");
+        ensure_vault_structure(&source).expect("source vault should be created");
+        ensure_vault_structure(&destination).expect("destination vault should be created");
+        std::fs::create_dir_all(source.join("inbox").join("projects"))
+            .expect("nested source folder should be creatable");
+        std::fs::write(
+            source.join("inbox").join("projects").join("plan.md"),
+            "# Plan",
+        )
+        .expect("nested note should be writable");
+        std::fs::write(source.join("archive").join("old.md"), "# Old")
+            .expect("archived note should be writable");
+        std::fs::write(source.join("trash").join("removed.md"), "# Removed")
+            .expect("trashed note should be writable");
+        std::fs::create_dir_all(
+            source
+                .join(VAULT_METADATA_DIR)
+                .join(VAULT_SIDECARS_DIR)
+                .join("a"),
+        )
+        .expect("sidecar subfolder should be creatable");
+        std::fs::write(
+            source
+                .join(VAULT_METADATA_DIR)
+                .join(VAULT_SIDECARS_DIR)
+                .join("a")
+                .join("plan.json"),
+            "{}",
+        )
+        .expect("sidecar metadata should be writable");
+        std::fs::write(
+            source
+                .join(VAULT_METADATA_DIR)
+                .join(VAULT_CACHE_DIR)
+                .join("cache.json"),
+            "{}",
+        )
+        .expect("cache metadata should be writable");
+
+        let result =
+            migrate_notes_vault_contents(&source, &destination, NoteVaultMigrationMode::Copy)
+                .expect("vault contents should copy");
+
+        assert_eq!(result.notes_migrated, 3);
+        assert_eq!(result.metadata_files_migrated, 1);
+        assert_eq!(result.conflicts, Vec::<String>::new());
+        assert!(source
+            .join("inbox")
+            .join("projects")
+            .join("plan.md")
+            .is_file());
+        assert!(destination
+            .join("inbox")
+            .join("projects")
+            .join("plan.md")
+            .is_file());
+        assert!(destination.join("archive").join("old.md").is_file());
+        assert!(destination.join("trash").join("removed.md").is_file());
+        assert!(destination
+            .join(VAULT_METADATA_DIR)
+            .join(VAULT_SIDECARS_DIR)
+            .join("a")
+            .join("plan.json")
+            .is_file());
+        assert!(!destination
+            .join(VAULT_METADATA_DIR)
+            .join(VAULT_CACHE_DIR)
+            .join("cache.json")
+            .exists());
+
+        std::fs::remove_dir_all(source).expect("source vault should be removable");
+        std::fs::remove_dir_all(destination).expect("destination vault should be removable");
+    }
+
+    #[test]
+    fn move_notes_vault_contents_removes_source_files_after_copying() {
+        let source = test_vault_root("axis-notes-migration-move-source-test");
+        let destination = test_vault_root("axis-notes-migration-move-destination-test");
+        ensure_vault_structure(&source).expect("source vault should be created");
+        ensure_vault_structure(&destination).expect("destination vault should be created");
+        std::fs::write(source.join("inbox").join("move-me.md"), "# Move")
+            .expect("source note should be writable");
+        std::fs::write(
+            source
+                .join(VAULT_METADATA_DIR)
+                .join(VAULT_CONFIG_DIR)
+                .join("local.json"),
+            "{}",
+        )
+        .expect("config metadata should be writable");
+
+        let result =
+            migrate_notes_vault_contents(&source, &destination, NoteVaultMigrationMode::Move)
+                .expect("vault contents should move");
+
+        assert_eq!(result.notes_migrated, 1);
+        assert_eq!(result.metadata_files_migrated, 1);
+        assert!(!source.join("inbox").join("move-me.md").exists());
+        assert!(!source
+            .join(VAULT_METADATA_DIR)
+            .join(VAULT_CONFIG_DIR)
+            .join("local.json")
+            .exists());
+        assert!(destination.join("inbox").join("move-me.md").is_file());
+        assert!(destination
+            .join(VAULT_METADATA_DIR)
+            .join(VAULT_CONFIG_DIR)
+            .join("local.json")
+            .is_file());
+
+        std::fs::remove_dir_all(source).expect("source vault should be removable");
+        std::fs::remove_dir_all(destination).expect("destination vault should be removable");
+    }
+
+    #[test]
+    fn migrate_notes_vault_contents_rejects_conflicts_before_copying_any_file() {
+        let source = test_vault_root("axis-notes-migration-conflict-source-test");
+        let destination = test_vault_root("axis-notes-migration-conflict-destination-test");
+        ensure_vault_structure(&source).expect("source vault should be created");
+        ensure_vault_structure(&destination).expect("destination vault should be created");
+        std::fs::write(source.join("inbox").join("plan.md"), "# Source")
+            .expect("source note should be writable");
+        std::fs::write(source.join("archive").join("old.md"), "# Old")
+            .expect("source archived note should be writable");
+        std::fs::write(destination.join("inbox").join("plan.md"), "# Destination")
+            .expect("destination note should be writable");
+
+        let error =
+            migrate_notes_vault_contents(&source, &destination, NoteVaultMigrationMode::Copy)
+                .expect_err("conflicting migration should fail");
+
+        assert!(error.contains("file conflicts"));
+        assert!(error.contains("inbox/plan.md"));
+        assert_eq!(
+            std::fs::read_to_string(destination.join("inbox").join("plan.md"))
+                .expect("destination note should remain readable"),
+            "# Destination"
+        );
+        assert!(!destination.join("archive").join("old.md").exists());
+        assert!(source.join("inbox").join("plan.md").is_file());
+
+        std::fs::remove_dir_all(source).expect("source vault should be removable");
+        std::fs::remove_dir_all(destination).expect("destination vault should be removable");
     }
 
     #[test]

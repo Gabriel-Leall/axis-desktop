@@ -3,7 +3,12 @@ import { devtools } from 'zustand/middleware'
 import { commands, unwrapResult } from '@/lib/tauri-bindings'
 import { countWords, noteHasTag } from '@/lib/notes-domain'
 import { logger } from '@/lib/logger'
-import type { Note as BindingNote, NoteVaultInfo } from '@/lib/tauri-bindings'
+import type {
+  Note as BindingNote,
+  NoteVaultInfo,
+  NoteVaultMigrationMode,
+  NoteVaultMigrationResult,
+} from '@/lib/tauri-bindings'
 import type { Note } from '@/lib/notes-domain'
 
 export type NotesWorkspaceView = 'inbox' | 'archive' | 'trash'
@@ -11,6 +16,7 @@ export type NotesWorkspaceView = 'inbox' | 'archive' | 'trash'
 interface NotesState {
   vaultInfo: NoteVaultInfo | null
   vaultError: string | null
+  pendingMigrationSourcePath: string | null
   workspaceView: NotesWorkspaceView
   notes: Note[]
   searchResults: Note[] | null
@@ -27,6 +33,10 @@ interface NotesState {
   loadVaultInfo: () => Promise<NoteVaultInfo | null>
   setVaultPath: (path: string) => Promise<NoteVaultInfo>
   resetVaultPath: () => Promise<NoteVaultInfo>
+  migratePendingVault: (
+    mode: NoteVaultMigrationMode
+  ) => Promise<NoteVaultMigrationResult>
+  dismissPendingVaultMigration: () => void
   openVaultFolder: () => Promise<void>
   createNote: (content?: string) => Promise<string>
   updateNote: (id: string, content: string) => void
@@ -231,6 +241,7 @@ export const useNotesStore = create<NotesState>()(
     (set, get) => ({
       vaultInfo: null,
       vaultError: null,
+      pendingMigrationSourcePath: null,
       workspaceView: 'inbox',
       notes: [],
       searchResults: null,
@@ -375,6 +386,7 @@ export const useNotesStore = create<NotesState>()(
       setVaultPath: async path => {
         cancelPendingSearch()
         set({ isLoading: true }, undefined, 'setVaultPath/start')
+        const previousVaultPath = get().vaultInfo?.path ?? null
         let vaultChanged = false
         let nextVaultInfo: NoteVaultInfo | null = null
 
@@ -392,6 +404,10 @@ export const useNotesStore = create<NotesState>()(
           set(
             {
               ...resetWorkspaceForVault(vaultInfo, notes),
+              pendingMigrationSourcePath:
+                previousVaultPath && previousVaultPath !== vaultInfo.path
+                  ? previousVaultPath
+                  : null,
               isLoading: false,
             },
             undefined,
@@ -412,6 +428,12 @@ export const useNotesStore = create<NotesState>()(
                   searchResults: null,
                   selectedTag: null,
                   isSearching: false,
+                  pendingMigrationSourcePath:
+                    previousVaultPath &&
+                    nextVaultInfo &&
+                    previousVaultPath !== nextVaultInfo.path
+                      ? previousVaultPath
+                      : null,
                   isLoading: false,
                 }
               : {
@@ -428,6 +450,7 @@ export const useNotesStore = create<NotesState>()(
       resetVaultPath: async () => {
         cancelPendingSearch()
         set({ isLoading: true }, undefined, 'resetVaultPath/start')
+        const previousVaultPath = get().vaultInfo?.path ?? null
         let vaultChanged = false
         let nextVaultInfo: NoteVaultInfo | null = null
 
@@ -449,6 +472,10 @@ export const useNotesStore = create<NotesState>()(
           set(
             {
               ...resetWorkspaceForVault(vaultInfo, notes),
+              pendingMigrationSourcePath:
+                previousVaultPath && previousVaultPath !== vaultInfo.path
+                  ? previousVaultPath
+                  : null,
               isLoading: false,
             },
             undefined,
@@ -469,6 +496,12 @@ export const useNotesStore = create<NotesState>()(
                   searchResults: null,
                   selectedTag: null,
                   isSearching: false,
+                  pendingMigrationSourcePath:
+                    previousVaultPath &&
+                    nextVaultInfo &&
+                    previousVaultPath !== nextVaultInfo.path
+                      ? previousVaultPath
+                      : null,
                   isLoading: false,
                 }
               : {
@@ -481,6 +514,61 @@ export const useNotesStore = create<NotesState>()(
           throw error
         }
       },
+
+      migratePendingVault: async mode => {
+        const sourcePath = get().pendingMigrationSourcePath
+        if (!sourcePath) {
+          throw new Error('No pending notes vault migration source')
+        }
+
+        cancelPendingSearch()
+        set({ isLoading: true }, undefined, 'migratePendingVault/start')
+
+        try {
+          const result = unwrapResult(
+            await commands.migrateNotesVault({
+              source_path: sourcePath,
+              mode,
+            })
+          )
+          const [vaultResult, notes] = await Promise.all([
+            withTimeout(
+              commands.getNotesVaultInfo(),
+              VAULT_LOAD_TIMEOUT_MS,
+              'Timed out while loading notes vault info (Tauri IPC)'
+            ),
+            loadActiveNotes(),
+          ])
+          const vaultInfo = unwrapResult(vaultResult)
+
+          set(
+            {
+              ...resetWorkspaceForVault(vaultInfo, notes),
+              pendingMigrationSourcePath: null,
+              isLoading: false,
+            },
+            undefined,
+            'migratePendingVault/done'
+          )
+
+          return result
+        } catch (error) {
+          logger.error(`Failed to migrate notes vault: ${String(error)}`)
+          set(
+            { vaultError: String(error), isLoading: false },
+            undefined,
+            'migratePendingVault/error'
+          )
+          throw error
+        }
+      },
+
+      dismissPendingVaultMigration: () =>
+        set(
+          { pendingMigrationSourcePath: null },
+          undefined,
+          'dismissPendingVaultMigration'
+        ),
 
       openVaultFolder: async () => {
         try {

@@ -90,6 +90,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         notes::get_notes_vault_info,
         notes::set_notes_vault_path,
         notes::reset_notes_vault_path,
+        notes::migrate_notes_vault,
         notes::open_notes_vault_folder,
         // Analytics
         analytics::get_analytics_summary,
