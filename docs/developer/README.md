@@ -33,10 +33,11 @@ Technical documentation for building and extending this app. These docs describe
 
 ## Data & Storage
 
-| Document                                  | Description                                  |
-| ----------------------------------------- | -------------------------------------------- |
-| [Data Persistence](./data-persistence.md) | File storage patterns, atomic writes, SQLite |
-| [External APIs](./external-apis.md)       | HTTP API calls, authentication, caching      |
+| Document                                      | Description                                  |
+| --------------------------------------------- | -------------------------------------------- |
+| [Data Persistence](./data-persistence.md)     | File storage patterns, atomic writes, SQLite |
+| [Notes Architecture](./notes-architecture.md) | Local notes vault, lifecycle, UI boundaries  |
+| [External APIs](./external-apis.md)           | HTTP API calls, authentication, caching      |
 
 ## Quality & Tooling
 
