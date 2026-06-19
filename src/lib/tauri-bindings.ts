@@ -59,6 +59,8 @@ export type {
   CreateNoteInput,
   UpdateNoteInput,
   NoteVaultInfo,
+  NoteVaultMigrationMode,
+  NoteVaultMigrationResult,
 } from './bindings'
 
 // OAuth domain

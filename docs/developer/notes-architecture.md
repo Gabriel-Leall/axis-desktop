@@ -34,6 +34,11 @@ new path, creates any missing vault directories, persists the active path in
 `preferences.json` as `notes_vault_path`, and keeps existing notes in the old
 vault. Changing the vault path is a switch, not a migration.
 
+After a successful vault switch, the frontend may offer an explicit migration
+prompt for the previous vault path. The default safe action is copy. Move is a
+separate user action and must never happen as part of changing the active vault
+path.
+
 If `notes_vault_path` is not set, Axis resolves the active vault to the default
 `Documents/Axis Notes` path.
 
@@ -99,6 +104,21 @@ Permanent delete:
 - Add it only with explicit UX, retention, undo/recovery expectations, tests,
   and documentation.
 
+Vault migration:
+
+- `migrate_notes_vault` copies or moves notes from a source vault into the
+  active vault.
+- The destination is always the currently active vault resolved by the backend.
+- The source must be an absolute local path and must differ from the active
+  vault.
+- File conflicts are detected before any copy or move starts.
+- The migration preserves `inbox/`, `archive/`, `trash/`, and applicable
+  `.axis-notes/sidecars/` and `.axis-notes/config/` files.
+- `.axis-notes/cache/` and `.axis-notes/manifest.json` are not migrated because
+  the cache is rebuildable and the destination vault owns its own manifest.
+- In move mode, source files are removed only after all files have been copied
+  to the destination.
+
 ## Backend Responsibilities
 
 The Rust notes command layer owns the durable contract:
@@ -109,6 +129,8 @@ The Rust notes command layer owns the durable contract:
 - Prevent path traversal or filesystem escapes from the active vault.
 - Read active, archived, and trashed notes from their physical directories.
 - Move notes between lifecycle directories.
+- Copy or move notes from a previous local vault into the active local vault
+  only through the explicit migration command.
 - Open the active vault folder through the operating system.
 - Expose typed command results through generated Tauri bindings.
 
@@ -138,6 +160,11 @@ Important store entrypoints:
   active selection.
 - `setVaultPath()` and `resetVaultPath()` change the active vault through typed
   backend commands.
+- `pendingMigrationSourcePath` remembers the previous vault path after a
+  successful switch so the UI can offer explicit copy/move actions without
+  automatically migrating data.
+- `migratePendingVault()` runs the explicit migration command, reloads active
+  notes, and clears the pending migration prompt only after success.
 - `createNote()`, `updateNote()`, `archiveNote()`, `deleteNote()`, and
   `restoreNote()` wrap the backend lifecycle commands.
 
@@ -170,6 +197,8 @@ Preferences notes pane:
 - Shows the active vault path.
 - Lets the user choose a different local folder.
 - Lets the user reset to the default Axis vault path.
+- Offers explicit copy/move actions from the previous vault after a successful
+  vault switch.
 - Lets the user open the active vault folder.
 - Surfaces validation errors and keeps the previous valid vault when a new path
   is invalid.
@@ -190,6 +219,8 @@ Axis currently assumes the vault is local and user-visible. That means:
 - There is no mobile or web access contract for notes.
 - Import/export from Obsidian or Notion is a future product decision, not part
   of this vault contract.
+- Moving or copying between local Axis vaults is local-only and does not create
+  a remote source of truth.
 
 Future work that changes these assumptions should update this document before
 or alongside implementation.
@@ -201,6 +232,8 @@ or alongside implementation.
   `.axis-notes/`.
 - Treat archive and trash as lifecycle directories, not arbitrary folders.
 - Flush pending editor saves before moving or switching vaults.
+- Do not migrate notes automatically when changing the active vault path.
+- Detect migration conflicts before copying or moving any file.
 - Use typed generated commands from `@/lib/tauri-bindings`.
 - Add tests for filesystem lifecycle rules in Rust and store behavior in
   TypeScript when changing note lifecycle behavior.
