@@ -204,8 +204,7 @@ export function NotesPane() {
             )}
 
             {pendingMigrationSourcePath && (
-              <div
-                role="region"
+              <section
                 aria-labelledby="notes-vault-migration-title"
                 className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-3"
               >
@@ -256,7 +255,7 @@ export function NotesPane() {
                     {t('preferences.notes.vault.migration.move')}
                   </Button>
                 </div>
-              </div>
+              </section>
             )}
 
             <div className="flex flex-wrap gap-2">
