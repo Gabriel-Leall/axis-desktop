@@ -18,8 +18,10 @@ Preferences, and the Rust vault commands.
 The default vault is created automatically on first use at:
 
 ```text
-Documents/Axis Notes/
+Documents/Axis_Notes/
 +-- inbox/
++   +-- Comece aqui/
++       +-- Bem-vindo ao Axis.md
 +-- archive/
 +-- trash/
 +-- .axis-notes/
@@ -40,7 +42,10 @@ separate user action and must never happen as part of changing the active vault
 path.
 
 If `notes_vault_path` is not set, Axis resolves the active vault to the default
-`Documents/Axis Notes` path.
+`Documents/Axis_Notes` path.
+
+Only a newly created default vault receives the welcome note. An existing vault
+is never populated or modified merely by being opened.
 
 ## Vault Directory Contract
 
@@ -60,8 +65,9 @@ Current top-level directories:
 
 Current metadata directories:
 
-- `.axis-notes/manifest.json` records internal vault metadata schema and is
-  preserved after creation.
+- `.axis-notes/manifest.json` records internal vault metadata schema, the
+  stable UUID for each Markdown path, and the welcome-note ID. It is preserved
+  after creation and is the authority for note IDs when files move or rename.
 - `.axis-notes/sidecars/` is reserved for per-note structured metadata.
 - `.axis-notes/cache/` is reserved for derived, rebuildable data.
 - `.axis-notes/config/` is reserved for vault-scoped settings.
@@ -82,6 +88,8 @@ Update and rename:
 
 - `update_note` changes Markdown file content.
 - `rename_note` changes the note file path while preserving the note data.
+- Note IDs remain stable UUIDs when a file is renamed or moved between lifecycle
+  directories. The Markdown path is a property of the note, not its identity.
 
 Archive:
 
@@ -116,6 +124,9 @@ Vault migration:
   `.axis-notes/sidecars/` and `.axis-notes/config/` files.
 - `.axis-notes/cache/` and `.axis-notes/manifest.json` are not migrated because
   the cache is rebuildable and the destination vault owns its own manifest.
+- Manifest-owned UUID mappings for migrated notes are copied into the
+  destination manifest, so note identity and future sidecar references survive
+  a local vault migration.
 - In move mode, source files are removed only after all files have been copied
   to the destination.
 
@@ -127,7 +138,8 @@ The Rust notes command layer owns the durable contract:
 - Create and validate the vault structure.
 - Keep `.axis-notes/` reserved for Axis metadata.
 - Prevent path traversal or filesystem escapes from the active vault.
-- Read active, archived, and trashed notes from their physical directories.
+- Read active, archived, and trashed notes as recursive physical trees from
+  their respective directories.
 - Move notes between lifecycle directories.
 - Copy or move notes from a previous local vault into the active local vault
   only through the explicit migration command.
@@ -145,15 +157,16 @@ The store owns:
 
 - `vaultInfo` and `vaultError` for the active local vault state.
 - `workspaceView`, currently `inbox`, `archive`, or `trash`.
-- Active note lists, search results, selected note, selected tag, and loading
-  flags.
+- The recursive workspace tree, its flattened notes for editor/search behavior,
+  search results, selected note, selected tag, and loading flags.
 - Debounced save flushing before lifecycle moves or vault switches.
 - Optimistic remove and rollback for archive/delete.
 - Resetting selection and filters when the active vault changes.
 
 Important store entrypoints:
 
-- `loadNotes()` loads vault info and notes for the current workspace.
+- `loadNotes()` loads vault info and a recursive physical tree for the current
+  workspace.
 - `loadWidgetNotes()` is the dashboard/widget entrypoint and forces the inbox
   workspace.
 - `setWorkspaceView()` changes between inbox, archive, and trash, clearing the
@@ -231,6 +244,9 @@ or alongside implementation.
 - Keep user Markdown in note files and Axis-owned structured metadata under
   `.axis-notes/`.
 - Treat archive and trash as lifecycle directories, not arbitrary folders.
+- Render folders from the backend tree instead of deriving artificial date
+  groups. Filtered search results may use a flat list so matching notes are not
+  hidden by collapsed folders.
 - Flush pending editor saves before moving or switching vaults.
 - Do not migrate notes automatically when changing the active vault path.
 - Detect migration conflicts before copying or moving any file.

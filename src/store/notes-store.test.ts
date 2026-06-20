@@ -5,6 +5,7 @@ import { useNotesStore } from './notes-store'
 vi.mock('@/lib/tauri-bindings', () => ({
   commands: {
     getNotes: vi.fn(),
+    getNotesWorkspaceTree: vi.fn(),
     getArchivedNotes: vi.fn(),
     getTrashedNotes: vi.fn(),
     getNotesVaultInfo: vi.fn(),
@@ -174,6 +175,65 @@ describe('useNotesStore lifecycle actions', () => {
         },
       ],
     })
+    vi.mocked(commands.getNotesWorkspaceTree).mockImplementation(
+      async workspace => {
+        const note =
+          workspace === 'archive'
+            ? {
+                id: 'archive/archived.md',
+                path: 'archive/archived.md',
+                title: 'Archived',
+                content: '# Archived\n\n#work Cold storage',
+                created_at: '2026-06-14T09:00:00.000Z',
+                updated_at: '2026-06-14T09:00:00.000Z',
+                word_count: 4,
+                tags: ['work'],
+                wiki_links: [],
+                has_attachments: false,
+                excerpt: 'Cold storage',
+              }
+            : workspace === 'trash'
+              ? {
+                  id: 'trash/trashed.md',
+                  path: 'trash/trashed.md',
+                  title: 'Trashed',
+                  content: '# Trashed\n\n#draft Removed note',
+                  created_at: '2026-06-13T09:00:00.000Z',
+                  updated_at: '2026-06-13T09:00:00.000Z',
+                  word_count: 4,
+                  tags: ['draft'],
+                  wiki_links: [],
+                  has_attachments: false,
+                  excerpt: 'Removed note',
+                }
+              : {
+                  id: 'plan-id',
+                  path: 'inbox/projects/plan.md',
+                  title: 'Plan',
+                  content: '# Plan',
+                  created_at: '2026-06-15T09:00:00.000Z',
+                  updated_at: '2026-06-15T09:00:00.000Z',
+                  word_count: 1,
+                  tags: [],
+                  wiki_links: [],
+                  has_attachments: false,
+                  excerpt: 'Plan',
+                }
+
+        return {
+          status: 'ok' as const,
+          data: {
+            workspace,
+            items: [
+              {
+                kind: 'note' as const,
+                note,
+              },
+            ],
+          },
+        }
+      }
+    )
     vi.mocked(commands.getArchivedNotes).mockResolvedValue({
       status: 'ok',
       data: [
@@ -214,6 +274,7 @@ describe('useNotesStore lifecycle actions', () => {
       vaultInfo: null,
       vaultError: null,
       pendingMigrationSourcePath: null,
+      tree: null,
       notes: [
         {
           id: 'inbox/alpha.md',
@@ -245,16 +306,38 @@ describe('useNotesStore lifecycle actions', () => {
     await useNotesStore.getState().loadNotes()
 
     expect(commands.getNotesVaultInfo).toHaveBeenCalled()
-    expect(commands.getNotes).toHaveBeenCalled()
+    expect(commands.getNotesWorkspaceTree).toHaveBeenCalledWith('inbox')
     expect(useNotesStore.getState().vaultInfo).toEqual({
       path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
       is_default: true,
     })
     expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
-      'inbox/loaded.md',
+      'plan-id',
     ])
-    expect(useNotesStore.getState().selectedNoteId).toBe('inbox/loaded.md')
+    expect(useNotesStore.getState().selectedNoteId).toBe('plan-id')
     expect(useNotesStore.getState().vaultError).toBeNull()
+  })
+
+  it('loads a physical workspace tree while preserving a stable selection', async () => {
+    useNotesStore.setState({
+      selectedNoteId: 'plan-id',
+      notes: [],
+    })
+
+    await useNotesStore.getState().loadNotes()
+
+    expect(commands.getNotesWorkspaceTree).toHaveBeenCalledWith('inbox')
+    expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
+      'plan-id',
+    ])
+    expect(useNotesStore.getState().selectedNoteId).toBe('plan-id')
+    expect(
+      (
+        useNotesStore.getState() as unknown as {
+          tree?: { workspace: string }
+        }
+      ).tree?.workspace
+    ).toBe('inbox')
   })
 
   it('switches to the archived workspace without resetting active filters', async () => {
@@ -266,7 +349,7 @@ describe('useNotesStore lifecycle actions', () => {
 
     await useNotesStore.getState().setWorkspaceView('archive')
 
-    expect(commands.getArchivedNotes).toHaveBeenCalled()
+    expect(commands.getNotesWorkspaceTree).toHaveBeenCalledWith('archive')
     expect(commands.searchNotes).not.toHaveBeenCalled()
     expect(useNotesStore.getState().workspaceView).toBe('archive')
     expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
@@ -291,7 +374,7 @@ describe('useNotesStore lifecycle actions', () => {
 
     await useNotesStore.getState().setWorkspaceView('trash')
 
-    expect(commands.getTrashedNotes).toHaveBeenCalled()
+    expect(commands.getNotesWorkspaceTree).toHaveBeenCalledWith('trash')
     expect(commands.searchNotes).not.toHaveBeenCalled()
     expect(useNotesStore.getState().workspaceView).toBe('trash')
     expect(
@@ -303,23 +386,29 @@ describe('useNotesStore lifecycle actions', () => {
   })
 
   it('scopes local workspace search across title tags and wiki links', async () => {
-    vi.mocked(commands.getArchivedNotes).mockResolvedValue({
+    vi.mocked(commands.getNotesWorkspaceTree).mockResolvedValueOnce({
       status: 'ok',
-      data: [
-        {
-          id: 'archive/metadata.md',
-          path: 'archive/metadata.md',
-          title: 'Metadata Only Match',
-          content: 'Body without the query',
-          created_at: '2026-06-14T09:00:00.000Z',
-          updated_at: '2026-06-14T09:00:00.000Z',
-          word_count: 4,
-          tags: ['reviewtag'],
-          wiki_links: ['reviewlink'],
-          has_attachments: false,
-          excerpt: 'Body without the query',
-        },
-      ],
+      data: {
+        workspace: 'archive',
+        items: [
+          {
+            kind: 'note',
+            note: {
+              id: 'archive/metadata.md',
+              path: 'archive/metadata.md',
+              title: 'Metadata Only Match',
+              content: 'Body without the query',
+              created_at: '2026-06-14T09:00:00.000Z',
+              updated_at: '2026-06-14T09:00:00.000Z',
+              word_count: 4,
+              tags: ['reviewtag'],
+              wiki_links: ['reviewlink'],
+              has_attachments: false,
+              excerpt: 'Body without the query',
+            },
+          },
+        ],
+      },
     })
 
     useNotesStore.setState({ searchQuery: 'reviewlink' })
@@ -361,13 +450,37 @@ describe('useNotesStore lifecycle actions', () => {
     const createdId = await useNotesStore.getState().createNote('# New')
 
     expect(createdId).toBe('inbox/new.md')
-    expect(commands.getNotes).toHaveBeenCalled()
+    expect(commands.getNotesWorkspaceTree).toHaveBeenCalledWith('inbox')
     expect(useNotesStore.getState().workspaceView).toBe('inbox')
     expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
       'inbox/new.md',
-      'inbox/loaded.md',
+      'plan-id',
     ])
     expect(useNotesStore.getState().selectedNoteId).toBe('inbox/new.md')
+  })
+
+  it('adds a newly created inbox note to the physical tree', async () => {
+    useNotesStore.setState({
+      workspaceView: 'inbox',
+      tree: {
+        workspace: 'inbox',
+        items: [
+          {
+            kind: 'folder',
+            path: 'inbox/projects',
+            name: 'Projects',
+            children: [],
+          },
+        ],
+      },
+    })
+
+    await useNotesStore.getState().createNote('# New')
+
+    expect(useNotesStore.getState().tree?.items[0]).toEqual({
+      kind: 'note',
+      note: expect.objectContaining({ id: 'inbox/new.md' }),
+    })
   })
 
   it('loads widget notes from the active vault inbox even when a lifecycle workspace is active', async () => {
@@ -454,16 +567,22 @@ describe('useNotesStore lifecycle actions', () => {
       .setVaultPath('D:\\Axis Vault')
 
     expect(commands.setNotesVaultPath).toHaveBeenCalledWith('D:\\Axis Vault')
-    expect(commands.getNotes).toHaveBeenCalled()
+    expect(commands.getNotesWorkspaceTree).toHaveBeenCalledWith('inbox')
     expect(vaultInfo).toEqual({
       path: 'D:\\Axis Vault',
       is_default: false,
     })
     expect(useNotesStore.getState().vaultInfo).toEqual(vaultInfo)
     expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
-      'inbox/loaded.md',
+      'plan-id',
     ])
-    expect(useNotesStore.getState().selectedNoteId).toBe('inbox/loaded.md')
+    expect(useNotesStore.getState().tree?.items).toEqual([
+      {
+        kind: 'note',
+        note: expect.objectContaining({ id: 'plan-id' }),
+      },
+    ])
+    expect(useNotesStore.getState().selectedNoteId).toBe('plan-id')
     expect(useNotesStore.getState().searchQuery).toBe('')
     expect(useNotesStore.getState().searchResults).toBeNull()
     expect(useNotesStore.getState().selectedTag).toBeNull()
@@ -505,10 +624,10 @@ describe('useNotesStore lifecycle actions', () => {
       mode: 'copy',
     })
     expect(result.notes_migrated).toBe(2)
-    expect(commands.getNotes).toHaveBeenCalled()
+    expect(commands.getNotesWorkspaceTree).toHaveBeenCalledWith('inbox')
     expect(useNotesStore.getState().pendingMigrationSourcePath).toBeNull()
     expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
-      'inbox/loaded.md',
+      'plan-id',
     ])
     expect(useNotesStore.getState().searchQuery).toBe('')
     expect(useNotesStore.getState().selectedTag).toBeNull()
@@ -607,10 +726,10 @@ describe('useNotesStore lifecycle actions', () => {
     }
   })
 
-  it('keeps the new vault info when notes reload fails after switching vaults', async () => {
-    vi.mocked(commands.getNotes).mockResolvedValue({
+  it('keeps the new vault info when tree reload fails after switching vaults', async () => {
+    vi.mocked(commands.getNotesWorkspaceTree).mockResolvedValue({
       status: 'error',
-      error: 'notes reload failed',
+      error: 'workspace tree reload failed',
     })
     useNotesStore.setState({
       vaultInfo: {
@@ -621,7 +740,7 @@ describe('useNotesStore lifecycle actions', () => {
 
     await expect(
       useNotesStore.getState().setVaultPath('D:\\Axis Vault')
-    ).rejects.toThrow('notes reload failed')
+    ).rejects.toThrow('workspace tree reload failed')
 
     expect(useNotesStore.getState().vaultInfo).toEqual({
       path: 'D:\\Axis Vault',
@@ -634,10 +753,10 @@ describe('useNotesStore lifecycle actions', () => {
     )
   })
 
-  it('times out stalled notes reloads after switching vaults', async () => {
+  it('times out stalled tree reloads after switching vaults', async () => {
     vi.useFakeTimers()
     try {
-      vi.mocked(commands.getNotes).mockReturnValue(
+      vi.mocked(commands.getNotesWorkspaceTree).mockReturnValue(
         new Promise(() => {
           // Intentionally never resolves to exercise the timeout branch.
         })
@@ -658,7 +777,9 @@ describe('useNotesStore lifecycle actions', () => {
 
       await vi.advanceTimersByTimeAsync(10_001)
 
-      await expect(outcome).resolves.toContain('Timed out while loading notes')
+      await expect(outcome).resolves.toContain(
+        'Timed out while loading notes workspace tree'
+      )
       expect(useNotesStore.getState().isLoading).toBe(false)
     } finally {
       vi.useRealTimers()
@@ -682,14 +803,14 @@ describe('useNotesStore lifecycle actions', () => {
     const vaultInfo = await useNotesStore.getState().resetVaultPath()
 
     expect(commands.resetNotesVaultPath).toHaveBeenCalled()
-    expect(commands.getNotes).toHaveBeenCalled()
+    expect(commands.getNotesWorkspaceTree).toHaveBeenCalledWith('inbox')
     expect(vaultInfo).toEqual({
       path: 'C:\\Users\\Gabriel\\Documents\\Axis Notes',
       is_default: true,
     })
     expect(useNotesStore.getState().vaultInfo).toEqual(vaultInfo)
     expect(useNotesStore.getState().notes.map(note => note.id)).toEqual([
-      'inbox/loaded.md',
+      'plan-id',
     ])
   })
 
@@ -704,6 +825,38 @@ describe('useNotesStore lifecycle actions', () => {
       'inbox/beta.md',
     ])
     expect(useNotesStore.getState().selectedNoteId).toBe('inbox/beta.md')
+  })
+
+  it('removes a moved note from the physical tree and prunes its empty folder', async () => {
+    useNotesStore.setState({
+      tree: {
+        workspace: 'inbox',
+        items: [
+          {
+            kind: 'folder',
+            path: 'inbox/projects',
+            name: 'Projects',
+            children: [
+              {
+                kind: 'note',
+                note: {
+                  id: 'inbox/alpha.md',
+                  path: 'inbox/projects/alpha.md',
+                  content: '# Alpha',
+                  created_at: '2026-06-15T10:00:00.000Z',
+                  updated_at: '2026-06-15T10:00:00.000Z',
+                  word_count: 2,
+                },
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    await useNotesStore.getState().deleteNote('inbox/alpha.md')
+
+    expect(useNotesStore.getState().tree?.items).toEqual([])
   })
 
   it('flushes pending edits before moving a note to trash', async () => {
@@ -802,6 +955,24 @@ describe('useNotesStore lifecycle actions', () => {
     expect(useNotesStore.getState().searchResults).toBeNull()
     expect(useNotesStore.getState().selectedTag).toBe('work')
     expect(useNotesStore.getState().isSearching).toBe(false)
+  })
+
+  it('adds a restored inbox note to the physical tree', async () => {
+    useNotesStore.setState({
+      tree: {
+        workspace: 'inbox',
+        items: [],
+      },
+    })
+
+    await useNotesStore.getState().restoreNote('trash/restored.md')
+
+    expect(useNotesStore.getState().tree?.items).toEqual([
+      {
+        kind: 'note',
+        note: expect.objectContaining({ id: 'inbox/restored.md' }),
+      },
+    ])
   })
 
   it('cancels pending search debounce when restoring a note without clearing filters', async () => {

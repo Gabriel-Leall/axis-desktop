@@ -8,9 +8,10 @@ import {
   Plus,
   Search,
   Tag,
+  FileText,
+  Folder,
   ChevronDown,
   ChevronRight,
-  ArrowLeft,
   MoreHorizontal,
   Trash2,
   Archive,
@@ -21,32 +22,34 @@ import {
   Copy,
   FolderOpen,
   X,
+  Eye,
+  Columns2,
+  PencilLine,
 } from 'lucide-react'
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
 import { toast } from 'sonner'
 import { useNotesStore } from '@/store/notes-store'
+import { NotesExplorerTree } from '@/components/notes/NotesExplorerTree'
 import type { NotesWorkspaceView } from '@/store/notes-store'
 import {
   getNoteTitle,
-  getNotePreview,
-  estimateReadTime,
   relativeDate,
   groupNotesByDate,
   countTags,
-  extractNoteTags,
   countWords,
 } from '@/lib/notes-domain'
 import { cn } from '@/lib/utils'
 import { logger } from '@/lib/logger'
-import { useUIStore } from '@/store/ui-store'
-import type { Note } from '@/lib/notes-domain'
+import type { Note, NoteWorkspaceTree } from '@/lib/notes-domain'
 
 import '@toast-ui/editor/dist/toastui-editor.css'
 
 interface NotesPageProps {
   initialSelectedNoteId?: string
 }
+
+type NotesEditorMode = 'edit' | 'preview' | 'split'
 
 function parseNoteContent(content: string): { title: string; body: string } {
   if (!content) {
@@ -109,12 +112,6 @@ const WORKSPACE_LABEL_KEYS: Record<NotesWorkspaceView, string> = {
   trash: 'notes.workspace.trash',
 }
 
-const WORKSPACE_DESCRIPTION_KEYS: Record<NotesWorkspaceView, string> = {
-  inbox: 'notes.workspace.inboxDescription',
-  archive: 'notes.workspace.archiveDescription',
-  trash: 'notes.workspace.trashDescription',
-}
-
 const WORKSPACE_OPTIONS: {
   view: NotesWorkspaceView
   icon: typeof Inbox
@@ -124,9 +121,36 @@ const WORKSPACE_OPTIONS: {
   { view: 'trash', icon: Trash2 },
 ]
 
+const EDITOR_MODE_OPTIONS: {
+  mode: NotesEditorMode
+  labelKey: string
+  ariaKey: string
+  icon: typeof PencilLine
+}[] = [
+  {
+    mode: 'edit',
+    labelKey: 'notes.editor.mode.edit',
+    ariaKey: 'notes.editor.mode.editAria',
+    icon: PencilLine,
+  },
+  {
+    mode: 'preview',
+    labelKey: 'notes.editor.mode.preview',
+    ariaKey: 'notes.editor.mode.previewAria',
+    icon: Eye,
+  },
+  {
+    mode: 'split',
+    labelKey: 'notes.editor.mode.split',
+    ariaKey: 'notes.editor.mode.splitAria',
+    icon: Columns2,
+  },
+]
+
 interface SidebarProps {
   allNotes: Note[]
   notes: Note[]
+  tree: NoteWorkspaceTree | null
   selectedNoteId: string | null
   workspaceView: NotesWorkspaceView
   searchQuery: string
@@ -149,11 +173,8 @@ function WorkspaceSwitcher({
   const { t } = useTranslation()
 
   return (
-    <div className="px-2 pb-2.5">
-      <div className="mb-1.5 px-1 font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
-        {t('notes.sidebar.vaultWorkspace')}
-      </div>
-      <div className="space-y-1">
+    <div className="px-2 pb-2">
+      <div className="space-y-0.5">
         {WORKSPACE_OPTIONS.map(option => {
           const Icon = option.icon
           const isActive = workspaceView === option.view
@@ -172,21 +193,19 @@ function WorkspaceSwitcher({
                 }
               }}
               className={cn(
-                'flex w-full items-start gap-2 rounded-md border px-2 py-2 text-start transition-colors',
+                'notes-explorer-row notes-paper-nav-item flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-start transition-colors',
                 isActive
-                  ? 'border-border bg-accent text-accent-foreground'
-                  : 'border-transparent text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
+                  ? 'is-active border-border text-accent-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               )}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon className="mt-0.5 size-3.5 shrink-0" />
-              <span className="min-w-0">
-                <span className="block text-xs font-medium">
-                  {t(WORKSPACE_LABEL_KEYS[option.view])}
-                </span>
-                <span className="block truncate text-[10px] text-muted-foreground/75">
-                  {t(WORKSPACE_DESCRIPTION_KEYS[option.view])}
-                </span>
+              <Icon className="size-3.5 shrink-0" />
+              <span className="min-w-0 flex-1 truncate text-xs">
+                {t(WORKSPACE_LABEL_KEYS[option.view])}
+              </span>
+              <span className="text-[10px] text-muted-foreground/70">
+                {option.view === 'inbox' ? '·' : ''}
               </span>
             </button>
           )
@@ -208,7 +227,7 @@ function SidebarSearch({
 
   return (
     <div className="px-2 pb-2.5">
-      <div className="flex items-center gap-1.5 rounded-md bg-muted/50 border border-border/50 px-2 py-1.5 focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
+      <div className="notes-paper-input flex items-center gap-1.5 rounded-lg border px-2 py-1.5 focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
         <Search className="size-3 shrink-0 text-muted-foreground" />
         <input
           type="text"
@@ -222,51 +241,13 @@ function SidebarSearch({
           <button
             type="button"
             onClick={() => onSearchChange('')}
-            className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+            className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
             aria-label={t('notes.sidebar.clearSearch')}
           >
             <X className="size-3" />
           </button>
         )}
       </div>
-    </div>
-  )
-}
-
-function AllWorkspaceNotesButton({
-  count,
-  selectedTag,
-  workspaceLabel,
-  onSelectTag,
-}: {
-  count: number
-  selectedTag: string | null
-  workspaceLabel: string
-  onSelectTag: (tag: string | null) => void
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <div className="px-2 pb-2">
-      <button
-        type="button"
-        onClick={() => onSelectTag(null)}
-        className={cn(
-          'flex w-full items-center justify-between rounded-md border px-2 py-1.5 text-xs transition-colors',
-          selectedTag
-            ? 'border-transparent text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground'
-            : 'border-border bg-accent text-accent-foreground'
-        )}
-      >
-        <span>
-          {t('notes.sidebar.allNotesInWorkspace', {
-            workspace: workspaceLabel,
-          })}
-        </span>
-        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-          {count}
-        </span>
-      </button>
     </div>
   )
 }
@@ -288,11 +269,11 @@ function TagsSection({
   const hasHiddenTags = tagCounts.length > 8
 
   return (
-    <div className="px-2 pb-2.5">
+    <div className="border-t border-border/50 px-2 pt-2">
       <button
         type="button"
         onClick={() => setTagsCollapsed(prev => !prev)}
-        className="flex w-full items-center justify-between rounded-md px-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground transition-colors hover:bg-accent/50 hover:text-accent-foreground"
+        className="flex w-full items-center justify-between rounded-md px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:bg-background/55 hover:text-foreground"
       >
         <span className="inline-flex items-center gap-1.5">
           <Tag className="size-3" />
@@ -306,14 +287,14 @@ function TagsSection({
       </button>
 
       {!tagsCollapsed && (
-        <div className="mt-1.5">
+        <div className="mt-1">
           {tagCounts.length === 0 ? (
-            <p className="px-2 text-[11px] text-muted-foreground">
+            <p className="px-2 py-1 text-[11px] text-muted-foreground">
               {t('notes.sidebar.tagsEmpty')}
             </p>
           ) : (
             <>
-              <div className="flex flex-wrap gap-1.5 px-1">
+              <div className="space-y-0.5">
                 {visibleTags.map(({ tag, count }) => {
                   const isSelectedTag = selectedTag === tag
                   return (
@@ -322,14 +303,17 @@ function TagsSection({
                       type="button"
                       onClick={() => onSelectTag(isSelectedTag ? null : tag)}
                       className={cn(
-                        'inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] transition-colors',
+                        'notes-explorer-row flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-xs transition-colors',
                         isSelectedTag
-                          ? 'border-border bg-accent text-accent-foreground'
-                          : 'border-border/50 bg-background/50 text-muted-foreground hover:border-border hover:bg-accent/50 hover:text-accent-foreground'
+                          ? 'bg-accent/80 text-accent-foreground'
+                          : 'text-muted-foreground hover:bg-background/70 hover:text-foreground'
                       )}
                     >
-                      <span>#{tag}</span>
-                      <span className="text-muted-foreground/70">{count}</span>
+                      <Tag className="size-3 shrink-0" />
+                      <span className="min-w-0 flex-1 truncate">#{tag}</span>
+                      <span className="text-[10px] text-muted-foreground/70">
+                        {count}
+                      </span>
                     </button>
                   )
                 })}
@@ -374,10 +358,9 @@ function SidebarEmptyState({
 
   if (!hasActiveFilters) {
     return (
-      <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+      <div className="notes-explorer-empty px-3 py-4 text-xs text-muted-foreground">
         {t(`notes.empty.${workspaceView}`)}
-        <br />
-        <span className="text-muted-foreground/70">
+        <span className="mt-1 block text-muted-foreground/70">
           {workspaceView === 'inbox'
             ? t('notes.empty.hint')
             : t('notes.empty.lifecycleHint')}
@@ -387,7 +370,7 @@ function SidebarEmptyState({
   }
 
   return (
-    <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+    <div className="notes-explorer-empty px-3 py-4 text-xs text-muted-foreground">
       <p>
         {hasSearch && selectedTag
           ? t('notes.empty.searchAndTagInWorkspace', {
@@ -432,13 +415,15 @@ function NotesList({
     <>
       {grouped.map(group => (
         <div key={group.label} className="mb-2">
-          <div className="px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
-            {t(GROUP_LABEL_KEYS[group.label] ?? 'notes.groups.older')}
+          <div className="notes-explorer-group flex items-center gap-1.5 px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground/75">
+            <ChevronDown className="size-3" />
+            <Folder className="size-3" />
+            <span>
+              {t(GROUP_LABEL_KEYS[group.label] ?? 'notes.groups.older')}
+            </span>
           </div>
           {group.notes.map(note => {
             const title = getNoteTitle(note.content)
-            const preview = getNotePreview(note.content)
-            const tags = extractNoteTags(note.content).slice(0, 2)
             const isSelected = note.id === selectedNoteId
 
             return (
@@ -447,35 +432,19 @@ function NotesList({
                 type="button"
                 onClick={() => onSelectNote(note.id)}
                 className={cn(
-                  'w-full rounded-md px-2.5 py-2 text-start transition-colors',
+                  'notes-explorer-note notes-paper-note-row flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-start transition-colors',
                   isSelected
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                    ? 'is-selected text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <div className="truncate text-sm font-medium">{title}</div>
-                {preview && (
-                  <div className="mt-0.5 truncate text-xs text-muted-foreground/80">
-                    {preview}
-                  </div>
-                )}
-                <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
-                  <span>{relativeDate(note.updated_at)}</span>
-                  <span>·</span>
-                  <span>{estimateReadTime(note.content)}</span>
-                </div>
-                {tags.length > 0 && (
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    {tags.map(tag => (
-                      <span
-                        key={`${note.id}-${tag}`}
-                        className="rounded-full border border-border/50 bg-background/50 px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <FileText className="size-3.5 shrink-0" />
+                <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                  {title}
+                </span>
+                <span className="shrink-0 text-[10px] text-muted-foreground/60">
+                  {relativeDate(note.updated_at)}
+                </span>
               </button>
             )
           })}
@@ -488,6 +457,7 @@ function NotesList({
 function Sidebar({
   allNotes,
   notes,
+  tree,
   selectedNoteId,
   workspaceView,
   searchQuery,
@@ -500,54 +470,67 @@ function Sidebar({
   onClearFilters,
 }: SidebarProps) {
   const { t } = useTranslation()
-  const workspaceLabel = t(WORKSPACE_LABEL_KEYS[workspaceView])
+  const hasActiveFilters = searchQuery.trim().length > 0 || selectedTag !== null
 
   return (
-    <div className="flex h-full w-64 shrink-0 flex-col bg-card text-card-foreground border-r border-border">
-      <div className="flex items-center justify-between px-3 py-2.5">
-        <h2 className="text-sm font-semibold tracking-wide text-foreground/90">
-          {t('notes.sidebar.title')}
-        </h2>
+    <aside className="notes-paper-sidebar notes-explorer flex h-full w-56 shrink-0 flex-col text-card-foreground">
+      <div className="notes-explorer-vault flex items-center justify-between px-3 py-2.5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="notes-explorer-vault-mark flex size-5 shrink-0 items-center justify-center rounded">
+              <Folder className="size-3.5" />
+            </div>
+            <h2 className="truncate text-xs font-semibold text-foreground">
+              {t('notes.sidebar.title')}
+            </h2>
+          </div>
+          <p className="mt-1 pl-7 font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground/70">
+            {t('notes.sidebar.vaultWorkspace')}
+          </p>
+        </div>
         {workspaceView === 'inbox' && (
           <button
             type="button"
             onClick={() => void onCreateNote()}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
             aria-label={t('notes.sidebar.newNote')}
           >
-            <Plus className="size-4" />
+            <Plus className="size-3.5" />
           </button>
         )}
       </div>
 
-      <WorkspaceSwitcher
-        workspaceView={workspaceView}
-        onWorkspaceChange={onWorkspaceChange}
-      />
       <SidebarSearch
         searchQuery={searchQuery}
         onSearchChange={onSearchChange}
       />
-      <AllWorkspaceNotesButton
-        count={allNotes.length}
-        selectedTag={selectedTag}
-        workspaceLabel={workspaceLabel}
-        onSelectTag={onSelectTag}
-      />
-      <TagsSection
-        allNotes={allNotes}
-        selectedTag={selectedTag}
-        onSelectTag={onSelectTag}
+      <WorkspaceSwitcher
+        workspaceView={workspaceView}
+        onWorkspaceChange={onWorkspaceChange}
       />
 
-      <div className="flex-1 overflow-y-auto px-1">
+      <div className="min-h-0 flex-1 overflow-y-auto px-1">
+        <div className="flex items-center justify-between px-2 pb-1 pt-2">
+          <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground/75">
+            {t('notes.sidebar.title')}
+          </span>
+          <span className="text-[10px] text-muted-foreground/65">
+            {allNotes.length}
+          </span>
+        </div>
         {notes.length === 0 ? (
           <SidebarEmptyState
             workspaceView={workspaceView}
-            workspaceLabel={workspaceLabel}
+            workspaceLabel={t(WORKSPACE_LABEL_KEYS[workspaceView])}
             searchQuery={searchQuery}
             selectedTag={selectedTag}
             onClearFilters={onClearFilters}
+          />
+        ) : !hasActiveFilters && tree ? (
+          <NotesExplorerTree
+            tree={tree}
+            selectedNoteId={selectedNoteId}
+            onSelectNote={onSelectNote}
           />
         ) : (
           <NotesList
@@ -557,7 +540,12 @@ function Sidebar({
           />
         )}
       </div>
-    </div>
+      <TagsSection
+        allNotes={allNotes}
+        selectedTag={selectedTag}
+        onSelectTag={onSelectTag}
+      />
+    </aside>
   )
 }
 
@@ -755,42 +743,83 @@ function NoteActionsMenu({
   )
 }
 
+function EditorModeSwitcher({
+  editorMode,
+  onEditorModeChange,
+}: {
+  editorMode: NotesEditorMode
+  onEditorModeChange: (mode: NotesEditorMode) => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div
+      className="notes-paper-segmented inline-flex items-center rounded-lg p-0.5"
+      aria-label={t('notes.editor.mode.label')}
+    >
+      {EDITOR_MODE_OPTIONS.map(option => {
+        const Icon = option.icon
+        const isActive = editorMode === option.mode
+
+        return (
+          <button
+            key={option.mode}
+            type="button"
+            aria-label={t(option.ariaKey)}
+            aria-pressed={isActive}
+            onClick={() => onEditorModeChange(option.mode)}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors',
+              isActive
+                ? 'bg-background/85 text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Icon className="size-3" />
+            <span>{t(option.labelKey)}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function EditorArea({
   note,
   workspaceView,
+  editorMode,
   isSaving,
   onArchive,
   onMoveToTrash,
   onRestore,
   onContentChange,
   onOpenVaultFolder,
+  onEditorModeChange,
 }: {
   note: Note | null
   workspaceView: NotesWorkspaceView
+  editorMode: NotesEditorMode
   isSaving: boolean
   onArchive: () => Promise<void>
   onMoveToTrash: () => Promise<void>
   onRestore: () => Promise<void>
   onContentChange: (noteId: string, content: string) => void
   onOpenVaultFolder: () => Promise<void>
+  onEditorModeChange: (mode: NotesEditorMode) => void
 }) {
   const { t } = useTranslation()
-  const [titleInput, setTitleInput] = useState(() =>
-    note ? parseNoteContent(note.content).title : ''
-  )
   const editorRef = useRef<ToastEditor>(null)
   const editorShellRef = useRef<HTMLDivElement>(null)
 
   function handleEditorChange() {
     if (!note) return
     const bodyMarkdown = editorRef.current?.getInstance().getMarkdown() ?? ''
-    onContentChange(note.id, buildNoteContent(titleInput, bodyMarkdown))
+    onContentChange(note.id, buildNoteContent(parsed.title, bodyMarkdown))
   }
 
   function handleTitleChange(event: React.ChangeEvent<HTMLInputElement>) {
     if (!note || workspaceView !== 'inbox') return
     const nextTitle = event.target.value
-    setTitleInput(nextTitle)
 
     const bodyMarkdown = editorRef.current?.getInstance().getMarkdown() ?? ''
     onContentChange(note.id, buildNoteContent(nextTitle, bodyMarkdown))
@@ -798,9 +827,9 @@ function EditorArea({
 
   if (!note) {
     return (
-      <div className="flex h-full flex-1 items-center justify-center bg-background px-8 text-muted-foreground">
-        <div className="max-w-md text-center">
-          <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-lg border border-border bg-card text-foreground shadow-sm">
+      <div className="notes-paper-editor flex h-full flex-1 items-center justify-center px-8 text-muted-foreground">
+        <div className="notes-paper-empty max-w-md text-center">
+          <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl border border-border bg-background/70 text-foreground shadow-sm">
             <FolderOpen className="size-5" />
           </div>
           <h2 className="text-lg font-semibold text-foreground">
@@ -812,7 +841,7 @@ function EditorArea({
           <button
             type="button"
             onClick={() => void onOpenVaultFolder()}
-            className="mt-5 inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl border border-border bg-background/70 px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-accent/80 hover:text-accent-foreground"
           >
             <FolderOpen className="size-4" />
             {t('notes.welcome.openFolder')}
@@ -825,28 +854,51 @@ function EditorArea({
   const parsed = parseNoteContent(note.content)
   const wordCount = countWords(parsed.body)
   const isReadOnly = workspaceView !== 'inbox'
+  const activeMode: NotesEditorMode = isReadOnly ? 'preview' : editorMode
+  const showEditor = activeMode === 'edit' || activeMode === 'split'
+  const showPreview = activeMode === 'preview' || activeMode === 'split'
 
   return (
     <div
-      className="flex h-full flex-1 flex-col bg-background text-foreground"
+      className="notes-paper-editor flex h-full flex-1 flex-col text-foreground"
       data-color-mode="auto"
     >
-      <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-2.5">
-        <div className="text-[10px] text-muted-foreground">
-          {relativeDate(note.updated_at)}
+      <div className="notes-paper-editorbar flex items-center justify-between gap-4 px-4 py-2.5">
+        <div className="min-w-0">
+          <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            {relativeDate(note.updated_at)}
+          </div>
+          <div className="mt-0.5 truncate text-xs text-muted-foreground/70">
+            {isReadOnly
+              ? t('notes.editor.readonlySurface')
+              : t('notes.editor.paperSurface')}
+          </div>
         </div>
 
-        <NoteActionsMenu
-          note={note}
-          workspaceView={workspaceView}
-          onArchive={onArchive}
-          onMoveToTrash={onMoveToTrash}
-          onRestore={onRestore}
-        />
+        <div className="flex items-center gap-2">
+          {!isReadOnly && (
+            <EditorModeSwitcher
+              editorMode={editorMode}
+              onEditorModeChange={onEditorModeChange}
+            />
+          )}
+          <NoteActionsMenu
+            note={note}
+            workspaceView={workspaceView}
+            onArchive={onArchive}
+            onMoveToTrash={onMoveToTrash}
+            onRestore={onRestore}
+          />
+        </div>
       </div>
 
-      <div className="flex-1 overflow-hidden bg-background text-start">
-        <div className="max-w-3xl mx-auto w-full h-full text-start">
+      <div className="flex-1 overflow-hidden text-start">
+        <div
+          className={cn(
+            'mx-auto h-full w-full text-start',
+            activeMode === 'split' ? 'max-w-6xl' : 'max-w-3xl'
+          )}
+        >
           <div className="h-full px-8 pt-8 pb-10 font-sans antialiased text-foreground text-start flex flex-col">
             {isReadOnly ? (
               <h1 className="mb-8 text-2xl font-semibold text-foreground">
@@ -855,7 +907,7 @@ function EditorArea({
             ) : (
               <input
                 type="text"
-                value={titleInput}
+                value={parsed.title}
                 onChange={handleTitleChange}
                 placeholder={t('notes.editor.titlePlaceholder')}
                 aria-label={t('notes.editor.titlePlaceholder')}
@@ -864,38 +916,47 @@ function EditorArea({
               />
             )}
 
-            {isReadOnly ? (
-              <div className="notes-inline-editor prose prose-sm max-w-none min-h-0 flex-1 overflow-y-auto text-start text-foreground">
-                <ToastViewer initialValue={parsed.body} />
-              </div>
-            ) : (
-              <div
-                ref={editorShellRef}
-                className="notes-inline-editor min-h-0 flex-1 text-start"
-              >
-                <ToastEditor
-                  key={note.id}
-                  ref={editorRef}
-                  initialValue={parsed.body}
-                  initialEditType="wysiwyg"
-                  hideModeSwitch
-                  height="100%"
-                  placeholder={t('notes.editor.placeholder')}
-                  usageStatistics={false}
-                  toolbarItems={[
-                    ['heading', 'bold', 'italic', 'strike'],
-                    ['ul', 'ol', 'task', 'quote'],
-                    ['link', 'code', 'codeblock'],
-                  ]}
-                  onChange={handleEditorChange}
-                />
-              </div>
-            )}
+            <div
+              className={cn(
+                'notes-paper-writing-grid min-h-0 flex-1',
+                activeMode === 'split' && 'is-split'
+              )}
+            >
+              {showEditor && !isReadOnly && (
+                <div
+                  ref={editorShellRef}
+                  className="notes-inline-editor min-h-0 text-start"
+                >
+                  <ToastEditor
+                    key={note.id}
+                    ref={editorRef}
+                    initialValue={parsed.body}
+                    initialEditType="wysiwyg"
+                    hideModeSwitch
+                    height="100%"
+                    placeholder={t('notes.editor.placeholder')}
+                    usageStatistics={false}
+                    toolbarItems={[
+                      ['heading', 'bold', 'italic', 'strike'],
+                      ['ul', 'ol', 'task', 'quote'],
+                      ['link', 'code', 'codeblock'],
+                    ]}
+                    onChange={handleEditorChange}
+                  />
+                </div>
+              )}
+
+              {showPreview && (
+                <div className="notes-paper-preview notes-inline-editor prose prose-sm max-w-none min-h-0 overflow-y-auto text-start text-foreground">
+                  <ToastViewer initialValue={parsed.body} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-t border-border px-4 py-2">
+      <div className="notes-paper-statusbar flex items-center justify-between px-4 py-2">
         <span className="font-mono text-[10px] text-muted-foreground">
           {isReadOnly
             ? t('notes.editor.footer.readonly')
@@ -924,11 +985,13 @@ async function openNotesVaultFolderFromStore() {
 
 export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const { t } = useTranslation()
+  const [editorMode, setEditorMode] = useState<NotesEditorMode>('edit')
   const notes = useNotesStore(state => state.notes)
   const selectedNoteId = useNotesStore(state => state.selectedNoteId)
   const workspaceView = useNotesStore(state => state.workspaceView)
   const searchQuery = useNotesStore(state => state.searchQuery)
   const selectedTag = useNotesStore(state => state.selectedTag)
+  const tree = useNotesStore(state => state.tree)
   const isSaving = useNotesStore(state => state.isSaving)
   const isLoading = useNotesStore(state => state.isLoading)
   const loadNotes = useNotesStore(state => state.loadNotes)
@@ -942,7 +1005,6 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const setSearchQuery = useNotesStore(state => state.setSearchQuery)
   const setSelectedTag = useNotesStore(state => state.setSelectedTag)
   const filteredNotes = useNotesStore(state => state.filteredNotes)
-  const navigateTo = useUIStore(state => state.navigateTo)
 
   useEffect(() => {
     loadNotes()
@@ -1119,7 +1181,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     }
   }
 
-  if (isLoading) {
+  if (isLoading && !tree && notes.length === 0) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
         <span className="text-sm text-muted-foreground">
@@ -1130,22 +1192,12 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <button
-          type="button"
-          onClick={() => navigateTo('grid')}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          aria-label="Back to grid"
-        >
-          <ArrowLeft className="size-4" />
-        </button>
-        <div className="w-8" aria-hidden="true" />
-      </div>
-      <div className="flex flex-1 overflow-hidden bg-background">
+    <div className="notes-paper-workspace flex h-full flex-col">
+      <div className="notes-paper-shell flex flex-1 overflow-hidden">
         <Sidebar
           allNotes={notes}
           notes={displayedNotes}
+          tree={tree}
           selectedNoteId={selectedNoteId}
           workspaceView={workspaceView}
           searchQuery={searchQuery}
@@ -1158,15 +1210,16 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           onClearFilters={handleClearFilters}
         />
         <EditorArea
-          key={`${workspaceView}-${activeNote?.id ?? 'no-note-selected'}`}
           note={activeNote}
           workspaceView={workspaceView}
+          editorMode={editorMode}
           isSaving={isSaving}
           onArchive={handleArchiveNote}
           onMoveToTrash={handleMoveNoteToTrash}
           onRestore={handleRestoreNote}
           onContentChange={handleContentChange}
           onOpenVaultFolder={handleOpenVaultFolder}
+          onEditorModeChange={setEditorMode}
         />
       </div>
     </div>

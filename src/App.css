@@ -319,7 +319,231 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
-   NOTES EDITOR — Inline (Toast UI) overrides
+   NOTES WORKSPACE - Paper surface inspired by ZenNotes
+   ═══════════════════════════════════════════════════════════ */
+.notes-paper-workspace {
+  --notes-cream-sweet: oklch(96.5% 0.028 82);
+  --notes-cream-sweet-soft: oklch(94.2% 0.036 78);
+  --notes-cream-sweet-deep: oklch(90.5% 0.048 74);
+  --notes-paper: color-mix(
+    in oklab,
+    var(--notes-cream-sweet) 76%,
+    var(--background)
+  );
+  --notes-paper-soft: color-mix(
+    in oklab,
+    var(--notes-cream-sweet-soft) 68%,
+    var(--card)
+  );
+  --notes-paper-warm: color-mix(
+    in oklab,
+    var(--notes-cream-sweet-deep) 72%,
+    var(--background)
+  );
+  --notes-ink-muted: color-mix(
+    in oklab,
+    var(--muted-foreground) 86%,
+    var(--foreground)
+  );
+  --notes-hairline: color-mix(in oklab, var(--border) 78%, transparent);
+  --notes-accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+  background:
+    radial-gradient(
+      circle at 14% 0%,
+      color-mix(in oklab, var(--notes-cream-sweet-deep) 44%, transparent),
+      transparent 30rem
+    ),
+    linear-gradient(180deg, var(--notes-paper-warm), var(--notes-paper));
+  color: var(--foreground);
+}
+
+.notes-paper-titlebar,
+.notes-paper-editorbar,
+.notes-paper-statusbar {
+  border-color: var(--notes-hairline);
+  background: color-mix(in oklab, var(--notes-paper) 84%, transparent);
+  backdrop-filter: saturate(145%) blur(18px);
+}
+
+.notes-paper-titlebar,
+.notes-paper-editorbar {
+  border-bottom: 1px solid var(--notes-hairline);
+}
+
+.notes-paper-statusbar {
+  border-top: 1px solid var(--notes-hairline);
+}
+
+.notes-paper-shell {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--notes-paper-soft) 88%, transparent),
+    var(--notes-paper)
+  );
+}
+
+.notes-paper-sidebar {
+  border-right: 1px solid var(--notes-hairline);
+  background: color-mix(in oklab, var(--notes-paper-soft) 88%, transparent);
+  backdrop-filter: saturate(145%) blur(18px);
+  box-shadow: inset -1px 0 0
+    color-mix(in oklab, var(--background) 55%, transparent);
+}
+
+.notes-explorer {
+  box-shadow:
+    inset -1px 0 0 color-mix(in oklab, var(--background) 55%, transparent),
+    10px 0 28px -30px color-mix(in oklab, var(--foreground) 48%, transparent);
+}
+
+.notes-explorer-vault {
+  border-bottom: 1px solid var(--notes-hairline);
+  background: color-mix(in oklab, var(--background) 22%, transparent);
+}
+
+.notes-explorer-vault-mark {
+  border: 1px solid color-mix(in oklab, var(--border) 72%, transparent);
+  background: color-mix(in oklab, var(--background) 64%, transparent);
+  color: var(--foreground);
+}
+
+.notes-explorer-row {
+  min-height: 1.875rem;
+}
+
+.notes-explorer-group {
+  min-height: 1.625rem;
+}
+
+.notes-explorer-note {
+  min-height: 1.875rem;
+}
+
+.notes-explorer-note .lucide {
+  color: color-mix(in oklab, var(--muted-foreground) 76%, var(--foreground));
+}
+
+.notes-explorer-empty {
+  border: 1px dashed color-mix(in oklab, var(--border) 72%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, var(--background) 22%, transparent);
+  line-height: 1.45;
+  text-align: start;
+}
+
+.notes-paper-editor {
+  background:
+    radial-gradient(
+      circle at 80% 0%,
+      color-mix(in oklab, var(--notes-cream-sweet-deep) 32%, transparent),
+      transparent 34rem
+    ),
+    var(--notes-paper);
+}
+
+.notes-paper-input {
+  border-color: var(--notes-hairline);
+  background: color-mix(in oklab, var(--background) 48%, transparent);
+}
+
+.notes-paper-nav-item:hover,
+.notes-paper-note-row:hover {
+  background: color-mix(in oklab, var(--background) 52%, transparent);
+}
+
+.notes-paper-nav-item.is-active,
+.notes-paper-note-row.is-selected {
+  border-color: color-mix(in oklab, var(--accent) 24%, var(--border));
+  background: color-mix(in oklab, var(--accent) 12%, var(--background));
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--accent) 18%, transparent);
+}
+
+.notes-paper-segmented {
+  border: 1px solid var(--notes-hairline);
+  background: color-mix(in oklab, var(--muted) 56%, transparent);
+}
+
+.notes-paper-writing-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.notes-paper-writing-grid.is-split {
+  grid-template-columns: minmax(0, 1.05fr) minmax(18rem, 0.95fr);
+}
+
+.notes-paper-writing-grid.is-split .notes-inline-editor:first-child {
+  border-right: 1px solid var(--notes-hairline);
+  padding-right: 1.25rem;
+}
+
+.notes-paper-preview {
+  border: 1px solid var(--notes-hairline);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--notes-cream-sweet) 36%, transparent);
+  padding: 1rem 1.125rem;
+}
+
+.notes-paper-empty {
+  border: 1px solid var(--notes-hairline);
+  border-radius: 1.5rem;
+  background: color-mix(in oklab, var(--notes-cream-sweet) 42%, transparent);
+  padding: 2rem;
+  box-shadow: 0 18px 48px -42px
+    color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+
+@media (max-width: 980px) {
+  .notes-paper-writing-grid.is-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .notes-paper-writing-grid.is-split .notes-inline-editor:first-child {
+    border-right: 0;
+    border-bottom: 1px solid var(--notes-hairline);
+    padding-right: 0;
+    padding-bottom: 1.25rem;
+  }
+}
+
+.notes-paper-widget {
+  --notes-widget-paper: color-mix(
+    in oklab,
+    oklch(96.5% 0.028 82) 72%,
+    var(--background)
+  );
+  --notes-widget-hairline: color-mix(in oklab, var(--border) 76%, transparent);
+  border-color: var(--notes-widget-hairline);
+  background:
+    radial-gradient(
+      circle at 12% 0%,
+      color-mix(in oklab, oklch(90.5% 0.048 74) 34%, transparent),
+      transparent 18rem
+    ),
+    var(--notes-widget-paper);
+  box-shadow: inset 0 1px 0
+    color-mix(in oklab, var(--background) 50%, transparent);
+}
+
+.notes-paper-widget-header,
+.notes-paper-widget-footer {
+  border-color: var(--notes-widget-hairline);
+  background: color-mix(in oklab, var(--background) 34%, transparent);
+  backdrop-filter: saturate(140%) blur(14px);
+}
+
+.notes-paper-widget-header {
+  border-bottom: 1px solid var(--notes-widget-hairline);
+}
+
+.notes-paper-widget-footer {
+  border-top: 1px solid var(--notes-widget-hairline);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NOTES EDITOR - Inline (Toast UI) overrides
    ═══════════════════════════════════════════════════════════ */
 .notes-inline-editor .toastui-editor-defaultUI {
   height: 100%;

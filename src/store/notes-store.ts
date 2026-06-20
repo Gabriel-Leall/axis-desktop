@@ -1,15 +1,17 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { commands, unwrapResult } from '@/lib/tauri-bindings'
-import { countWords, noteHasTag } from '@/lib/notes-domain'
+import { countWords, flattenNoteTree, noteHasTag } from '@/lib/notes-domain'
 import { logger } from '@/lib/logger'
 import type {
   Note as BindingNote,
+  NoteTreeItem as BindingNoteTreeItem,
   NoteVaultInfo,
   NoteVaultMigrationMode,
   NoteVaultMigrationResult,
+  NoteWorkspaceTree as BindingNoteWorkspaceTree,
 } from '@/lib/tauri-bindings'
-import type { Note } from '@/lib/notes-domain'
+import type { Note, NoteTreeItem, NoteWorkspaceTree } from '@/lib/notes-domain'
 
 export type NotesWorkspaceView = 'inbox' | 'archive' | 'trash'
 
@@ -18,6 +20,7 @@ interface NotesState {
   vaultError: string | null
   pendingMigrationSourcePath: string | null
   workspaceView: NotesWorkspaceView
+  tree: NoteWorkspaceTree | null
   notes: Note[]
   searchResults: Note[] | null
   selectedNoteId: string | null
@@ -65,6 +68,69 @@ function removeNoteFromList(notes: Note[], id: string): Note[] {
   return notes.filter(note => note.id !== id)
 }
 
+function removeNoteFromTree(
+  tree: NoteWorkspaceTree | null,
+  id: string
+): NoteWorkspaceTree | null {
+  if (!tree) return null
+
+  function removeFromItems(items: NoteTreeItem[]): NoteTreeItem[] {
+    const remainingItems: NoteTreeItem[] = []
+
+    for (const item of items) {
+      if (item.kind === 'note') {
+        if (item.note.id !== id) {
+          remainingItems.push(item)
+        }
+        continue
+      }
+
+      const children = removeFromItems(item.children)
+      if (children.length > 0) {
+        remainingItems.push({ ...item, children })
+      }
+    }
+
+    return remainingItems
+  }
+
+  return { ...tree, items: removeFromItems(tree.items) }
+}
+
+function updateNoteInTree(
+  tree: NoteWorkspaceTree | null,
+  note: Note
+): NoteWorkspaceTree | null {
+  if (!tree) return null
+
+  function updateItems(items: NoteTreeItem[]): NoteTreeItem[] {
+    return items.map(item => {
+      if (item.kind === 'note') {
+        return item.note.id === note.id ? { ...item, note } : item
+      }
+
+      return { ...item, children: updateItems(item.children) }
+    })
+  }
+
+  return { ...tree, items: updateItems(tree.items) }
+}
+
+function prependNoteToTree(
+  tree: NoteWorkspaceTree | null,
+  note: Note
+): NoteWorkspaceTree | null {
+  if (!tree) return null
+
+  const withoutExisting = removeNoteFromTree(tree, note.id)
+  if (!withoutExisting) return null
+
+  return {
+    ...withoutExisting,
+    items: [{ kind: 'note', note }, ...withoutExisting.items],
+  }
+}
+
 function nextSelectedNoteId(
   previousSelectedNoteId: string | null,
   removedNoteId: string,
@@ -110,6 +176,7 @@ function withTimeout<T>(
 function mapBindingNote(note: BindingNote): Note {
   return {
     id: note.id,
+    path: note.path,
     title: note.title,
     content: note.content,
     created_at: note.created_at,
@@ -117,6 +184,31 @@ function mapBindingNote(note: BindingNote): Note {
     word_count: note.word_count,
     tags: note.tags,
     wiki_links: note.wiki_links,
+  }
+}
+
+function mapBindingTreeItem(item: BindingNoteTreeItem): NoteTreeItem {
+  if (item.kind === 'folder') {
+    return {
+      kind: 'folder',
+      path: item.path,
+      name: item.name,
+      children: item.children.map(mapBindingTreeItem),
+    }
+  }
+
+  return {
+    kind: 'note',
+    note: mapBindingNote(item.note),
+  }
+}
+
+function mapBindingWorkspaceTree(
+  tree: BindingNoteWorkspaceTree
+): NoteWorkspaceTree {
+  return {
+    workspace: tree.workspace,
+    items: tree.items.map(mapBindingTreeItem),
   }
 }
 
@@ -157,12 +249,13 @@ function workspaceStateFromNotes(
 
 function resetWorkspaceForVault(
   vaultInfo: NoteVaultInfo,
-  notes: Note[]
+  tree: NoteWorkspaceTree
 ): Pick<
   NotesState,
   | 'vaultInfo'
   | 'vaultError'
   | 'workspaceView'
+  | 'tree'
   | 'notes'
   | 'selectedNoteId'
   | 'searchQuery'
@@ -170,10 +263,13 @@ function resetWorkspaceForVault(
   | 'selectedTag'
   | 'isSearching'
 > {
+  const notes = flattenNoteTree(tree.items)
+
   return {
     vaultInfo,
     vaultError: null,
     workspaceView: 'inbox',
+    tree,
     notes,
     selectedNoteId: notes[0]?.id ?? null,
     searchQuery: '',
@@ -181,16 +277,6 @@ function resetWorkspaceForVault(
     selectedTag: null,
     isSearching: false,
   }
-}
-
-async function loadActiveNotes(): Promise<Note[]> {
-  return unwrapResult(
-    await withTimeout(
-      commands.getNotes(),
-      NOTES_LOAD_TIMEOUT_MS,
-      'Timed out while loading notes (Tauri IPC)'
-    )
-  ).map(mapBindingNote)
 }
 
 async function loadNotesForWorkspace(
@@ -210,6 +296,20 @@ async function loadNotesForWorkspace(
       'Timed out while loading notes (Tauri IPC)'
     )
   ).map(mapBindingNote)
+}
+
+async function loadTreeForWorkspace(
+  view: NotesWorkspaceView
+): Promise<NoteWorkspaceTree> {
+  return mapBindingWorkspaceTree(
+    unwrapResult(
+      await withTimeout(
+        commands.getNotesWorkspaceTree(view),
+        NOTES_LOAD_TIMEOUT_MS,
+        'Timed out while loading notes workspace tree (Tauri IPC)'
+      )
+    )
+  )
 }
 
 async function flushPendingSave(notes: Note[]): Promise<boolean> {
@@ -243,6 +343,7 @@ export const useNotesStore = create<NotesState>()(
       vaultError: null,
       pendingMigrationSourcePath: null,
       workspaceView: 'inbox',
+      tree: null,
       notes: [],
       searchResults: null,
       selectedNoteId: null,
@@ -261,21 +362,23 @@ export const useNotesStore = create<NotesState>()(
           set({ isLoading: true }, undefined, 'loadNotes/start')
           try {
             const currentView = get().workspaceView
-            const [vaultResult, notesResult] = await Promise.all([
+            const [vaultResult, tree] = await Promise.all([
               withTimeout(
                 commands.getNotesVaultInfo(),
                 VAULT_LOAD_TIMEOUT_MS,
                 'Timed out while loading notes vault info (Tauri IPC)'
               ),
-              loadNotesForWorkspace(currentView),
+              loadTreeForWorkspace(currentView),
             ])
             const vaultInfo = unwrapResult(vaultResult)
+            const notes = flattenNoteTree(tree.items)
 
             set(
               state => ({
                 vaultInfo,
                 vaultError: null,
-                ...workspaceStateFromNotes(notesResult, state.selectedNoteId),
+                tree,
+                ...workspaceStateFromNotes(notes, state.selectedNoteId),
                 searchResults: state.searchQuery.trim()
                   ? state.searchResults
                   : null,
@@ -315,6 +418,7 @@ export const useNotesStore = create<NotesState>()(
               vaultInfo,
               vaultError: null,
               workspaceView: 'inbox',
+              tree: null,
               ...workspaceStateFromNotes(notes, state.selectedNoteId),
               searchQuery: '',
               searchResults: null,
@@ -342,11 +446,13 @@ export const useNotesStore = create<NotesState>()(
         set({ isLoading: true }, undefined, 'setWorkspaceView/start')
 
         try {
-          const notes = await loadNotesForWorkspace(view)
+          const tree = await loadTreeForWorkspace(view)
+          const notes = flattenNoteTree(tree.items)
 
           set(
             {
               workspaceView: view,
+              tree,
               notes,
               selectedNoteId: null,
               searchResults: null,
@@ -399,11 +505,11 @@ export const useNotesStore = create<NotesState>()(
           const vaultInfo = unwrapResult(await commands.setNotesVaultPath(path))
           nextVaultInfo = vaultInfo
           vaultChanged = true
-          const notes = await loadActiveNotes()
+          const tree = await loadTreeForWorkspace('inbox')
 
           set(
             {
-              ...resetWorkspaceForVault(vaultInfo, notes),
+              ...resetWorkspaceForVault(vaultInfo, tree),
               pendingMigrationSourcePath:
                 previousVaultPath && previousVaultPath !== vaultInfo.path
                   ? previousVaultPath
@@ -422,6 +528,7 @@ export const useNotesStore = create<NotesState>()(
               ? {
                   vaultInfo: nextVaultInfo,
                   vaultError: String(error),
+                  tree: null,
                   notes: [],
                   selectedNoteId: null,
                   searchQuery: '',
@@ -467,11 +574,11 @@ export const useNotesStore = create<NotesState>()(
           const vaultInfo = unwrapResult(await commands.resetNotesVaultPath())
           nextVaultInfo = vaultInfo
           vaultChanged = true
-          const notes = await loadActiveNotes()
+          const tree = await loadTreeForWorkspace('inbox')
 
           set(
             {
-              ...resetWorkspaceForVault(vaultInfo, notes),
+              ...resetWorkspaceForVault(vaultInfo, tree),
               pendingMigrationSourcePath:
                 previousVaultPath && previousVaultPath !== vaultInfo.path
                   ? previousVaultPath
@@ -490,6 +597,7 @@ export const useNotesStore = create<NotesState>()(
               ? {
                   vaultInfo: nextVaultInfo,
                   vaultError: String(error),
+                  tree: null,
                   notes: [],
                   selectedNoteId: null,
                   searchQuery: '',
@@ -531,19 +639,19 @@ export const useNotesStore = create<NotesState>()(
               mode,
             })
           )
-          const [vaultResult, notes] = await Promise.all([
+          const [vaultResult, tree] = await Promise.all([
             withTimeout(
               commands.getNotesVaultInfo(),
               VAULT_LOAD_TIMEOUT_MS,
               'Timed out while loading notes vault info (Tauri IPC)'
             ),
-            loadActiveNotes(),
+            loadTreeForWorkspace('inbox'),
           ])
           const vaultInfo = unwrapResult(vaultResult)
 
           set(
             {
-              ...resetWorkspaceForVault(vaultInfo, notes),
+              ...resetWorkspaceForVault(vaultInfo, tree),
               pendingMigrationSourcePath: null,
               isLoading: false,
             },
@@ -593,18 +701,21 @@ export const useNotesStore = create<NotesState>()(
               })
             )
           )
-          const inboxNotes =
+          const currentTree =
             currentView === 'inbox'
-              ? get().notes
-              : await loadNotesForWorkspace('inbox')
+              ? get().tree
+              : await loadTreeForWorkspace('inbox')
+          const inboxTree = prependNoteToTree(currentTree, createdNote) ?? {
+            workspace: 'inbox' as const,
+            items: [{ kind: 'note' as const, note: createdNote }],
+          }
+          const inboxNotes = flattenNoteTree(inboxTree.items)
 
           set(
             {
               workspaceView: 'inbox',
-              notes: [
-                createdNote,
-                ...inboxNotes.filter(note => note.id !== createdNote.id),
-              ],
+              tree: inboxTree,
+              notes: inboxNotes,
               selectedNoteId: createdNote.id,
               searchQuery: '',
               searchResults: null,
@@ -643,6 +754,18 @@ export const useNotesStore = create<NotesState>()(
                   }
                 : n
             ),
+            tree: updateNoteInTree(state.tree, {
+              ...(state.notes.find(note => note.id === id) ?? {
+                id,
+                content,
+                created_at: updatedAt,
+                updated_at: updatedAt,
+                word_count: wordCount,
+              }),
+              content,
+              word_count: wordCount,
+              updated_at: updatedAt,
+            }),
             isSaving: true,
           }),
           undefined,
@@ -670,6 +793,7 @@ export const useNotesStore = create<NotesState>()(
                 notes: state.notes.map(note =>
                   note.id === savedNote.id ? savedNote : note
                 ),
+                tree: updateNoteInTree(state.tree, savedNote),
                 isSaving: false,
               }),
               undefined,
@@ -688,6 +812,7 @@ export const useNotesStore = create<NotesState>()(
 
       deleteNote: async id => {
         const snapshot = {
+          tree: get().tree,
           notes: get().notes,
           searchResults: get().searchResults,
           selectedNoteId: get().selectedNoteId,
@@ -715,6 +840,7 @@ export const useNotesStore = create<NotesState>()(
           set(
             state => ({
               notes: removeNoteFromList(state.notes, id),
+              tree: removeNoteFromTree(state.tree, id),
               searchResults: state.searchResults
                 ? removeNoteFromList(state.searchResults, id)
                 : null,
@@ -747,6 +873,7 @@ export const useNotesStore = create<NotesState>()(
 
       archiveNote: async id => {
         const snapshot = {
+          tree: get().tree,
           notes: get().notes,
           searchResults: get().searchResults,
           selectedNoteId: get().selectedNoteId,
@@ -774,6 +901,7 @@ export const useNotesStore = create<NotesState>()(
           set(
             state => ({
               notes: removeNoteFromList(state.notes, id),
+              tree: removeNoteFromTree(state.tree, id),
               searchResults: state.searchResults
                 ? removeNoteFromList(state.searchResults, id)
                 : null,
@@ -823,6 +951,10 @@ export const useNotesStore = create<NotesState>()(
                       ),
                     ]
                   : removeNoteFromList(state.notes, id),
+              tree:
+                currentView === 'inbox'
+                  ? prependNoteToTree(state.tree, restoredNote)
+                  : removeNoteFromTree(state.tree, id),
               selectedNoteId: currentView === 'inbox' ? restoredNote.id : null,
               searchResults: null,
               isSearching: false,
