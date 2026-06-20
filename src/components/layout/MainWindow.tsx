@@ -23,18 +23,20 @@ import { WrapUpDialog } from '@/components/wrap-up/WrapUpDialog'
  */
 const LAYOUT = {
   leftSidebar: { default: 4, min: 4, max: 4 },
+  notesActivityBar: { default: 3, min: 3, max: 3 },
   rightSidebar: { default: 20, min: 15, max: 40 },
   main: { min: 30 },
 } as const
-
-// Main content default is calculated to ensure totals sum to 100%
-const MAIN_CONTENT_DEFAULT =
-  100 - LAYOUT.leftSidebar.default - LAYOUT.rightSidebar.default
 
 export function MainWindow() {
   const { theme } = useTheme()
   const leftSidebarVisible = useUIStore(state => state.leftSidebarVisible)
   const rightSidebarVisible = useUIStore(state => state.rightSidebarVisible)
+  const activePage = useUIStore(state => state.activePage)
+  const leftSidebarLayout =
+    activePage === 'notes' ? LAYOUT.notesActivityBar : LAYOUT.leftSidebar
+  const mainContentDefault =
+    100 - leftSidebarLayout.default - LAYOUT.rightSidebar.default
 
   // Set up global event listeners (keyboard shortcuts, etc.)
   useMainWindowEventListeners()
@@ -44,11 +46,14 @@ export function MainWindow() {
       <TitleBar />
 
       <div className="flex flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal">
+        <ResizablePanelGroup
+          key={activePage === 'notes' ? 'notes-layout' : 'default-layout'}
+          direction="horizontal"
+        >
           <ResizablePanel
-            defaultSize={LAYOUT.leftSidebar.default}
-            minSize={LAYOUT.leftSidebar.min}
-            maxSize={LAYOUT.leftSidebar.max}
+            defaultSize={leftSidebarLayout.default}
+            minSize={leftSidebarLayout.min}
+            maxSize={leftSidebarLayout.max}
             className={cn(!leftSidebarVisible && 'hidden')}
           >
             <LeftSideBar />
@@ -57,7 +62,7 @@ export function MainWindow() {
           <ResizableHandle className={cn(!leftSidebarVisible && 'hidden')} />
 
           <ResizablePanel
-            defaultSize={MAIN_CONTENT_DEFAULT}
+            defaultSize={mainContentDefault}
             minSize={LAYOUT.main.min}
           >
             <MainWindowContent />

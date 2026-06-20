@@ -61,6 +61,9 @@ export type {
   NoteVaultInfo,
   NoteVaultMigrationMode,
   NoteVaultMigrationResult,
+  NoteTreeItem,
+  NoteWorkspaceTree,
+  NotesWorkspace,
 } from './bindings'
 
 // OAuth domain

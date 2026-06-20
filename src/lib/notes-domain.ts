@@ -12,6 +12,7 @@ export interface NoteTagCount {
 
 export interface Note {
   id: string
+  path?: string
   title?: string
   content: string
   created_at: string
@@ -19,6 +20,37 @@ export interface Note {
   word_count: number
   tags?: string[]
   wiki_links?: string[]
+}
+
+export type NoteTreeItem =
+  | {
+      kind: 'folder'
+      path: string
+      name: string
+      children: NoteTreeItem[]
+    }
+  | {
+      kind: 'note'
+      note: Note
+    }
+
+export interface NoteWorkspaceTree {
+  workspace: 'inbox' | 'archive' | 'trash'
+  items: NoteTreeItem[]
+}
+
+export function flattenNoteTree(items: readonly NoteTreeItem[]): Note[] {
+  const notes: Note[] = []
+
+  for (const item of items) {
+    if (item.kind === 'note') {
+      notes.push(item.note)
+      continue
+    }
+    notes.push(...flattenNoteTree(item.children))
+  }
+
+  return notes
 }
 
 const TAG_PATTERN = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]{0,31})/gu

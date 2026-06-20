@@ -60,6 +60,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
   const quickPaneLabel = quickPaneShortcut
     ? t('quickPane.openWithShortcut', { shortcut: quickPaneShortcut })
     : t('quickPane.open')
+  const isCompact = activePage === 'notes'
 
   useEffect(() => {
     let cancelled = false
@@ -91,31 +92,54 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
   }
 
   return (
-    <div className={cn('flex h-full flex-col border-r bg-sidebar', className)}>
+    <div
+      data-testid="axis-activity-bar"
+      className={cn(
+        'flex h-full flex-col border-r bg-sidebar',
+        isCompact && 'axis-activity-bar-compact',
+        className
+      )}
+    >
       {/* Activity Bar - icon-only navigation */}
       <nav
-        className="flex flex-col items-center gap-1 p-2 pt-3"
-        aria-label="Main navigation"
+        className={cn(
+          'flex flex-col items-center',
+          isCompact ? 'gap-0.5 p-1.5 pt-2' : 'gap-1 p-2 pt-3'
+        )}
+        aria-label={t('sidebar.mainNavigation')}
       >
-        <div className="mb-6 mt-1 flex items-center justify-center">
+        <div
+          className={cn(
+            'flex items-center justify-center',
+            isCompact ? 'mb-4 mt-0.5' : 'mb-6 mt-1'
+          )}
+        >
           <img
             src="/Axis-Logo.png"
             alt="Axis Logo"
-            className="size-8 object-contain drop-shadow-sm"
+            className={cn(
+              'object-contain drop-shadow-sm',
+              isCompact ? 'size-6' : 'size-8'
+            )}
           />
         </div>
         {NAV_ITEMS.map(item => {
           const isActive = activePage === item.id
           return (
-            <div key={item.id} className={cn(item.spacedBelow && 'mb-6')}>
+            <div
+              key={item.id}
+              className={cn(item.spacedBelow && (isCompact ? 'mb-4' : 'mb-6'))}
+            >
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
                     onClick={() => navigateTo(item.id)}
+                    aria-label={item.label}
                     aria-current={isActive ? 'page' : undefined}
                     className={cn(
-                      'group relative flex size-9 items-center justify-center rounded-md transition-all duration-150',
+                      'group relative flex items-center justify-center rounded-md transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                      isCompact ? 'size-7.5' : 'size-9',
                       isActive
                         ? [
                             'text-foreground',
@@ -129,7 +153,8 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                   >
                     <item.icon
                       className={cn(
-                        'size-4.5 transition-colors',
+                        'transition-colors',
+                        isCompact ? 'size-4' : 'size-4.5',
                         isActive
                           ? 'text-foreground'
                           : 'text-muted-foreground group-hover:text-foreground'
@@ -147,16 +172,29 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
         })}
       </nav>
 
-      <div className="mt-auto flex flex-col items-center pb-4">
+      <div
+        className={cn(
+          'mt-auto flex flex-col items-center',
+          isCompact ? 'pb-2' : 'pb-4'
+        )}
+      >
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               type="button"
               onClick={() => void handleQuickPaneToggle()}
               aria-label={quickPaneLabel}
-              className="group mb-3 flex size-9 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent/8 hover:text-foreground"
+              className={cn(
+                'group flex items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                isCompact ? 'mb-2 size-7.5' : 'mb-3 size-9'
+              )}
             >
-              <PanelTopOpen className="size-4.5 transition-colors" />
+              <PanelTopOpen
+                className={cn(
+                  'transition-colors',
+                  isCompact ? 'size-4' : 'size-4.5'
+                )}
+              />
             </button>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={8}>
@@ -169,7 +207,11 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
             <button
               type="button"
               onClick={() => setPreferencesOpen(true, 'user')}
-              className="group relative flex size-9 items-center justify-center rounded-full border border-border bg-sidebar-accent/50 shadow-sm transition-all hover:border-primary/30 hover:ring-2 hover:ring-primary/10 overflow-hidden"
+              aria-label={profileName || t('sidebar.account')}
+              className={cn(
+                'group relative flex items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-accent/50 shadow-sm transition-all hover:border-primary/30 hover:ring-2 hover:ring-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                isCompact ? 'size-7.5' : 'size-9'
+              )}
             >
               {profileImage ? (
                 <img
@@ -183,7 +225,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
             </button>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={8}>
-            {profileName || 'Conta'}
+            {profileName || t('sidebar.account')}
           </TooltipContent>
         </Tooltip>
       </div>

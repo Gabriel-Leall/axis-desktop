@@ -90,9 +90,9 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground">
+    <div className="notes-paper-widget flex h-full w-full flex-col overflow-hidden rounded-xl border text-card-foreground">
       <div
-        className="widget-drag-handle flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5"
+        className="widget-drag-handle notes-paper-widget-header flex shrink-0 items-center gap-2 px-3 py-1.5"
         style={{ cursor: 'grab' }}
       >
         <Brain className="size-3.5 text-muted-foreground" strokeWidth={2} />
@@ -102,7 +102,7 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
         <button
           type="button"
           onClick={handleOpenPage}
-          className="rounded p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+          className="rounded-md p-0.5 text-muted-foreground/60 transition-colors hover:bg-background/65 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
           aria-label={t('widgets.brainDump.openNotesAria')}
         >
           <ArrowUpRight className="size-3" />
@@ -110,7 +110,7 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
         <button
           type="button"
           onClick={() => void handleCreateNote()}
-          className="rounded p-0.5 text-muted-foreground/60 transition-colors hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+          className="rounded-md p-0.5 text-muted-foreground/60 transition-colors hover:bg-background/65 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
           aria-label={t('widgets.brainDump.newNoteAria')}
         >
           <Plus className="size-3" />
@@ -124,10 +124,10 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
         placeholder={t('widgets.brainDump.placeholder')}
         aria-label={t('widgets.brainDump.editorAria')}
         spellCheck={false}
-        className="font-sans text-base leading-relaxed h-full w-full resize-none bg-transparent p-4 text-foreground placeholder:text-muted-foreground/60 outline-none"
+        className="h-full w-full resize-none bg-transparent p-4 font-sans text-base leading-relaxed text-foreground placeholder:text-muted-foreground/60 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
       />
 
-      <div className="flex shrink-0 items-center justify-between border-t border-border px-3 py-1">
+      <div className="notes-paper-widget-footer flex shrink-0 items-center justify-between px-3 py-1">
         <span className="text-muted-foreground font-mono text-xs">
           {t('widgets.brainDump.notesCount', { count: widgetNotes.length })}
         </span>

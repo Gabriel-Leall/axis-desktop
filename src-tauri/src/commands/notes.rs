@@ -5,16 +5,17 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Component, Path, PathBuf};
 use std::sync::LazyLock;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_opener::OpenerExt;
+use uuid::Uuid;
 
 use crate::commands::preferences;
 use crate::types::AppPreferences;
 
-const DEFAULT_VAULT_DIR_NAME: &str = "Axis Notes";
+const DEFAULT_VAULT_DIR_NAME: &str = "Axis_Notes";
 const INBOX_DIR: &str = "inbox";
 const ARCHIVE_DIR: &str = "archive";
 const TRASH_DIR: &str = "trash";
@@ -23,8 +24,10 @@ const VAULT_MANIFEST_FILE: &str = "manifest.json";
 const VAULT_SIDECARS_DIR: &str = "sidecars";
 const VAULT_CACHE_DIR: &str = "cache";
 const VAULT_CONFIG_DIR: &str = "config";
-const VAULT_METADATA_SCHEMA_VERSION: u32 = 1;
+const VAULT_METADATA_SCHEMA_VERSION: u32 = 2;
 const SEARCH_MAX_RESULTS: usize = 80;
+const WELCOME_NOTE_RELATIVE_PATH: &str = "inbox/Comece aqui/Bem-vindo ao Axis.md";
+const WELCOME_NOTE_CONTENT: &str = "# Bem-vindo ao Axis\n\nSuas notas locais ficam no seu vault do Axis. Esta pasta e sua: voce pode criar notas soltas em Entrada, organizar projetos em pastas e abrir o vault no Explorer ou Finder quando quiser.\n\n## Como usar Notes\n\n- Escreva em Markdown e mantenha seus arquivos no seu computador.\n- Entrada e sua area ativa; Arquivo e Lixeira sao estados para organizar o que ja nao esta em uso.\n- Use a barra lateral para navegar pelas pastas e encontrar suas notas.\n\n## Anotacoes\n\nEm breve, voce podera selecionar um trecho para deixar uma anotacao privada nele. Ela tambem ficara salva apenas no seu vault.\n";
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct VaultLayout {
@@ -136,6 +139,43 @@ pub struct NoteVaultInfo {
 
 #[derive(Debug, Serialize, Deserialize, Type, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub enum NotesWorkspace {
+    Inbox,
+    Archive,
+    Trash,
+}
+
+impl NotesWorkspace {
+    fn directory_name(self) -> &'static str {
+        match self {
+            Self::Inbox => INBOX_DIR,
+            Self::Archive => ARCHIVE_DIR,
+            Self::Trash => TRASH_DIR,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Type, Clone)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum NoteTreeItem {
+    Folder {
+        path: String,
+        name: String,
+        children: Vec<NoteTreeItem>,
+    },
+    Note {
+        note: NoteSummary,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize, Type, Clone)]
+pub struct NoteWorkspaceTree {
+    pub workspace: NotesWorkspace,
+    pub items: Vec<NoteTreeItem>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Type, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub enum NoteVaultMigrationMode {
     Copy,
     Move,
@@ -163,6 +203,80 @@ struct VaultManifest {
     application: String,
     created_at: String,
     updated_at: String,
+    #[serde(default)]
+    note_ids_by_path: BTreeMap<String, String>,
+    #[serde(default)]
+    welcome_note_id: Option<String>,
+}
+
+struct VaultMetadata {
+    manifest_path: PathBuf,
+    manifest: VaultManifest,
+    dirty: bool,
+}
+
+impl VaultMetadata {
+    fn id_for_path(&mut self, path: &str) -> String {
+        if let Some(id) = self.manifest.note_ids_by_path.get(path) {
+            return id.clone();
+        }
+
+        let id = Uuid::new_v4().to_string();
+        self.manifest
+            .note_ids_by_path
+            .insert(path.to_string(), id.clone());
+        self.dirty = true;
+        id
+    }
+
+    fn path_for_id(&self, id: &str) -> Option<&str> {
+        self.manifest
+            .note_ids_by_path
+            .iter()
+            .find_map(|(path, candidate)| (candidate == id).then_some(path.as_str()))
+    }
+
+    fn rebind_path(&mut self, source_path: &str, destination_path: &str) {
+        let id = self
+            .manifest
+            .note_ids_by_path
+            .remove(source_path)
+            .unwrap_or_else(|| Uuid::new_v4().to_string());
+        self.manifest
+            .note_ids_by_path
+            .insert(destination_path.to_string(), id);
+        self.dirty = true;
+    }
+
+    fn set_welcome_note_id(&mut self, id: String) {
+        if self.manifest.welcome_note_id.as_deref() != Some(id.as_str()) {
+            self.manifest.welcome_note_id = Some(id);
+            self.dirty = true;
+        }
+    }
+
+    fn bind_id_to_path(&mut self, path: &str, id: &str) {
+        if self.manifest.note_ids_by_path.get(path) != Some(&id.to_string()) {
+            self.manifest
+                .note_ids_by_path
+                .insert(path.to_string(), id.to_string());
+            self.dirty = true;
+        }
+    }
+
+    fn persist_if_dirty(&mut self) -> Result<(), String> {
+        if !self.dirty {
+            return Ok(());
+        }
+
+        self.manifest.schema_version = VAULT_METADATA_SCHEMA_VERSION;
+        self.manifest.updated_at = now_iso_string();
+        let content = serde_json::to_string_pretty(&self.manifest)
+            .map_err(|e| format!("Failed to serialize notes vault manifest: {e}"))?;
+        write_atomic(&self.manifest_path, &content)?;
+        self.dirty = false;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -226,6 +340,8 @@ fn ensure_vault_structure(root: &Path) -> Result<(), String> {
         return Err("Selected notes vault path is not a directory".to_string());
     }
 
+    let is_new_vault = !root.exists();
+
     let layout = VaultLayout::standard();
     for dir in layout.required_dirs() {
         std::fs::create_dir_all(root.join(dir))
@@ -233,6 +349,10 @@ fn ensure_vault_structure(root: &Path) -> Result<(), String> {
     }
 
     ensure_vault_metadata_area(root)?;
+
+    if is_new_vault {
+        seed_welcome_note(root)?;
+    }
 
     Ok(())
 }
@@ -268,12 +388,52 @@ fn ensure_vault_metadata_area(root: &Path) -> Result<(), String> {
         application: "axis-desktop".to_string(),
         created_at: now.clone(),
         updated_at: now,
+        note_ids_by_path: BTreeMap::new(),
+        welcome_note_id: None,
     };
     let content = serde_json::to_string_pretty(&manifest)
         .map_err(|e| format!("Failed to serialize notes vault manifest: {e}"))?;
 
     write_atomic(&manifest_path, &content)?;
     Ok(())
+}
+
+fn load_vault_metadata(root: &Path) -> Result<VaultMetadata, String> {
+    let manifest_path = root.join(VAULT_METADATA_DIR).join(VAULT_MANIFEST_FILE);
+    ensure_not_symlink(&manifest_path, "Notes vault manifest")?;
+
+    let content = std::fs::read_to_string(&manifest_path)
+        .map_err(|e| format!("Failed to read notes vault manifest: {e}"))?;
+    let manifest = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse notes vault manifest: {e}"))?;
+
+    Ok(VaultMetadata {
+        manifest_path,
+        manifest,
+        dirty: false,
+    })
+}
+
+fn seed_welcome_note(root: &Path) -> Result<(), String> {
+    let welcome_path = root
+        .join(INBOX_DIR)
+        .join("Comece aqui")
+        .join("Bem-vindo ao Axis.md");
+
+    if !welcome_path.exists() {
+        let parent = welcome_path
+            .parent()
+            .ok_or_else(|| "Invalid welcome note path".to_string())?;
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create welcome note folder: {e}"))?;
+        write_atomic(&welcome_path, WELCOME_NOTE_CONTENT)?;
+    }
+
+    let mut metadata = load_vault_metadata(root)?;
+    let path = relative_note_path(root, &welcome_path)?;
+    let id = metadata.id_for_path(&path);
+    metadata.set_welcome_note_id(id);
+    metadata.persist_if_dirty()
 }
 
 fn ensure_not_symlink(path: &Path, context: &str) -> Result<(), String> {
@@ -352,6 +512,33 @@ fn resolve_note_path(root: &Path, rel_path: &str) -> Result<PathBuf, String> {
         return Err(format!("Path escapes notes root: {rel_path}"));
     }
 
+    Ok(abs)
+}
+
+fn relative_note_path(root: &Path, abs_path: &Path) -> Result<String, String> {
+    abs_path
+        .strip_prefix(root)
+        .map_err(|e| format!("Failed to compute relative note path: {e}"))
+        .map(|path| path.to_string_lossy().replace('\\', "/"))
+}
+
+fn resolve_note_path_by_id(
+    root: &Path,
+    metadata: &mut VaultMetadata,
+    id: &str,
+) -> Result<PathBuf, String> {
+    if let Some(path) = metadata.path_for_id(id) {
+        return resolve_note_path(root, path);
+    }
+
+    // Older renderer state used the vault-relative path as the note ID. Resolve
+    // that safe legacy form once and immediately bind it to a stable UUID.
+    let abs = resolve_note_path(root, id)?;
+    if !abs.is_file() {
+        return Err("Note not found".to_string());
+    }
+    let path = relative_note_path(root, &abs)?;
+    metadata.id_for_path(&path);
     Ok(abs)
 }
 
@@ -505,18 +692,25 @@ fn parse_iso_or_epoch(value: &str) -> i64 {
 }
 
 fn note_from_file(root: &Path, abs_path: &Path) -> Result<Note, String> {
-    let rel = abs_path
-        .strip_prefix(root)
-        .map_err(|e| format!("Failed to compute relative note path: {e}"))?
-        .to_string_lossy()
-        .replace('\\', "/");
+    let mut metadata = load_vault_metadata(root)?;
+    let note = note_from_file_with_metadata(root, abs_path, &mut metadata)?;
+    metadata.persist_if_dirty()?;
+    Ok(note)
+}
 
-    let metadata =
+fn note_from_file_with_metadata(
+    root: &Path,
+    abs_path: &Path,
+    metadata: &mut VaultMetadata,
+) -> Result<Note, String> {
+    let rel = relative_note_path(root, abs_path)?;
+
+    let file_metadata =
         std::fs::metadata(abs_path).map_err(|e| format!("Failed to read note metadata: {e}"))?;
     let content = std::fs::read_to_string(abs_path)
         .map_err(|e| format!("Failed to read note content: {e}"))?;
 
-    let created_at = metadata
+    let created_at = file_metadata
         .created()
         .map(|v| {
             let dt: chrono::DateTime<chrono::Utc> = v.into();
@@ -524,7 +718,7 @@ fn note_from_file(root: &Path, abs_path: &Path) -> Result<Note, String> {
         })
         .unwrap_or_else(|_| now_iso_string());
 
-    let updated_at = metadata
+    let updated_at = file_metadata
         .modified()
         .map(|v| {
             let dt: chrono::DateTime<chrono::Utc> = v.into();
@@ -535,7 +729,7 @@ fn note_from_file(root: &Path, abs_path: &Path) -> Result<Note, String> {
     let title = resolve_note_title(&content, &rel);
 
     Ok(Note {
-        id: rel.clone(),
+        id: metadata.id_for_path(&rel),
         path: rel,
         title,
         content: content.clone(),
@@ -642,28 +836,134 @@ fn read_notes_in_vault_dir(root: &Path, dir_name: &str) -> Result<Vec<Note>, Str
     }
 
     let mut notes = Vec::new();
-    for entry in
-        std::fs::read_dir(&dir_path).map_err(|e| format!("Failed to list notes directory: {e}"))?
+    let layout = VaultLayout::standard();
+
+    fn walk(
+        root: &Path,
+        dir: &Path,
+        layout: &VaultLayout,
+        out: &mut Vec<Note>,
+    ) -> Result<(), String> {
+        let entries =
+            std::fs::read_dir(dir).map_err(|e| format!("Failed to list notes directory: {e}"))?;
+        for entry in entries {
+            let entry = entry.map_err(|e| format!("Failed to read directory entry: {e}"))?;
+            let path = entry.path();
+            let file_type = entry
+                .file_type()
+                .map_err(|e| format!("Failed to read entry type: {e}"))?;
+
+            if file_type.is_dir() {
+                let name = entry.file_name();
+                if !layout.is_internal_dir_name(&name.to_string_lossy()) {
+                    walk(root, &path, layout, out)?;
+                }
+                continue;
+            }
+
+            if file_type.is_file()
+                && path
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| ext.eq_ignore_ascii_case("md"))
+                    .unwrap_or(false)
+            {
+                out.push(note_from_file(root, &path)?);
+            }
+        }
+
+        Ok(())
+    }
+
+    walk(root, &dir_path, &layout, &mut notes)?;
+
+    notes.sort_by(|a, b| parse_iso_or_epoch(&b.updated_at).cmp(&parse_iso_or_epoch(&a.updated_at)));
+    Ok(notes)
+}
+
+fn read_workspace_tree(
+    root: &Path,
+    workspace: NotesWorkspace,
+) -> Result<NoteWorkspaceTree, String> {
+    let mut metadata = load_vault_metadata(root)?;
+    let directory = resolve_note_path(root, workspace.directory_name())?;
+    let items = read_tree_items(root, &directory, &mut metadata)?;
+    metadata.persist_if_dirty()?;
+
+    Ok(NoteWorkspaceTree { workspace, items })
+}
+
+fn read_tree_items(
+    root: &Path,
+    directory: &Path,
+    metadata: &mut VaultMetadata,
+) -> Result<Vec<NoteTreeItem>, String> {
+    let mut folders = Vec::new();
+    let mut notes = Vec::new();
+    let layout = VaultLayout::standard();
+
+    for entry in std::fs::read_dir(directory)
+        .map_err(|e| format!("Failed to list notes tree directory: {e}"))?
     {
-        let entry = entry.map_err(|e| format!("Failed to read directory entry: {e}"))?;
+        let entry = entry.map_err(|e| format!("Failed to read notes tree entry: {e}"))?;
         let path = entry.path();
         let file_type = entry
             .file_type()
-            .map_err(|e| format!("Failed to read entry type: {e}"))?;
+            .map_err(|e| format!("Failed to read notes tree entry type: {e}"))?;
+        let name = entry.file_name().to_string_lossy().to_string();
+
+        if file_type.is_dir() {
+            if layout.is_internal_dir_name(&name) {
+                continue;
+            }
+            folders.push((name, path));
+            continue;
+        }
 
         if file_type.is_file()
             && path
                 .extension()
-                .and_then(|ext| ext.to_str())
-                .map(|ext| ext.eq_ignore_ascii_case("md"))
-                .unwrap_or(false)
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
         {
-            notes.push(note_from_file(root, &path)?);
+            notes.push((name, path));
         }
     }
 
-    notes.sort_by(|a, b| parse_iso_or_epoch(&b.updated_at).cmp(&parse_iso_or_epoch(&a.updated_at)));
-    Ok(notes)
+    folders.sort_by(|left, right| left.0.to_lowercase().cmp(&right.0.to_lowercase()));
+    notes.sort_by(|left, right| left.0.to_lowercase().cmp(&right.0.to_lowercase()));
+
+    let mut items = Vec::with_capacity(folders.len() + notes.len());
+    for (name, path) in folders {
+        let children = read_tree_items(root, &path, metadata)?;
+        items.push(NoteTreeItem::Folder {
+            path: relative_note_path(root, &path)?,
+            name,
+            children,
+        });
+    }
+    for (_, path) in notes {
+        let note = note_from_file_with_metadata(root, &path, metadata)?;
+        items.push(NoteTreeItem::Note {
+            note: summary_from_note(&note),
+        });
+    }
+
+    Ok(items)
+}
+
+#[cfg(test)]
+fn tree_contains_path(tree: &NoteWorkspaceTree, expected_path: &str) -> bool {
+    fn contains(items: &[NoteTreeItem], expected_path: &str) -> bool {
+        items.iter().any(|item| match item {
+            NoteTreeItem::Folder { path, children, .. } => {
+                path == expected_path || contains(children, expected_path)
+            }
+            NoteTreeItem::Note { note } => note.path == expected_path,
+        })
+    }
+
+    contains(&tree.items, expected_path)
 }
 
 fn write_atomic(path: &Path, content: &str) -> Result<(), String> {
@@ -732,13 +1032,14 @@ fn merge_title_body(title: &str, body: &str) -> String {
 }
 
 fn move_note_to_vault_dir(root: &Path, id: &str, destination_dir: &str) -> Result<Note, String> {
-    let src_abs = resolve_note_path(root, id)?;
-    if !src_abs.is_file() {
-        return Err("Note not found".to_string());
-    }
+    let mut metadata = load_vault_metadata(root)?;
+    let src_abs = resolve_note_path_by_id(root, &mut metadata, id)?;
+    let source_path = relative_note_path(root, &src_abs)?;
 
-    if note_top_level_dir_name(id).as_deref() == Some(destination_dir) {
-        return note_from_file(root, &src_abs);
+    if note_top_level_dir_name(&source_path).as_deref() == Some(destination_dir) {
+        let note = note_from_file_with_metadata(root, &src_abs, &mut metadata)?;
+        metadata.persist_if_dirty()?;
+        return Ok(note);
     }
 
     let file_name = src_abs
@@ -748,7 +1049,11 @@ fn move_note_to_vault_dir(root: &Path, id: &str, destination_dir: &str) -> Resul
     let target_abs = next_unique_path(root, destination_dir, file_name)?;
 
     std::fs::rename(&src_abs, &target_abs).map_err(|e| format!("Failed to move note: {e}"))?;
-    note_from_file(root, &target_abs)
+    let target_path = relative_note_path(root, &target_abs)?;
+    metadata.rebind_path(&source_path, &target_path);
+    let note = note_from_file_with_metadata(root, &target_abs, &mut metadata)?;
+    metadata.persist_if_dirty()?;
+    Ok(note)
 }
 
 fn collect_vault_migration_files(root: &Path) -> Result<Vec<VaultMigrationFile>, String> {
@@ -848,6 +1153,42 @@ fn rollback_copied_migration_files(paths: &[PathBuf]) {
     }
 }
 
+fn preserve_migrated_note_ids(
+    source_root: &Path,
+    destination_root: &Path,
+    files: &[VaultMigrationFile],
+) -> Result<(), String> {
+    let source_metadata = load_vault_metadata(source_root)?;
+    let mut destination_metadata = load_vault_metadata(destination_root)?;
+
+    for file in files {
+        if file.kind != VaultMigrationFileKind::Note {
+            continue;
+        }
+
+        if let Some(id) = source_metadata
+            .manifest
+            .note_ids_by_path
+            .get(&file.relative_path)
+        {
+            destination_metadata.bind_id_to_path(&file.relative_path, id);
+        }
+    }
+
+    destination_metadata.persist_if_dirty()
+}
+
+fn is_default_welcome_note(file: &VaultMigrationFile) -> bool {
+    if file.kind != VaultMigrationFileKind::Note || file.relative_path != WELCOME_NOTE_RELATIVE_PATH
+    {
+        return false;
+    }
+
+    std::fs::read_to_string(&file.source_abs)
+        .map(|content| content == WELCOME_NOTE_CONTENT)
+        .unwrap_or(false)
+}
+
 fn migrate_notes_vault_contents(
     source_root: &Path,
     destination_root: &Path,
@@ -879,7 +1220,12 @@ fn migrate_notes_vault_contents(
         return Err("Source and destination notes vaults must be different".to_string());
     }
 
-    let files = collect_vault_migration_files(source_root)?;
+    let files: Vec<VaultMigrationFile> = collect_vault_migration_files(source_root)?
+        .into_iter()
+        // A fresh destination already owns this app-provided note. A user edit
+        // changes its content, so it remains a normal migration candidate.
+        .filter(|file| !is_default_welcome_note(file))
+        .collect();
     let conflicts: Vec<String> = files
         .iter()
         .filter(|file| destination_root.join(&file.relative_path).exists())
@@ -924,6 +1270,11 @@ fn migrate_notes_vault_contents(
         copied_paths.push(destination_abs);
     }
 
+    if let Err(error) = preserve_migrated_note_ids(source_root, destination_root, &files) {
+        rollback_copied_migration_files(&copied_paths);
+        return Err(error);
+    }
+
     if mode == NoteVaultMigrationMode::Move {
         for file in &files {
             std::fs::remove_file(&file.source_abs).map_err(|e| {
@@ -960,20 +1311,22 @@ fn move_note_to_lifecycle_dir(
 
 fn restore_note_to_inbox(root: &Path, id: &str) -> Result<Note, String> {
     let layout = VaultLayout::standard();
-    let top_level_dir = note_top_level_dir_name(id);
+    let mut metadata = load_vault_metadata(root)?;
+    let abs = resolve_note_path_by_id(root, &mut metadata, id)?;
+    let path = relative_note_path(root, &abs)?;
+    let top_level_dir = note_top_level_dir_name(&path);
 
     if top_level_dir
         .as_deref()
         .is_some_and(|dir| layout.is_lifecycle_dir_name(dir))
     {
+        metadata.persist_if_dirty()?;
         return move_note_to_vault_dir(root, id, INBOX_DIR);
     }
 
-    let abs = resolve_note_path(root, id)?;
-    if !abs.is_file() {
-        return Err("Note not found".to_string());
-    }
-    note_from_file(root, &abs)
+    let note = note_from_file_with_metadata(root, &abs, &mut metadata)?;
+    metadata.persist_if_dirty()?;
+    Ok(note)
 }
 
 #[tauri::command]
@@ -986,6 +1339,16 @@ pub async fn get_notes(app: AppHandle) -> Result<Vec<NoteSummary>, String> {
         .map(|note| summary_from_note(&note))
         .collect();
     Ok(summaries)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_notes_workspace_tree(
+    app: AppHandle,
+    workspace: NotesWorkspace,
+) -> Result<NoteWorkspaceTree, String> {
+    let root = notes_root(&app)?;
+    read_workspace_tree(&root, workspace)
 }
 
 #[tauri::command]
@@ -1016,11 +1379,11 @@ pub async fn get_trashed_notes(app: AppHandle) -> Result<Vec<NoteSummary>, Strin
 #[specta::specta]
 pub async fn get_note(app: AppHandle, id: String) -> Result<Note, String> {
     let root = notes_root(&app)?;
-    let abs = resolve_note_path(&root, &id)?;
-    if !abs.exists() {
-        return Err("Note not found".to_string());
-    }
-    note_from_file(&root, &abs)
+    let mut metadata = load_vault_metadata(&root)?;
+    let abs = resolve_note_path_by_id(&root, &mut metadata, &id)?;
+    let note = note_from_file_with_metadata(&root, &abs, &mut metadata)?;
+    metadata.persist_if_dirty()?;
+    Ok(note)
 }
 
 #[tauri::command]
@@ -1060,13 +1423,12 @@ pub async fn create_note(app: AppHandle, input: CreateNoteInput) -> Result<NoteS
 #[specta::specta]
 pub async fn update_note(app: AppHandle, input: UpdateNoteInput) -> Result<Note, String> {
     let root = notes_root(&app)?;
-    let abs = resolve_note_path(&root, &input.id)?;
-    if !abs.exists() {
-        return Err("Note not found".to_string());
-    }
+    let mut metadata = load_vault_metadata(&root)?;
+    let abs = resolve_note_path_by_id(&root, &mut metadata, &input.id)?;
 
     write_atomic(&abs, &input.content)?;
-    let note = note_from_file(&root, &abs)?;
+    let note = note_from_file_with_metadata(&root, &abs, &mut metadata)?;
+    metadata.persist_if_dirty()?;
     Ok(note)
 }
 
@@ -1074,10 +1436,9 @@ pub async fn update_note(app: AppHandle, input: UpdateNoteInput) -> Result<Note,
 #[specta::specta]
 pub async fn rename_note(app: AppHandle, input: RenameNoteInput) -> Result<Note, String> {
     let root = notes_root(&app)?;
-    let src_abs = resolve_note_path(&root, &input.id)?;
-    if !src_abs.exists() {
-        return Err("Note not found".to_string());
-    }
+    let mut metadata = load_vault_metadata(&root)?;
+    let src_abs = resolve_note_path_by_id(&root, &mut metadata, &input.id)?;
+    let source_path = relative_note_path(&root, &src_abs)?;
 
     let new_filename = ensure_md_filename(&input.title);
     let target_abs = src_abs
@@ -1091,9 +1452,12 @@ pub async fn rename_note(app: AppHandle, input: RenameNoteInput) -> Result<Note,
         }
         std::fs::rename(&src_abs, &target_abs)
             .map_err(|e| format!("Failed to rename note: {e}"))?;
+        let target_path = relative_note_path(&root, &target_abs)?;
+        metadata.rebind_path(&source_path, &target_path);
     }
 
-    let note = note_from_file(&root, &target_abs)?;
+    let note = note_from_file_with_metadata(&root, &target_abs, &mut metadata)?;
+    metadata.persist_if_dirty()?;
     Ok(note)
 }
 
@@ -1312,7 +1676,7 @@ mod tests {
         let documents = Path::new("Documents");
         let path = default_vault_path_from_documents(documents);
 
-        assert_eq!(path, documents.join("Axis Notes"));
+        assert_eq!(path, documents.join("Axis_Notes"));
     }
 
     #[test]
@@ -1371,6 +1735,79 @@ mod tests {
         assert!(manifest["updated_at"]
             .as_str()
             .is_some_and(|v| !v.is_empty()));
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn ensure_empty_vault_seeds_welcome_note_with_stable_id() {
+        let root = test_vault_root("axis-notes-welcome-seed-test");
+
+        ensure_vault_structure(&root).expect("vault structure should be created");
+
+        let welcome_path = root
+            .join(INBOX_DIR)
+            .join("Comece aqui")
+            .join("Bem-vindo ao Axis.md");
+        assert!(welcome_path.is_file());
+
+        let content =
+            std::fs::read_to_string(&welcome_path).expect("welcome note should be readable");
+        assert!(content.contains("notas locais"));
+
+        let manifest_path = root.join(VAULT_METADATA_DIR).join(VAULT_MANIFEST_FILE);
+        let manifest: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(manifest_path).expect("manifest should be readable"),
+        )
+        .expect("manifest should be valid JSON");
+        let welcome_id = manifest["welcome_note_id"]
+            .as_str()
+            .expect("welcome note should have a stable ID");
+        assert_eq!(
+            manifest["note_ids_by_path"]["inbox/Comece aqui/Bem-vindo ao Axis.md"].as_str(),
+            Some(welcome_id)
+        );
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn ensure_existing_vault_never_receives_welcome_content() {
+        let root = test_vault_root("axis-notes-existing-vault-test");
+        let inbox = root.join(INBOX_DIR);
+        std::fs::create_dir_all(&inbox).expect("inbox should be creatable");
+        std::fs::write(inbox.join("existing.md"), "# Existing")
+            .expect("existing note should be writable");
+
+        ensure_vault_structure(&root).expect("vault structure should be created");
+
+        assert!(!root.join(INBOX_DIR).join("Comece aqui").exists());
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn note_file_uses_a_manifest_owned_stable_id() {
+        let root = test_vault_root("axis-notes-stable-id-test");
+        ensure_vault_structure(&root).expect("vault structure should be created");
+        let note_path = root.join(INBOX_DIR).join("plan.md");
+        std::fs::write(&note_path, "# Plan").expect("note fixture should be writable");
+
+        let first = note_from_file(&root, &note_path).expect("first read should succeed");
+        let second = note_from_file(&root, &note_path).expect("second read should succeed");
+
+        assert_ne!(first.id, first.path);
+        assert_eq!(first.id, second.id);
+
+        let manifest: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(root.join(VAULT_METADATA_DIR).join(VAULT_MANIFEST_FILE))
+                .expect("manifest should be readable"),
+        )
+        .expect("manifest should be valid JSON");
+        assert_eq!(
+            manifest["note_ids_by_path"]["inbox/plan.md"].as_str(),
+            Some(first.id.as_str())
+        );
 
         std::fs::remove_dir_all(root).expect("test vault should be removable");
     }
@@ -1515,8 +1952,11 @@ mod tests {
 
         let notes = read_all_notes(&root).expect("notes should be readable");
 
-        assert_eq!(notes.len(), 1);
-        assert_eq!(notes[0].path, "inbox/visible.md");
+        assert_eq!(notes.len(), 2);
+        assert!(notes.iter().any(|note| note.path == "inbox/visible.md"));
+        assert!(notes
+            .iter()
+            .any(|note| note.path == WELCOME_NOTE_RELATIVE_PATH));
 
         std::fs::remove_dir_all(root).expect("test vault should be removable");
     }
@@ -1535,8 +1975,11 @@ mod tests {
 
         let notes = read_all_notes(&root).expect("notes should be readable");
 
-        assert_eq!(notes.len(), 1);
-        assert_eq!(notes[0].path, "inbox/visible.md");
+        assert_eq!(notes.len(), 2);
+        assert!(notes.iter().any(|note| note.path == "inbox/visible.md"));
+        assert!(notes
+            .iter()
+            .any(|note| note.path == WELCOME_NOTE_RELATIVE_PATH));
 
         std::fs::remove_dir_all(root).expect("test vault should be removable");
     }
@@ -1562,6 +2005,63 @@ mod tests {
         assert_eq!(archived_notes[0].path, "archive/archived.md");
         assert_eq!(trashed_notes.len(), 1);
         assert_eq!(trashed_notes[0].path, "trash/trashed.md");
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn read_notes_in_vault_dir_includes_nested_note_paths() {
+        let root = test_vault_root("axis-notes-nested-workspace-test");
+        ensure_vault_structure(&root).expect("vault structure should be created");
+        let nested = root.join(INBOX_DIR).join("projects").join("axis");
+        std::fs::create_dir_all(&nested).expect("nested folder should be creatable");
+        std::fs::write(root.join(INBOX_DIR).join("root.md"), "# Root")
+            .expect("root note should be writable");
+        std::fs::write(nested.join("plan.md"), "# Plan").expect("nested note should be writable");
+
+        let notes =
+            read_notes_in_vault_dir(&root, INBOX_DIR).expect("workspace notes should be readable");
+        let paths: Vec<&str> = notes.iter().map(|note| note.path.as_str()).collect();
+
+        assert!(paths.contains(&"inbox/root.md"));
+        assert!(paths.contains(&"inbox/projects/axis/plan.md"));
+
+        std::fs::remove_dir_all(root).expect("test vault should be removable");
+    }
+
+    #[test]
+    fn workspace_tree_keeps_physical_folder_nesting_and_stable_note_ids() {
+        let root = test_vault_root("axis-notes-tree-test");
+        ensure_vault_structure(&root).expect("vault structure should be created");
+        let project = root.join(INBOX_DIR).join("projects").join("axis");
+        std::fs::create_dir_all(&project).expect("project folder should be creatable");
+        std::fs::write(root.join(INBOX_DIR).join("root.md"), "# Root")
+            .expect("root note should be writable");
+        std::fs::write(project.join("plan.md"), "# Plan").expect("nested note should be writable");
+        std::fs::write(
+            root.join(VAULT_METADATA_DIR)
+                .join(VAULT_SIDECARS_DIR)
+                .join("hidden.md"),
+            "# Hidden",
+        )
+        .expect("internal fixture should be writable");
+
+        let tree = read_workspace_tree(&root, NotesWorkspace::Inbox)
+            .expect("workspace tree should be readable");
+
+        assert_eq!(tree.workspace, NotesWorkspace::Inbox);
+        assert_eq!(tree.items.len(), 3);
+        assert!(
+            matches!(tree.items.first(), Some(NoteTreeItem::Folder { name, .. }) if name == "Comece aqui")
+        );
+        assert!(
+            matches!(tree.items.get(1), Some(NoteTreeItem::Folder { name, .. }) if name == "projects")
+        );
+        assert!(
+            matches!(tree.items.get(2), Some(NoteTreeItem::Note { note }) if note.path == "inbox/root.md" && note.id != note.path)
+        );
+        assert!(!tree_contains_path(&tree, ".axis-notes/sidecars/hidden.md"));
+        assert!(tree_contains_path(&tree, "inbox/projects/axis/plan.md"));
 
         std::fs::remove_dir_all(root).expect("test vault should be removable");
     }
@@ -1724,6 +2224,38 @@ mod tests {
     }
 
     #[test]
+    fn migrate_notes_vault_contents_preserves_manifest_note_ids() {
+        let source = test_vault_root("axis-notes-migration-ids-source-test");
+        let destination = test_vault_root("axis-notes-migration-ids-destination-test");
+        ensure_vault_structure(&source).expect("source vault should be created");
+        ensure_vault_structure(&destination).expect("destination vault should be created");
+        std::fs::write(source.join(INBOX_DIR).join("plan.md"), "# Plan")
+            .expect("source note should be writable");
+
+        let source_id = read_all_notes(&source)
+            .expect("source notes should be readable")
+            .into_iter()
+            .find(|note| note.path == "inbox/plan.md")
+            .expect("plan should be listed")
+            .id;
+
+        migrate_notes_vault_contents(&source, &destination, NoteVaultMigrationMode::Copy)
+            .expect("vault contents should copy");
+
+        let destination_id = read_all_notes(&destination)
+            .expect("destination notes should be readable")
+            .into_iter()
+            .find(|note| note.path == "inbox/plan.md")
+            .expect("migrated plan should be listed")
+            .id;
+
+        assert_eq!(destination_id, source_id);
+
+        std::fs::remove_dir_all(source).expect("source vault should be removable");
+        std::fs::remove_dir_all(destination).expect("destination vault should be removable");
+    }
+
+    #[test]
     fn migrate_notes_vault_contents_rejects_conflicts_before_copying_any_file() {
         let source = test_vault_root("axis-notes-migration-conflict-source-test");
         let destination = test_vault_root("axis-notes-migration-conflict-destination-test");
@@ -1787,6 +2319,6 @@ mod tests {
         let root = resolve_vault_root_from_preferences(Path::new("Documents"), &preferences)
             .expect("default vault path should resolve");
 
-        assert_eq!(root, Path::new("Documents").join("Axis Notes"));
+        assert_eq!(root, Path::new("Documents").join(DEFAULT_VAULT_DIR_NAME));
     }
 }

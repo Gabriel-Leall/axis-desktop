@@ -614,6 +614,14 @@ async getNotes() : Promise<Result<NoteSummary[], string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async getNotesWorkspaceTree(workspace: NotesWorkspace) : Promise<Result<NoteWorkspaceTree, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_notes_workspace_tree", { workspace }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getArchivedNotes() : Promise<Result<NoteSummary[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_archived_notes") };
@@ -840,9 +848,12 @@ export type KanbanSubtask = { id: string; card_id: string; title: string; comple
 export type MigrateNotesVaultInput = { source_path: string; mode: NoteVaultMigrationMode }
 export type Note = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
 export type NoteSummary = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
+export type NoteTreeItem = { kind: "folder"; path: string; name: string; children: NoteTreeItem[] } | { kind: "note"; note: NoteSummary }
 export type NoteVaultInfo = { path: string; is_default: boolean }
 export type NoteVaultMigrationMode = "copy" | "move"
 export type NoteVaultMigrationResult = { source_path: string; destination_path: string; mode: NoteVaultMigrationMode; notes_migrated: number; metadata_files_migrated: number; conflicts: string[] }
+export type NoteWorkspaceTree = { workspace: NotesWorkspace; items: NoteTreeItem[] }
+export type NotesWorkspace = "inbox" | "archive" | "trash"
 export type OAuthLoopbackResult = { code: string; state: string | null; redirect_uri: string }
 export type PomodoroSession = { id: string; session_type: string; duration_seconds: number; completed: boolean; task_id: string | null; started_at: string; ended_at: string | null; created_at: string }
 export type PomodoroSettings = { focus_duration: number; short_break_duration: number; long_break_duration: number; pomos_until_long_break: number; auto_start_breaks: boolean; auto_start_focus: boolean; sound_notifications: boolean }

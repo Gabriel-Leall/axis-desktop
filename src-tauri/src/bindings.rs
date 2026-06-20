@@ -77,6 +77,7 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         kanban::create_kanban_subtask,
         // Notes
         notes::get_notes,
+        notes::get_notes_workspace_tree,
         notes::get_archived_notes,
         notes::get_trashed_notes,
         notes::get_note,
