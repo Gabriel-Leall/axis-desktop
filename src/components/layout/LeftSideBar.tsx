@@ -135,6 +135,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                   <button
                     type="button"
                     onClick={() => navigateTo(item.id)}
+                    aria-label={item.label}
                     aria-current={isActive ? 'page' : undefined}
                     className={cn(
                       'group relative flex items-center justify-center rounded-md transition-all duration-150',

@@ -38,4 +38,10 @@ describe('LeftSideBar', () => {
       'axis-activity-bar-compact'
     )
   })
+
+  it('gives each activity control an accessible name', () => {
+    render(<LeftSideBar />)
+
+    expect(screen.getByRole('button', { name: 'Notes' })).toBeInTheDocument()
+  })
 })
