@@ -106,7 +106,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
           'flex flex-col items-center',
           isCompact ? 'gap-0.5 p-1.5 pt-2' : 'gap-1 p-2 pt-3'
         )}
-        aria-label="Main navigation"
+        aria-label={t('sidebar.mainNavigation')}
       >
         <div
           className={cn(
@@ -138,7 +138,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
                     aria-label={item.label}
                     aria-current={isActive ? 'page' : undefined}
                     className={cn(
-                      'group relative flex items-center justify-center rounded-md transition-all duration-150',
+                      'group relative flex items-center justify-center rounded-md transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
                       isCompact ? 'size-7.5' : 'size-9',
                       isActive
                         ? [
@@ -185,7 +185,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
               onClick={() => void handleQuickPaneToggle()}
               aria-label={quickPaneLabel}
               className={cn(
-                'group flex items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent/8 hover:text-foreground',
+                'group flex items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
                 isCompact ? 'mb-2 size-7.5' : 'mb-3 size-9'
               )}
             >
@@ -207,8 +207,9 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
             <button
               type="button"
               onClick={() => setPreferencesOpen(true, 'user')}
+              aria-label={profileName || t('sidebar.account')}
               className={cn(
-                'group relative flex items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-accent/50 shadow-sm transition-all hover:border-primary/30 hover:ring-2 hover:ring-primary/10',
+                'group relative flex items-center justify-center overflow-hidden rounded-full border border-border bg-sidebar-accent/50 shadow-sm transition-all hover:border-primary/30 hover:ring-2 hover:ring-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
                 isCompact ? 'size-7.5' : 'size-9'
               )}
             >
@@ -224,7 +225,7 @@ export function LeftSideBar({ children, className }: LeftSideBarProps) {
             </button>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={8}>
-            {profileName || 'Conta'}
+            {profileName || t('sidebar.account')}
           </TooltipContent>
         </Tooltip>
       </div>

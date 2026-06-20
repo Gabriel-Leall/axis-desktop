@@ -483,6 +483,25 @@ describe('useNotesStore lifecycle actions', () => {
     })
   })
 
+  it('keeps a created note available when loading the inbox tree fails', async () => {
+    vi.mocked(commands.getNotesWorkspaceTree).mockResolvedValueOnce({
+      status: 'error',
+      error: 'inbox tree unavailable',
+    })
+    useNotesStore.setState({ workspaceView: 'archive', tree: null })
+
+    await expect(useNotesStore.getState().createNote('# New')).resolves.toBe(
+      'inbox/new.md'
+    )
+
+    expect(useNotesStore.getState().tree?.items).toEqual([
+      {
+        kind: 'note',
+        note: expect.objectContaining({ id: 'inbox/new.md' }),
+      },
+    ])
+  })
+
   it('loads widget notes from the active vault inbox even when a lifecycle workspace is active', async () => {
     useNotesStore.setState({
       workspaceView: 'trash',

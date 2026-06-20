@@ -141,6 +141,7 @@ describe('NotesPage', () => {
       vaultError: null,
       pendingMigrationSourcePath: null,
       workspaceView: 'inbox',
+      tree: null,
       notes: [],
       searchResults: null,
       selectedNoteId: null,
@@ -194,6 +195,20 @@ describe('NotesPage', () => {
     expect(
       screen.getByRole('button', { name: 'Paper workspace' })
     ).toBeInTheDocument()
+  })
+
+  it('keeps the existing body when changing a title in preview mode', async () => {
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.click(screen.getByRole('button', { name: 'Preview mode' }))
+    fireEvent.change(screen.getByDisplayValue('Paper workspace'), {
+      target: { value: 'Renamed workspace' },
+    })
+
+    expect(useNotesStore.getState().selectedNote()?.content).toBe(
+      '# Renamed workspace\n\nA note with preview content.'
+    )
   })
 
   it('keeps the paper workspace mounted while another workspace tree loads', async () => {

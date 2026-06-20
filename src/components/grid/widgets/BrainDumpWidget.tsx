@@ -124,7 +124,7 @@ export function BrainDumpWidget({ onNavigateToNotes }: BrainDumpWidgetProps) {
         placeholder={t('widgets.brainDump.placeholder')}
         aria-label={t('widgets.brainDump.editorAria')}
         spellCheck={false}
-        className="h-full w-full resize-none bg-transparent p-4 font-sans text-base leading-relaxed text-foreground placeholder:text-muted-foreground/60 outline-none"
+        className="h-full w-full resize-none bg-transparent p-4 font-sans text-base leading-relaxed text-foreground placeholder:text-muted-foreground/60 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
       />
 
       <div className="notes-paper-widget-footer flex shrink-0 items-center justify-between px-3 py-1">

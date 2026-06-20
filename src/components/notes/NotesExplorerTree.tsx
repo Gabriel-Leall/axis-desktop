@@ -48,7 +48,7 @@ function TreeItem({
       >
         <FileText className="size-3.5 shrink-0" />
         <span className="min-w-0 flex-1 truncate text-xs font-medium">
-          {item.note.title || 'Untitled'}
+          {item.note.title || t('notes.sidebar.untitled')}
         </span>
       </button>
     )

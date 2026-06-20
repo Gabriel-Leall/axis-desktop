@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as notesDomain from './notes-domain'
+import type { NoteTreeItem } from './notes-domain'
 
 const treeFixture = [
   {
@@ -50,6 +51,58 @@ describe('flattenNoteTree', () => {
     expect(flattenNoteTree(treeFixture)).toEqual([
       expect.objectContaining({ id: 'plan-id' }),
       expect.objectContaining({ id: 'root-id' }),
+    ])
+  })
+
+  it('returns no notes for an empty tree', () => {
+    expect(notesDomain.flattenNoteTree([])).toEqual([])
+  })
+
+  it('preserves depth-first order through multiple folder levels', () => {
+    const deepTree: NoteTreeItem[] = [
+      {
+        kind: 'folder',
+        path: 'inbox/projects',
+        name: 'Projects',
+        children: [
+          {
+            kind: 'folder',
+            path: 'inbox/projects/axis',
+            name: 'Axis',
+            children: [
+              {
+                kind: 'note',
+                note: {
+                  id: 'deep-id',
+                  path: 'inbox/projects/axis/deep.md',
+                  title: 'Deep',
+                  content: '# Deep',
+                  created_at: '2026-06-19T10:00:00.000Z',
+                  updated_at: '2026-06-19T10:00:00.000Z',
+                  word_count: 1,
+                },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'note',
+        note: {
+          id: 'after-id',
+          path: 'inbox/after.md',
+          title: 'After',
+          content: '# After',
+          created_at: '2026-06-19T10:00:00.000Z',
+          updated_at: '2026-06-19T10:00:00.000Z',
+          word_count: 1,
+        },
+      },
+    ]
+
+    expect(notesDomain.flattenNoteTree(deepTree).map(note => note.id)).toEqual([
+      'deep-id',
+      'after-id',
     ])
   })
 })

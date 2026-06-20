@@ -620,7 +620,7 @@ function NoteActionsMenu({
         type="button"
         onClick={() => setShowMenu(!showMenu)}
         className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        aria-label="Note actions"
+        aria-label={t('notes.editor.menu.actions')}
       >
         <MoreHorizontal className="size-4" />
       </button>
@@ -813,7 +813,8 @@ function EditorArea({
 
   function handleEditorChange() {
     if (!note) return
-    const bodyMarkdown = editorRef.current?.getInstance().getMarkdown() ?? ''
+    const bodyMarkdown =
+      editorRef.current?.getInstance().getMarkdown() ?? parsed.body
     onContentChange(note.id, buildNoteContent(parsed.title, bodyMarkdown))
   }
 
@@ -821,7 +822,8 @@ function EditorArea({
     if (!note || workspaceView !== 'inbox') return
     const nextTitle = event.target.value
 
-    const bodyMarkdown = editorRef.current?.getInstance().getMarkdown() ?? ''
+    const bodyMarkdown =
+      editorRef.current?.getInstance().getMarkdown() ?? parsed.body
     onContentChange(note.id, buildNoteContent(nextTitle, bodyMarkdown))
   }
 

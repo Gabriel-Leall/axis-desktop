@@ -704,7 +704,12 @@ export const useNotesStore = create<NotesState>()(
           const currentTree =
             currentView === 'inbox'
               ? get().tree
-              : await loadTreeForWorkspace('inbox')
+              : await loadTreeForWorkspace('inbox').catch(error => {
+                  logger.error(
+                    `Failed to reload inbox tree after create: ${String(error)}`
+                  )
+                  return null
+                })
           const inboxTree = prependNoteToTree(currentTree, createdNote) ?? {
             workspace: 'inbox' as const,
             items: [{ kind: 'note' as const, note: createdNote }],

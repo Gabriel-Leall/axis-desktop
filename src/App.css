@@ -347,6 +347,7 @@
   );
   --notes-hairline: color-mix(in oklab, var(--border) 78%, transparent);
   --notes-accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+
   background:
     radial-gradient(
       circle at 14% 0%,
@@ -383,7 +384,8 @@
 }
 
 .notes-paper-sidebar {
-  border-right: 1px solid var(--notes-hairline);
+  border-inline-end: 1px solid var(--notes-hairline);
+
   background: color-mix(in oklab, var(--notes-paper-soft) 88%, transparent);
   backdrop-filter: saturate(145%) blur(18px);
   box-shadow: inset -1px 0 0
@@ -475,8 +477,8 @@
 }
 
 .notes-paper-writing-grid.is-split .notes-inline-editor:first-child {
-  border-right: 1px solid var(--notes-hairline);
-  padding-right: 1.25rem;
+  border-inline-end: 1px solid var(--notes-hairline);
+  padding-inline-end: 1.25rem;
 }
 
 .notes-paper-preview {
@@ -501,9 +503,9 @@
   }
 
   .notes-paper-writing-grid.is-split .notes-inline-editor:first-child {
-    border-right: 0;
+    border-inline-end: 0;
     border-bottom: 1px solid var(--notes-hairline);
-    padding-right: 0;
+    padding-inline-end: 0;
     padding-bottom: 1.25rem;
   }
 }
@@ -516,6 +518,7 @@
   );
   --notes-widget-hairline: color-mix(in oklab, var(--border) 76%, transparent);
   border-color: var(--notes-widget-hairline);
+
   background:
     radial-gradient(
       circle at 12% 0%,
