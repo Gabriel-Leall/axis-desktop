@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import {
@@ -64,13 +64,8 @@ export function NotesTreeActionDialog({
   onSubmit,
 }: NotesTreeActionDialogProps) {
   const { t } = useTranslation()
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(() => request?.initialValue ?? '')
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  useEffect(() => {
-    setValue(request?.initialValue ?? '')
-    setIsSubmitting(false)
-  }, [request])
 
   if (!request) return null
 
@@ -82,12 +77,9 @@ export function NotesTreeActionDialog({
     if (valueIsBlank || isSubmitting) return
 
     setIsSubmitting(true)
-    try {
-      const didSubmit = await onSubmit(value.trim())
-      if (didSubmit) onOpenChange(false)
-    } finally {
-      setIsSubmitting(false)
-    }
+    const didSubmit = await onSubmit(value.trim()).catch(() => false)
+    setIsSubmitting(false)
+    if (didSubmit) onOpenChange(false)
   }
 
   return (
