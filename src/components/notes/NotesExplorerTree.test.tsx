@@ -84,6 +84,39 @@ describe('NotesExplorerTree', () => {
     expect(onSelectNote).toHaveBeenCalledWith('plan-id')
   })
 
+  it('marks Inbox rows as drag sources and only folders as drop targets', () => {
+    const { rerender } = render(
+      <NotesExplorerTree
+        tree={tree}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Plan' })).toHaveAttribute(
+      'data-drag-source',
+      'true'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Collapse Projects' })
+    ).toHaveAttribute('data-drop-target', 'true')
+
+    rerender(
+      <NotesExplorerTree
+        tree={{ ...tree, workspace: 'trash' }}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Plan' })).not.toHaveAttribute(
+      'data-drag-source'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Collapse Projects' })
+    ).not.toHaveAttribute('data-drop-target')
+  })
+
   it('opens lifecycle actions on right click and archives an inbox note', async () => {
     const user = userEvent.setup()
     const onContextAction = vi.fn()
