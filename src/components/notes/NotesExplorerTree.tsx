@@ -170,11 +170,7 @@ export function NotesExplorerTree({
   }
 
   function scheduleFolderExpansion(path: string) {
-    if (
-      !collapsedPaths.has(path) ||
-      hoverTargetRef.current === path ||
-      hoverTimerRef.current !== null
-    ) {
+    if (!collapsedPaths.has(path) || hoverTargetRef.current === path) {
       return
     }
 
@@ -237,17 +233,17 @@ export function NotesExplorerTree({
     if (!validation.valid || !onMoveItem) return
 
     isMovingRef.current = true
-    void Promise.resolve(
-      onMoveItem(draggedItem, validation.destinationFolder)
-    ).then(
-      () => {
-        isMovingRef.current = false
-      },
-      () => {
-        // The caller reports the localized lifecycle error and restores its snapshot.
-        isMovingRef.current = false
-      }
-    )
+    void Promise.resolve()
+      .then(() => onMoveItem(draggedItem, validation.destinationFolder))
+      .then(
+        () => {
+          isMovingRef.current = false
+        },
+        () => {
+          // The caller reports the localized lifecycle error and restores its snapshot.
+          isMovingRef.current = false
+        }
+      )
   }
 
   return (

@@ -1090,6 +1090,7 @@ describe('useNotesStore lifecycle actions', () => {
         },
       ],
     }
+    const expectedTree = structuredClone(tree)
     useNotesStore.setState({ tree, selectedNoteId: 'inbox/alpha.md' })
 
     await expect(
@@ -1099,7 +1100,7 @@ describe('useNotesStore lifecycle actions', () => {
       })
     ).rejects.toThrow('filesystem move failed')
 
-    expect(useNotesStore.getState().tree).toEqual(tree)
+    expect(useNotesStore.getState().tree).toEqual(expectedTree)
     expect(useNotesStore.getState().selectedNoteId).toBe('inbox/alpha.md')
   })
 

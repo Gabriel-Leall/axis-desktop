@@ -94,6 +94,26 @@ describe('getNotesTreeDropValidation', () => {
       ).toEqual({ valid: false })
     }
   )
+
+  it('rejects moving a folder into its current parent folder', () => {
+    expect(
+      getNotesTreeDropValidation(
+        tree,
+        { kind: 'folder', path: 'inbox/projects/axis' },
+        'inbox/projects'
+      )
+    ).toEqual({ valid: false })
+  })
+
+  it('rejects moving a note into its current parent folder', () => {
+    expect(
+      getNotesTreeDropValidation(
+        tree,
+        { kind: 'note', id: 'plan' },
+        'inbox/projects'
+      )
+    ).toEqual({ valid: false })
+  })
 })
 
 describe('projectNotesTreeMove', () => {

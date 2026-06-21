@@ -69,6 +69,25 @@ const tree = {
       ],
     },
     {
+      kind: 'folder' as const,
+      path: 'inbox/target',
+      name: 'Target',
+      children: [
+        {
+          kind: 'note' as const,
+          note: {
+            id: 'target-id',
+            path: 'inbox/target/target.md',
+            title: 'Target note',
+            content: '# Target note',
+            created_at: '2026-06-19T10:00:00.000Z',
+            updated_at: '2026-06-19T10:00:00.000Z',
+            word_count: 1,
+          },
+        },
+      ],
+    },
+    {
       kind: 'note' as const,
       note: {
         id: 'root-id',
@@ -240,6 +259,87 @@ describe('NotesExplorerTree', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('retargets folder expansion when the drag moves to a new folder', () => {
+    vi.useFakeTimers()
+    try {
+      render(
+        <NotesExplorerTree
+          tree={tree}
+          selectedNoteId={null}
+          onSelectNote={vi.fn()}
+        />
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Collapse Projects' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Collapse Target' }))
+      act(() => {
+        dnd.props?.onDragStart?.({
+          active: {
+            data: { current: { item: { kind: 'note', id: 'root-id' } } },
+          },
+        })
+      })
+      act(() => {
+        dnd.props?.onDragOver?.({
+          over: { data: { current: { path: 'inbox/projects' } } },
+        })
+      })
+      act(() => {
+        dnd.props?.onDragOver?.({
+          over: { data: { current: { path: 'inbox/target' } } },
+        })
+      })
+      act(() => {
+        vi.advanceTimersByTime(600)
+      })
+
+      expect(
+        screen.queryByRole('button', { name: 'Plan' })
+      ).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Target note' })).toBeVisible()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('recovers after a synchronous drag callback failure', async () => {
+    const onMoveItem = vi.fn(() => {
+      throw new Error('vault move failed')
+    })
+    render(
+      <NotesExplorerTree
+        tree={tree}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+        onMoveItem={onMoveItem}
+      />
+    )
+
+    act(() => {
+      dnd.props?.onDragStart?.({
+        active: {
+          data: { current: { item: { kind: 'note', id: 'root-id' } } },
+        },
+      })
+    })
+
+    expect(() => {
+      act(() => {
+        dnd.props?.onDragEnd?.({
+          active: {
+            data: { current: { item: { kind: 'note', id: 'root-id' } } },
+          },
+          over: { data: { current: { path: 'inbox/projects' } } },
+        })
+      })
+    }).not.toThrow()
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(onMoveItem).toHaveBeenCalledTimes(1)
   })
 
   it('announces the dragged item and flags an invalid descendant target', async () => {
