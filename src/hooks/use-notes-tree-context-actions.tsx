@@ -80,11 +80,13 @@ export function useNotesTreeContextActions() {
         action: {
           label: t('common.undo'),
           onClick: () => {
-            const undo =
-              workspaceView === 'archive'
-                ? archiveTreeItem(treeItemInWorkspace(item, 'archive'))
-                : restoreTreeItem(trashedItem)
-            void undo.catch(showError)
+            if (workspaceView === 'archive') {
+              void restoreTreeItem(trashedItem)
+                .then(() => archiveTreeItem(treeItemInWorkspace(item, 'inbox')))
+                .catch(showError)
+              return
+            }
+            void restoreTreeItem(trashedItem).catch(showError)
           },
         },
         cancel: {

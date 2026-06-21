@@ -734,6 +734,8 @@ fn creates_a_folder_only_inside_the_inbox_workspace() {
         .expect_err("archive must not allow normal folder creation");
 
     assert!(error.contains("Inbox"));
+    assert!(create_notes_folder_at_path(&root, INBOX_DIR, "nested/Projects").is_err());
+    assert!(create_notes_folder_at_path(&root, INBOX_DIR, "nested\\Projects").is_err());
     assert!(!root.join(ARCHIVE_DIR).join("Projects").exists());
 
     std::fs::remove_dir_all(root).expect("test vault should be removable");

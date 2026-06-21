@@ -28,6 +28,8 @@ pub(super) fn create_notes_folder_at_path(
 pub(super) fn validated_folder_name(name: &str) -> Result<&str, String> {
     let trimmed_name = name.trim();
     if trimmed_name.is_empty()
+        || trimmed_name.contains('/')
+        || trimmed_name.contains('\\')
         || trimmed_name == "."
         || trimmed_name == ".."
         || Path::new(trimmed_name).components().count() != 1

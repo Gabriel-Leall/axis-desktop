@@ -1021,7 +1021,16 @@ describe('useNotesStore lifecycle actions', () => {
       status: 'ok',
       data: null,
     })
+    const alphaNote = {
+      id: 'inbox/alpha.md',
+      path: 'inbox/projects/alpha.md',
+      content: '# Alpha',
+      created_at: '2026-06-15T10:00:00.000Z',
+      updated_at: '2026-06-15T10:00:00.000Z',
+      word_count: 2,
+    }
     useNotesStore.setState({
+      notes: [alphaNote],
       tree: {
         workspace: 'inbox',
         items: [
@@ -1032,14 +1041,7 @@ describe('useNotesStore lifecycle actions', () => {
             children: [
               {
                 kind: 'note',
-                note: {
-                  id: 'inbox/alpha.md',
-                  path: 'inbox/projects/alpha.md',
-                  content: '# Alpha',
-                  created_at: '2026-06-15T10:00:00.000Z',
-                  updated_at: '2026-06-15T10:00:00.000Z',
-                  word_count: 2,
-                },
+                note: alphaNote,
               },
             ],
           },

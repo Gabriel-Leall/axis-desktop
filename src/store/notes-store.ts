@@ -346,6 +346,19 @@ async function flushPendingSave(notes: Note[]): Promise<boolean> {
   return true
 }
 
+function reconcileSearchResults(
+  previousResults: Note[] | null,
+  notes: Note[]
+): Note[] | null {
+  if (!previousResults) return null
+
+  const notesById = new Map(notes.map(note => [note.id, note]))
+  return previousResults.flatMap(result => {
+    const note = notesById.get(result.id)
+    return note ? [note] : []
+  })
+}
+
 export const useNotesStore = create<NotesState>()(
   devtools(
     (set, get) => {
@@ -359,6 +372,8 @@ export const useNotesStore = create<NotesState>()(
           searchResults: get().searchResults,
           selectedNoteId: get().selectedNoteId,
         }
+        const attemptedPendingSave =
+          debounceTimer !== null && debouncedNoteId !== null
         let flushedPendingSave = false
 
         try {
@@ -384,11 +399,7 @@ export const useNotesStore = create<NotesState>()(
               )
                 ? state.selectedNoteId
                 : null,
-              searchResults: state.searchResults
-                ? state.searchResults.filter(result =>
-                    notes.some(note => note.id === result.id)
-                  )
-                : null,
+              searchResults: reconcileSearchResults(state.searchResults, notes),
             }),
             undefined,
             `${actionName}/done`
@@ -398,7 +409,10 @@ export const useNotesStore = create<NotesState>()(
           set(
             {
               ...snapshot,
-              isSaving: flushedPendingSave ? false : get().isSaving,
+              isSaving:
+                attemptedPendingSave || flushedPendingSave
+                  ? false
+                  : get().isSaving,
             },
             undefined,
             `${actionName}/rollback`
@@ -449,7 +463,7 @@ export const useNotesStore = create<NotesState>()(
                   tree,
                   ...workspaceStateFromNotes(notes, state.selectedNoteId),
                   searchResults: state.searchQuery.trim()
-                    ? state.searchResults
+                    ? reconcileSearchResults(state.searchResults, notes)
                     : null,
                 }),
                 undefined,
