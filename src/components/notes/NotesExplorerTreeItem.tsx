@@ -207,6 +207,10 @@ export function NotesExplorerTreeItem({
   const folderAction = isCollapsed
     ? t('notes.sidebar.expandFolder', { name: item.name })
     : t('notes.sidebar.collapseFolder', { name: item.name })
+  const folderAriaLabel =
+    dropState === 'invalid'
+      ? `${folderAction}. ${t('notes.tree.invalidDestination')}`
+      : folderAction
 
   return (
     <div className="notes-explorer-tree-folder" ref={setDropNodeRef}>
@@ -220,16 +224,11 @@ export function NotesExplorerTreeItem({
           type="button"
           onClick={() => onToggleFolder(item.path)}
           aria-expanded={!isCollapsed}
-          aria-label={folderAction}
+          aria-label={folderAriaLabel}
           data-drag-source={isInbox ? 'true' : undefined}
           data-drop-target={isInbox ? 'true' : undefined}
           data-drop-state={dropState}
           data-dragging={isActiveDrag ? 'true' : undefined}
-          aria-description={
-            dropState === 'invalid'
-              ? t('notes.tree.invalidDestination')
-              : undefined
-          }
           className="notes-explorer-tree-folder-row flex w-full items-center gap-1.5 rounded-md py-1.5 pe-2 text-start text-muted-foreground transition-colors hover:bg-background/55 hover:text-foreground"
           style={{ paddingInlineStart }}
           {...attributes}

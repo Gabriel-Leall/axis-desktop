@@ -9,7 +9,7 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NoteTreeItem, NoteWorkspaceTree } from '@/lib/notes-domain'
 import {
@@ -39,6 +39,44 @@ interface NotesExplorerTreeProps {
     item: NotesTreeItemRef,
     destinationFolder: string
   ) => Promise<void> | void
+}
+
+interface DragState {
+  activeItem: NotesTreeDragItem | null
+  activeLabel: string
+  activeDropTarget: string | null
+  invalidDropTarget: string | null
+}
+
+type DragStateAction =
+  | { type: 'clear' }
+  | { type: 'start'; item: NotesTreeDragItem; label: string }
+  | { type: 'over'; validTarget: string | null; invalidTarget: string | null }
+
+const initialDragState: DragState = {
+  activeItem: null,
+  activeLabel: '',
+  activeDropTarget: null,
+  invalidDropTarget: null,
+}
+
+function dragStateReducer(
+  state: DragState,
+  action: DragStateAction
+): DragState {
+  if (action.type === 'clear') return initialDragState
+  if (action.type === 'start') {
+    return {
+      ...initialDragState,
+      activeItem: action.item,
+      activeLabel: action.label,
+    }
+  }
+  return {
+    ...state,
+    activeDropTarget: action.validTarget,
+    invalidDropTarget: action.invalidTarget,
+  }
 }
 
 function isNotesTreeDragItem(value: unknown): value is NotesTreeDragItem {
@@ -91,15 +129,13 @@ export function NotesExplorerTree({
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(
     () => new Set()
   )
-  const [activeItem, setActiveItem] = useState<NotesTreeDragItem | null>(null)
-  const [activeLabel, setActiveLabel] = useState('')
-  const [activeDropTarget, setActiveDropTarget] = useState<string | null>(null)
-  const [invalidDropTarget, setInvalidDropTarget] = useState<string | null>(
-    null
+  const [dragState, dispatchDragState] = useReducer(
+    dragStateReducer,
+    initialDragState
   )
-  const [isMoving, setIsMoving] = useState(false)
   const hoverTimerRef = useRef<number | null>(null)
   const hoverTargetRef = useRef<string | null>(null)
+  const isMovingRef = useRef(false)
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -116,10 +152,7 @@ export function NotesExplorerTree({
 
   function clearDragState() {
     clearHoverTimer()
-    setActiveItem(null)
-    setActiveLabel('')
-    setActiveDropTarget(null)
-    setInvalidDropTarget(null)
+    dispatchDragState({ type: 'clear' })
   }
 
   useEffect(() => clearHoverTimer, [])
@@ -159,23 +192,31 @@ export function NotesExplorerTree({
   }
 
   function handleDragStart(event: DragStartEvent) {
-    if (isMoving) return
+    if (isMovingRef.current) return
     const draggedItem = event.active.data.current?.item
     if (!isNotesTreeDragItem(draggedItem)) return
 
-    setActiveItem(draggedItem)
-    setActiveLabel(
-      getItemLabel(tree.items, draggedItem, t('notes.sidebar.untitled'))
-    )
+    dispatchDragState({
+      type: 'start',
+      item: draggedItem,
+      label: getItemLabel(tree.items, draggedItem, t('notes.sidebar.untitled')),
+    })
   }
 
   function handleDragOver(event: DragOverEvent) {
-    if (!activeItem) return
+    if (!dragState.activeItem) return
 
     const target = getDropFolderPath(event.over?.data.current)
-    const validation = getNotesTreeDropValidation(tree, activeItem, target)
-    setActiveDropTarget(validation.valid ? validation.destinationFolder : null)
-    setInvalidDropTarget(target && !validation.valid ? target : null)
+    const validation = getNotesTreeDropValidation(
+      tree,
+      dragState.activeItem,
+      target
+    )
+    dispatchDragState({
+      type: 'over',
+      validTarget: validation.valid ? validation.destinationFolder : null,
+      invalidTarget: target && !validation.valid ? target : null,
+    })
 
     if (validation.valid) {
       scheduleFolderExpansion(validation.destinationFolder)
@@ -184,25 +225,29 @@ export function NotesExplorerTree({
     }
   }
 
-  async function handleDragEnd(event: DragEndEvent) {
+  function handleDragEnd(event: DragEndEvent) {
     const draggedItem = event.active.data.current?.item
     const target = getDropFolderPath(event.over?.data.current)
     const validation =
-      isNotesTreeDragItem(draggedItem) && !isMoving
+      isNotesTreeDragItem(draggedItem) && !isMovingRef.current
         ? getNotesTreeDropValidation(tree, draggedItem, target)
         : { valid: false as const }
 
     clearDragState()
     if (!validation.valid || !onMoveItem) return
 
-    setIsMoving(true)
-    try {
-      await onMoveItem(draggedItem, validation.destinationFolder)
-    } catch {
-      // The caller reports the localized lifecycle error and restores its snapshot.
-    } finally {
-      setIsMoving(false)
-    }
+    isMovingRef.current = true
+    void Promise.resolve(
+      onMoveItem(draggedItem, validation.destinationFolder)
+    ).then(
+      () => {
+        isMovingRef.current = false
+      },
+      () => {
+        // The caller reports the localized lifecycle error and restores its snapshot.
+        isMovingRef.current = false
+      }
+    )
   }
 
   return (
@@ -213,7 +258,7 @@ export function NotesExplorerTree({
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragCancel={clearDragState}
-        onDragEnd={event => void handleDragEnd(event)}
+        onDragEnd={handleDragEnd}
       >
         {tree.items.map(item => (
           <NotesExplorerTreeItem
@@ -223,23 +268,24 @@ export function NotesExplorerTree({
             selectedNoteId={selectedNoteId}
             collapsedPaths={collapsedPaths}
             workspace={tree.workspace}
-            activeItem={activeItem}
-            activeDropTarget={activeDropTarget}
-            invalidDropTarget={invalidDropTarget}
+            activeItem={dragState.activeItem}
+            activeDropTarget={dragState.activeDropTarget}
+            invalidDropTarget={dragState.invalidDropTarget}
             onToggleFolder={toggleFolder}
             onSelectNote={onSelectNote}
             onContextAction={onContextAction}
           />
         ))}
         <DragOverlay dropAnimation={null}>
-          {activeItem ? (
-            <div
-              aria-label={t('notes.tree.dragging', { item: activeLabel })}
+          {dragState.activeItem ? (
+            <output
+              aria-label={t('notes.tree.dragging', {
+                item: dragState.activeLabel,
+              })}
               className="notes-tree-drag-overlay"
-              role="status"
             >
-              {activeLabel}
-            </div>
+              {dragState.activeLabel}
+            </output>
           ) : null}
         </DragOverlay>
       </DndContext>

@@ -267,12 +267,12 @@ describe('NotesExplorerTree', () => {
     })
 
     expect(screen.getByRole('status')).toHaveAccessibleName('Dragging Projects')
+    expect(screen.getByRole('status').tagName).toBe('OUTPUT')
     expect(
-      screen.getByRole('button', { name: 'Collapse Axis' })
+      screen.getByRole('button', {
+        name: 'Collapse Axis. This folder cannot contain the dragged item',
+      })
     ).toHaveAttribute('data-drop-state', 'invalid')
-    expect(
-      screen.getByRole('button', { name: 'Collapse Axis' })
-    ).toHaveAccessibleDescription('This folder cannot contain the dragged item')
   })
 
   it('opens lifecycle actions on right click and archives an inbox note', async () => {
