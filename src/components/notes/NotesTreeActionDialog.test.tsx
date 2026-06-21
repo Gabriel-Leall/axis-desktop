@@ -56,4 +56,20 @@ describe('NotesTreeActionDialog', () => {
       screen.getByRole('dialog', { name: 'New folder' })
     ).toBeInTheDocument()
   })
+
+  it('disables submission while the folder name is blank', () => {
+    render(
+      <NotesTreeActionDialog
+        request={{
+          action: 'create-folder',
+          item: { kind: 'folder', path: 'inbox' },
+          initialValue: '',
+        }}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn().mockResolvedValue(true)}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Create folder' })).toBeDisabled()
+  })
 })

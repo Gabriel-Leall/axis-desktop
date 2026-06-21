@@ -178,4 +178,38 @@ describe('NotesExplorerTree', () => {
       })
     })
   })
+
+  it('limits Trash to restoring an item', async () => {
+    const user = userEvent.setup()
+    const onContextAction = vi.fn()
+    render(
+      <NotesExplorerTree
+        tree={{ ...tree, workspace: 'trash' }}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+        onContextAction={onContextAction}
+      />
+    )
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Plan' }))
+
+    expect(screen.getByRole('menuitem', { name: 'Restore note' })).toBeVisible()
+    expect(
+      screen.queryByRole('menuitem', { name: 'Archive' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('menuitem', { name: 'Move to trash' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('menuitem', { name: 'New folder' })
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('menuitem', { name: 'Restore note' }))
+    await waitFor(() => {
+      expect(onContextAction).toHaveBeenCalledWith('restore', {
+        kind: 'note',
+        id: 'plan-id',
+      })
+    })
+  })
 })

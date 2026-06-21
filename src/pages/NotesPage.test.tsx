@@ -147,6 +147,10 @@ describe('NotesPage', () => {
       status: 'ok',
       data: null,
     })
+    vi.mocked(commands.restoreNotesTreeItem).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
 
     useNotesStore.setState({
       vaultInfo: null,
@@ -247,6 +251,23 @@ describe('NotesPage', () => {
     expect(toast.success).toHaveBeenCalledWith('Item archived.', {
       action: expect.objectContaining({ label: 'Undo' }),
       cancel: expect.objectContaining({ label: 'View archive' }),
+    })
+
+    const options = vi
+      .mocked(toast.success)
+      .mock.calls.at(-1)?.[1] as unknown as {
+      action: { onClick: (event: never) => void }
+      cancel: { onClick: (event: never) => void }
+    }
+    options.action.onClick(undefined as never)
+    options.cancel.onClick(undefined as never)
+
+    await waitFor(() => {
+      expect(commands.restoreNotesTreeItem).toHaveBeenCalledWith({
+        kind: 'note',
+        id: 'inbox/paper-workspace.md',
+      })
+      expect(commands.getNotesWorkspaceTree).toHaveBeenLastCalledWith('archive')
     })
   })
 
