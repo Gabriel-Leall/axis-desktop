@@ -30,7 +30,15 @@ import { save, open } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
 import { toast } from 'sonner'
 import { useNotesStore } from '@/store/notes-store'
-import { NotesExplorerTree } from '@/components/notes/NotesExplorerTree'
+import {
+  NotesExplorerTree,
+  type NotesTreeContextAction,
+  type NotesTreeItemRef,
+} from '@/components/notes/NotesExplorerTree'
+import {
+  NotesTreeActionDialog,
+  type NotesTreeDialogRequest,
+} from '@/components/notes/NotesTreeActionDialog'
 import type { NotesWorkspaceView } from '@/store/notes-store'
 import {
   getNoteTitle,
@@ -147,6 +155,16 @@ const EDITOR_MODE_OPTIONS: {
   },
 ]
 
+function treeItemInWorkspace(
+  item: NotesTreeItemRef,
+  workspace: NotesWorkspaceView
+): NotesTreeItemRef {
+  if (item.kind === 'note') return item
+
+  const name = item.name ?? item.path.split('/').at(-1) ?? ''
+  return { kind: 'folder', path: `${workspace}/${name}`, name: item.name }
+}
+
 interface SidebarProps {
   allNotes: Note[]
   notes: Note[]
@@ -159,6 +177,10 @@ interface SidebarProps {
   onWorkspaceChange: (view: NotesWorkspaceView) => Promise<void>
   onSelectTag: (tag: string | null) => void
   onCreateNote: () => Promise<void>
+  onContextAction: (
+    action: NotesTreeContextAction,
+    item: NotesTreeItemRef
+  ) => void
   onSearchChange: (q: string) => void
   onClearFilters: () => void
 }
@@ -466,6 +488,7 @@ function Sidebar({
   onWorkspaceChange,
   onSelectTag,
   onCreateNote,
+  onContextAction,
   onSearchChange,
   onClearFilters,
 }: SidebarProps) {
@@ -531,6 +554,7 @@ function Sidebar({
             tree={tree}
             selectedNoteId={selectedNoteId}
             onSelectNote={onSelectNote}
+            onContextAction={onContextAction}
           />
         ) : (
           <NotesList
@@ -988,6 +1012,8 @@ async function openNotesVaultFolderFromStore() {
 export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const { t } = useTranslation()
   const [editorMode, setEditorMode] = useState<NotesEditorMode>('edit')
+  const [treeDialogRequest, setTreeDialogRequest] =
+    useState<NotesTreeDialogRequest | null>(null)
   const notes = useNotesStore(state => state.notes)
   const selectedNoteId = useNotesStore(state => state.selectedNoteId)
   const workspaceView = useNotesStore(state => state.workspaceView)
@@ -999,6 +1025,12 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const loadNotes = useNotesStore(state => state.loadNotes)
   const setWorkspaceView = useNotesStore(state => state.setWorkspaceView)
   const createNote = useNotesStore(state => state.createNote)
+  const createFolder = useNotesStore(state => state.createFolder)
+  const renameFolder = useNotesStore(state => state.renameFolder)
+  const moveTreeItem = useNotesStore(state => state.moveTreeItem)
+  const archiveTreeItem = useNotesStore(state => state.archiveTreeItem)
+  const trashTreeItem = useNotesStore(state => state.trashTreeItem)
+  const restoreTreeItem = useNotesStore(state => state.restoreTreeItem)
   const updateNote = useNotesStore(state => state.updateNote)
   const deleteNote = useNotesStore(state => state.deleteNote)
   const archiveNote = useNotesStore(state => state.archiveNote)
@@ -1050,6 +1082,135 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   function handleClearFilters() {
     setSearchQuery('')
     setSelectedTag(null)
+  }
+
+  function handleTreeContextAction(
+    action: NotesTreeContextAction,
+    item: NotesTreeItemRef
+  ) {
+    void (async () => {
+      if (action === 'create-folder' && item.kind === 'folder') {
+        setTreeDialogRequest({ action, item, initialValue: '' })
+        return
+      }
+      if (action === 'rename-folder' && item.kind === 'folder') {
+        setTreeDialogRequest({
+          action,
+          item,
+          initialValue: item.name ?? item.path.split('/').at(-1) ?? '',
+        })
+        return
+      }
+      if (action === 'move') {
+        setTreeDialogRequest({ action, item, initialValue: 'inbox' })
+        return
+      }
+      await handleTreeLifecycleAction(action, item)
+    })().catch(showLifecycleError)
+  }
+
+  async function handleTreeLifecycleAction(
+    action: NotesTreeContextAction,
+    item: NotesTreeItemRef
+  ) {
+    if (action === 'archive') {
+      await archiveTreeItem(item)
+      const archivedItem = treeItemInWorkspace(item, 'archive')
+      toast.success(t('notes.snackbar.itemArchived'), {
+        action: {
+          label: t('common.undo'),
+          onClick: () => {
+            void restoreTreeItem(archivedItem).catch(showLifecycleError)
+          },
+        },
+        cancel: {
+          label: t('notes.snackbar.viewArchive'),
+          onClick: () => {
+            void goToWorkspaceNote(
+              'archive',
+              item.kind === 'note' ? item.id : null
+            ).catch(showLifecycleError)
+          },
+        },
+      })
+      return
+    }
+
+    if (action === 'trash') {
+      await trashTreeItem(item)
+      const trashedItem = treeItemInWorkspace(item, 'trash')
+      toast.success(t('notes.snackbar.itemMovedToTrash'), {
+        action: {
+          label: t('common.undo'),
+          onClick: () => {
+            const undo =
+              workspaceView === 'archive'
+                ? archiveTreeItem(treeItemInWorkspace(item, 'archive'))
+                : restoreTreeItem(trashedItem)
+            void undo.catch(showLifecycleError)
+          },
+        },
+        cancel: {
+          label: t('notes.snackbar.viewTrash'),
+          onClick: () => {
+            void goToWorkspaceNote(
+              'trash',
+              item.kind === 'note' ? item.id : null
+            ).catch(showLifecycleError)
+          },
+        },
+      })
+      return
+    }
+
+    if (action === 'restore') {
+      await restoreTreeItem(item)
+      toast.success(t('notes.snackbar.itemRestored'), {
+        action: {
+          label: t('common.undo'),
+          onClick: () => {
+            const undo =
+              workspaceView === 'archive'
+                ? archiveTreeItem(treeItemInWorkspace(item, 'inbox'))
+                : trashTreeItem(treeItemInWorkspace(item, 'inbox'))
+            void undo.catch(showLifecycleError)
+          },
+        },
+        cancel: {
+          label: t('notes.snackbar.goToNote'),
+          onClick: () => {
+            void goToWorkspaceNote(
+              'inbox',
+              item.kind === 'note' ? item.id : null
+            ).catch(showLifecycleError)
+          },
+        },
+      })
+    }
+  }
+
+  async function handleTreeDialogSubmit(value: string): Promise<boolean> {
+    if (!treeDialogRequest) return false
+
+    try {
+      const { action, item } = treeDialogRequest
+      if (action === 'create-folder' && item.kind === 'folder') {
+        await createFolder(item.path, value)
+        return true
+      }
+      if (action === 'rename-folder' && item.kind === 'folder') {
+        await renameFolder(item.path, value)
+        return true
+      }
+      if (action === 'move') {
+        await moveTreeItem(item, value)
+        return true
+      }
+      return false
+    } catch (error) {
+      showLifecycleError(error)
+      return false
+    }
   }
 
   async function goToWorkspaceNote(
@@ -1208,8 +1369,16 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           onWorkspaceChange={setWorkspaceView}
           onSelectTag={setSelectedTag}
           onCreateNote={handleCreateNote}
+          onContextAction={handleTreeContextAction}
           onSearchChange={setSearchQuery}
           onClearFilters={handleClearFilters}
+        />
+        <NotesTreeActionDialog
+          request={treeDialogRequest}
+          onOpenChange={open => {
+            if (!open) setTreeDialogRequest(null)
+          }}
+          onSubmit={handleTreeDialogSubmit}
         />
         <EditorArea
           note={activeNote}

@@ -57,6 +57,10 @@ export type {
 export type {
   Note,
   CreateNoteInput,
+  CreateNotesFolderInput,
+  MoveNotesTreeItemInput,
+  NotesTreeItemRef,
+  RenameNotesFolderInput,
   UpdateNoteInput,
   NoteVaultInfo,
   NoteVaultMigrationMode,
