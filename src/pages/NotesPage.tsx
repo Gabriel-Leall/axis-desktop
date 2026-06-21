@@ -168,6 +168,10 @@ interface SidebarProps {
     action: NotesTreeContextAction,
     item: NotesTreeItemRef
   ) => void
+  onMoveTreeItem: (
+    item: NotesTreeItemRef,
+    destinationFolder: string
+  ) => Promise<void>
   onSearchChange: (q: string) => void
   onClearFilters: () => void
 }
@@ -476,6 +480,7 @@ function Sidebar({
   onSelectTag,
   onCreateNote,
   onContextAction,
+  onMoveTreeItem,
   onSearchChange,
   onClearFilters,
 }: SidebarProps) {
@@ -542,6 +547,7 @@ function Sidebar({
             selectedNoteId={selectedNoteId}
             onSelectNote={onSelectNote}
             onContextAction={onContextAction}
+            onMoveItem={onMoveTreeItem}
           />
         ) : (
           <NotesList
@@ -999,7 +1005,8 @@ async function openNotesVaultFolderFromStore() {
 export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const { t } = useTranslation()
   const [editorMode, setEditorMode] = useState<NotesEditorMode>('edit')
-  const { contextDialog, onContextAction } = useNotesTreeContextActions()
+  const { contextDialog, onContextAction, onMoveTreeItem } =
+    useNotesTreeContextActions()
   const notes = useNotesStore(state => state.notes)
   const selectedNoteId = useNotesStore(state => state.selectedNoteId)
   const workspaceView = useNotesStore(state => state.workspaceView)
@@ -1221,6 +1228,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           onSelectTag={setSelectedTag}
           onCreateNote={handleCreateNote}
           onContextAction={onContextAction}
+          onMoveTreeItem={onMoveTreeItem}
           onSearchChange={setSearchQuery}
           onClearFilters={handleClearFilters}
         />

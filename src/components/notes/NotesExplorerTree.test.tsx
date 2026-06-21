@@ -1,7 +1,44 @@
-import { describe, expect, it, vi } from 'vitest'
+import { act } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@/test/test-utils'
 import userEvent from '@testing-library/user-event'
 import { NotesExplorerTree } from './NotesExplorerTree'
+
+const dnd = vi.hoisted(() => ({
+  props: null as {
+    onDragEnd?: (event: unknown) => void
+    onDragOver?: (event: unknown) => void
+    onDragStart?: (event: unknown) => void
+  } | null,
+}))
+
+vi.mock('@dnd-kit/core', () => ({
+  DndContext: ({
+    children,
+    ...props
+  }: {
+    children: React.ReactNode
+    onDragEnd?: (event: unknown) => void
+    onDragOver?: (event: unknown) => void
+    onDragStart?: (event: unknown) => void
+  }) => {
+    dnd.props = props
+    return children
+  },
+  DragOverlay: ({ children }: { children: React.ReactNode }) => children,
+  PointerSensor: vi.fn(),
+  closestCenter: vi.fn(),
+  useDraggable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: vi.fn(),
+  }),
+  useDroppable: () => ({
+    setNodeRef: vi.fn(),
+  }),
+  useSensor: vi.fn(),
+  useSensors: () => [],
+}))
 
 const tree = {
   workspace: 'inbox' as const,
@@ -12,12 +49,37 @@ const tree = {
       name: 'Projects',
       children: [
         {
+          kind: 'folder' as const,
+          path: 'inbox/projects/axis',
+          name: 'Axis',
+          children: [],
+        },
+        {
           kind: 'note' as const,
           note: {
             id: 'plan-id',
             path: 'inbox/projects/plan.md',
             title: 'Plan',
             content: '# Plan',
+            created_at: '2026-06-19T10:00:00.000Z',
+            updated_at: '2026-06-19T10:00:00.000Z',
+            word_count: 1,
+          },
+        },
+      ],
+    },
+    {
+      kind: 'folder' as const,
+      path: 'inbox/target',
+      name: 'Target',
+      children: [
+        {
+          kind: 'note' as const,
+          note: {
+            id: 'target-id',
+            path: 'inbox/target/target.md',
+            title: 'Target note',
+            content: '# Target note',
             created_at: '2026-06-19T10:00:00.000Z',
             updated_at: '2026-06-19T10:00:00.000Z',
             word_count: 1,
@@ -41,6 +103,10 @@ const tree = {
 }
 
 describe('NotesExplorerTree', () => {
+  beforeEach(() => {
+    dnd.props = null
+  })
+
   it('collapses a physical folder without changing the selected note', async () => {
     const user = userEvent.setup()
 
@@ -82,6 +148,231 @@ describe('NotesExplorerTree', () => {
     await user.click(screen.getByRole('button', { name: 'Plan' }))
 
     expect(onSelectNote).toHaveBeenCalledWith('plan-id')
+  })
+
+  it('marks Inbox rows as drag sources and only folders as drop targets', () => {
+    const { rerender } = render(
+      <NotesExplorerTree
+        tree={tree}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Plan' })).toHaveAttribute(
+      'data-drag-source',
+      'true'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Collapse Projects' })
+    ).toHaveAttribute('data-drop-target', 'true')
+
+    rerender(
+      <NotesExplorerTree
+        tree={{ ...tree, workspace: 'trash' }}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Plan' })).not.toHaveAttribute(
+      'data-drag-source'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Collapse Projects' })
+    ).not.toHaveAttribute('data-drop-target')
+  })
+
+  it('moves a note only when it is dropped on a valid Inbox folder', async () => {
+    const onMoveItem = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <NotesExplorerTree
+        tree={tree}
+        selectedNoteId="plan-id"
+        onSelectNote={vi.fn()}
+        onMoveItem={onMoveItem}
+      />
+    )
+
+    await act(async () => {
+      dnd.props?.onDragStart?.({
+        active: {
+          data: { current: { item: { kind: 'note', id: 'root-id' } } },
+        },
+      })
+    })
+
+    await act(async () => {
+      dnd.props?.onDragEnd?.({
+        active: {
+          data: { current: { item: { kind: 'note', id: 'root-id' } } },
+        },
+        over: { data: { current: { path: 'inbox/projects' } } },
+      })
+    })
+
+    await waitFor(() => {
+      expect(onMoveItem).toHaveBeenCalledWith(
+        { kind: 'note', id: 'root-id' },
+        'inbox/projects'
+      )
+    })
+  })
+
+  it('opens a collapsed valid destination folder after 600 ms of drag hover', async () => {
+    vi.useFakeTimers()
+    try {
+      render(
+        <NotesExplorerTree
+          tree={tree}
+          selectedNoteId={null}
+          onSelectNote={vi.fn()}
+        />
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Collapse Projects' }))
+      act(() => {
+        dnd.props?.onDragStart?.({
+          active: {
+            data: { current: { item: { kind: 'note', id: 'root-id' } } },
+          },
+        })
+      })
+      act(() => {
+        dnd.props?.onDragOver?.({
+          over: { data: { current: { path: 'inbox/projects' } } },
+        })
+      })
+
+      act(() => {
+        vi.advanceTimersByTime(599)
+      })
+      expect(
+        screen.queryByRole('button', { name: 'Plan' })
+      ).not.toBeInTheDocument()
+
+      act(() => {
+        vi.advanceTimersByTime(1)
+      })
+      expect(screen.getByRole('button', { name: 'Plan' })).toBeVisible()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('retargets folder expansion when the drag moves to a new folder', () => {
+    vi.useFakeTimers()
+    try {
+      render(
+        <NotesExplorerTree
+          tree={tree}
+          selectedNoteId={null}
+          onSelectNote={vi.fn()}
+        />
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Collapse Projects' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Collapse Target' }))
+      act(() => {
+        dnd.props?.onDragStart?.({
+          active: {
+            data: { current: { item: { kind: 'note', id: 'root-id' } } },
+          },
+        })
+      })
+      act(() => {
+        dnd.props?.onDragOver?.({
+          over: { data: { current: { path: 'inbox/projects' } } },
+        })
+      })
+      act(() => {
+        dnd.props?.onDragOver?.({
+          over: { data: { current: { path: 'inbox/target' } } },
+        })
+      })
+      act(() => {
+        vi.advanceTimersByTime(600)
+      })
+
+      expect(
+        screen.queryByRole('button', { name: 'Plan' })
+      ).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Target note' })).toBeVisible()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('recovers after a synchronous drag callback failure', async () => {
+    const onMoveItem = vi.fn(() => {
+      throw new Error('vault move failed')
+    })
+    render(
+      <NotesExplorerTree
+        tree={tree}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+        onMoveItem={onMoveItem}
+      />
+    )
+
+    act(() => {
+      dnd.props?.onDragStart?.({
+        active: {
+          data: { current: { item: { kind: 'note', id: 'root-id' } } },
+        },
+      })
+    })
+
+    expect(() => {
+      act(() => {
+        dnd.props?.onDragEnd?.({
+          active: {
+            data: { current: { item: { kind: 'note', id: 'root-id' } } },
+          },
+          over: { data: { current: { path: 'inbox/projects' } } },
+        })
+      })
+    }).not.toThrow()
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(onMoveItem).toHaveBeenCalledTimes(1)
+  })
+
+  it('announces the dragged item and flags an invalid descendant target', async () => {
+    render(
+      <NotesExplorerTree
+        tree={tree}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+      />
+    )
+
+    act(() => {
+      dnd.props?.onDragStart?.({
+        active: {
+          data: {
+            current: { item: { kind: 'folder', path: 'inbox/projects' } },
+          },
+        },
+      })
+    })
+    act(() => {
+      dnd.props?.onDragOver?.({
+        over: { data: { current: { path: 'inbox/projects/axis' } } },
+      })
+    })
+
+    expect(screen.getByRole('status')).toHaveAccessibleName('Dragging Projects')
+    expect(screen.getByRole('status').tagName).toBe('OUTPUT')
+    expect(
+      screen.getByRole('button', {
+        name: 'Collapse Axis. This folder cannot contain the dragged item',
+      })
+    ).toHaveAttribute('data-drop-state', 'invalid')
   })
 
   it('opens lifecycle actions on right click and archives an inbox note', async () => {

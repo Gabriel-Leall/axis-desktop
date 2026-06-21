@@ -1,21 +1,31 @@
-import { useState, type ReactElement } from 'react'
-import { ChevronDown, ChevronRight, FileText, Folder } from 'lucide-react'
-import * as ContextMenu from '@radix-ui/react-context-menu'
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
 import type { NoteTreeItem, NoteWorkspaceTree } from '@/lib/notes-domain'
+import {
+  getNotesTreeDropValidation,
+  type NotesTreeDragItem,
+} from '@/lib/notes-tree-drag-domain'
+import { NotesExplorerTreeItem } from './NotesExplorerTreeItem'
+import type {
+  NotesTreeContextAction,
+  NotesTreeItemRef,
+} from './notes-tree-types'
 
-export type NotesTreeContextAction =
-  | 'create-folder'
-  | 'rename-folder'
-  | 'move'
-  | 'archive'
-  | 'trash'
-  | 'restore'
-
-export type NotesTreeItemRef =
-  | { kind: 'note'; id: string }
-  | { kind: 'folder'; path: string; name?: string }
+export type {
+  NotesTreeContextAction,
+  NotesTreeItemRef,
+} from './notes-tree-types'
 
 interface NotesExplorerTreeProps {
   tree: NoteWorkspaceTree
@@ -25,178 +35,87 @@ interface NotesExplorerTreeProps {
     action: NotesTreeContextAction,
     item: NotesTreeItemRef
   ) => void
+  onMoveItem?: (
+    item: NotesTreeItemRef,
+    destinationFolder: string
+  ) => Promise<void> | void
 }
 
-interface TreeItemProps {
-  item: NoteTreeItem
-  depth: number
-  selectedNoteId: string | null
-  collapsedPaths: ReadonlySet<string>
-  onToggleFolder: (path: string) => void
-  onSelectNote: (id: string) => void
-  workspace: NoteWorkspaceTree['workspace']
-  onContextAction?: NotesExplorerTreeProps['onContextAction']
+interface DragState {
+  activeItem: NotesTreeDragItem | null
+  activeLabel: string
+  activeDropTarget: string | null
+  invalidDropTarget: string | null
 }
 
-function TreeItemContextMenu({
-  children,
-  item,
-  workspace,
-  onContextAction,
-}: {
-  children: ReactElement
-  item: NotesTreeItemRef
-  workspace: NoteWorkspaceTree['workspace']
-  onContextAction?: NotesExplorerTreeProps['onContextAction']
-}) {
-  const { t } = useTranslation()
-  const [isOpen, setIsOpen] = useState(false)
+type DragStateAction =
+  | { type: 'clear' }
+  | { type: 'start'; item: NotesTreeDragItem; label: string }
+  | { type: 'over'; validTarget: string | null; invalidTarget: string | null }
 
-  if (!onContextAction) return children
-  const dispatchContextAction = onContextAction
+const initialDragState: DragState = {
+  activeItem: null,
+  activeLabel: '',
+  activeDropTarget: null,
+  invalidDropTarget: null,
+}
 
-  function handleAction(action: NotesTreeContextAction) {
-    setIsOpen(false)
-    // Let Radix restore focus from the closed context menu before opening a dialog.
-    window.setTimeout(() => dispatchContextAction(action, item), 0)
+function dragStateReducer(
+  state: DragState,
+  action: DragStateAction
+): DragState {
+  if (action.type === 'clear') return initialDragState
+  if (action.type === 'start') {
+    return {
+      ...initialDragState,
+      activeItem: action.item,
+      activeLabel: action.label,
+    }
   }
-
-  const isFolder = item.kind === 'folder'
-  const actions: NotesTreeContextAction[] =
-    workspace === 'inbox'
-      ? [
-          ...(isFolder ? (['create-folder', 'rename-folder'] as const) : []),
-          'move',
-          'archive',
-          'trash',
-        ]
-      : workspace === 'archive'
-        ? ['restore', 'trash']
-        : ['restore']
-
-  const labels: Record<NotesTreeContextAction, string> = {
-    'create-folder': t('notes.contextMenu.newFolder'),
-    'rename-folder': t('notes.contextMenu.renameFolder'),
-    move: t('notes.contextMenu.move'),
-    archive: t('notes.contextMenu.archive'),
-    trash: t('notes.editor.menu.moveToTrash'),
-    restore: t('notes.editor.menu.restore'),
+  return {
+    ...state,
+    activeDropTarget: action.validTarget,
+    invalidDropTarget: action.invalidTarget,
   }
+}
 
+function isNotesTreeDragItem(value: unknown): value is NotesTreeDragItem {
+  if (!value || typeof value !== 'object') return false
+  const item = value as Partial<NotesTreeDragItem>
   return (
-    <ContextMenu.Root onOpenChange={setIsOpen} open={isOpen}>
-      <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
-      <ContextMenu.Portal>
-        <ContextMenu.Content className="z-50 min-w-44 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md">
-          {actions.map(action => (
-            <ContextMenu.Item
-              key={action}
-              onSelect={() => handleAction(action)}
-              className={cn(
-                'flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground',
-                action === 'trash' && 'text-destructive'
-              )}
-            >
-              {labels[action]}
-            </ContextMenu.Item>
-          ))}
-        </ContextMenu.Content>
-      </ContextMenu.Portal>
-    </ContextMenu.Root>
+    (item.kind === 'note' && typeof item.id === 'string') ||
+    (item.kind === 'folder' && typeof item.path === 'string')
   )
 }
 
-function TreeItem({
-  item,
-  depth,
-  selectedNoteId,
-  collapsedPaths,
-  onToggleFolder,
-  onSelectNote,
-  workspace,
-  onContextAction,
-}: TreeItemProps) {
-  const { t } = useTranslation()
-  const paddingInlineStart = `${depth * 14 + 8}px`
+function getDropFolderPath(value: unknown): string | null {
+  if (!value || typeof value !== 'object') return null
+  const data = value as { path?: unknown }
+  return typeof data.path === 'string' ? data.path : null
+}
 
-  if (item.kind === 'note') {
-    const isSelected = item.note.id === selectedNoteId
+function getItemLabel(
+  items: readonly NoteTreeItem[],
+  draggedItem: NotesTreeDragItem,
+  untitled: string
+): string {
+  for (const item of items) {
+    if (item.kind === 'note') {
+      if (draggedItem.kind === 'note' && item.note.id === draggedItem.id) {
+        return item.note.title || untitled
+      }
+      continue
+    }
 
-    return (
-      <TreeItemContextMenu
-        item={{ kind: 'note', id: item.note.id }}
-        workspace={workspace}
-        onContextAction={onContextAction}
-      >
-        <button
-          type="button"
-          onClick={() => onSelectNote(item.note.id)}
-          aria-current={isSelected ? 'page' : undefined}
-          className={cn(
-            'notes-explorer-tree-note notes-paper-note-row flex w-full items-center gap-2 rounded-md py-1.5 pe-2 text-start transition-colors',
-            isSelected
-              ? 'is-selected text-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-          style={{ paddingInlineStart }}
-        >
-          <FileText className="size-3.5 shrink-0" />
-          <span className="min-w-0 flex-1 truncate text-xs font-medium">
-            {item.note.title || t('notes.sidebar.untitled')}
-          </span>
-        </button>
-      </TreeItemContextMenu>
-    )
+    if (draggedItem.kind === 'folder' && item.path === draggedItem.path) {
+      return item.name
+    }
+
+    const nestedLabel = getItemLabel(item.children, draggedItem, untitled)
+    if (nestedLabel) return nestedLabel
   }
 
-  const isCollapsed = collapsedPaths.has(item.path)
-  const folderAction = isCollapsed
-    ? t('notes.sidebar.expandFolder', { name: item.name })
-    : t('notes.sidebar.collapseFolder', { name: item.name })
-
-  return (
-    <div className="notes-explorer-tree-folder">
-      <TreeItemContextMenu
-        item={{ kind: 'folder', path: item.path, name: item.name }}
-        workspace={workspace}
-        onContextAction={onContextAction}
-      >
-        <button
-          type="button"
-          onClick={() => onToggleFolder(item.path)}
-          aria-expanded={!isCollapsed}
-          aria-label={folderAction}
-          className="notes-explorer-tree-folder-row flex w-full items-center gap-1.5 rounded-md py-1.5 pe-2 text-start text-muted-foreground transition-colors hover:bg-background/55 hover:text-foreground"
-          style={{ paddingInlineStart }}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="size-3 shrink-0" />
-          ) : (
-            <ChevronDown className="size-3 shrink-0" />
-          )}
-          <Folder className="size-3.5 shrink-0" />
-          <span className="min-w-0 truncate text-xs font-medium">
-            {item.name}
-          </span>
-        </button>
-      </TreeItemContextMenu>
-
-      {!isCollapsed &&
-        item.children.map(child => (
-          <TreeItem
-            key={child.kind === 'folder' ? child.path : child.note.id}
-            item={child}
-            depth={depth + 1}
-            selectedNoteId={selectedNoteId}
-            collapsedPaths={collapsedPaths}
-            onToggleFolder={onToggleFolder}
-            onSelectNote={onSelectNote}
-            workspace={workspace}
-            onContextAction={onContextAction}
-          />
-        ))}
-    </div>
-  )
+  return ''
 }
 
 export function NotesExplorerTree({
@@ -204,10 +123,39 @@ export function NotesExplorerTree({
   selectedNoteId,
   onSelectNote,
   onContextAction,
+  onMoveItem,
 }: NotesExplorerTreeProps) {
+  const { t } = useTranslation()
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(
     () => new Set()
   )
+  const [dragState, dispatchDragState] = useReducer(
+    dragStateReducer,
+    initialDragState
+  )
+  const hoverTimerRef = useRef<number | null>(null)
+  const hoverTargetRef = useRef<string | null>(null)
+  const isMovingRef = useRef(false)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    })
+  )
+
+  function clearHoverTimer() {
+    if (hoverTimerRef.current !== null) {
+      window.clearTimeout(hoverTimerRef.current)
+      hoverTimerRef.current = null
+    }
+    hoverTargetRef.current = null
+  }
+
+  function clearDragState() {
+    clearHoverTimer()
+    dispatchDragState({ type: 'clear' })
+  }
+
+  useEffect(() => clearHoverTimer, [])
 
   function toggleFolder(path: string) {
     setCollapsedPaths(previous => {
@@ -221,21 +169,122 @@ export function NotesExplorerTree({
     })
   }
 
+  function scheduleFolderExpansion(path: string) {
+    if (!collapsedPaths.has(path) || hoverTargetRef.current === path) {
+      return
+    }
+
+    clearHoverTimer()
+    hoverTargetRef.current = path
+    hoverTimerRef.current = window.setTimeout(() => {
+      setCollapsedPaths(previous => {
+        if (!previous.has(path)) return previous
+        const next = new Set(previous)
+        next.delete(path)
+        return next
+      })
+      hoverTimerRef.current = null
+    }, 600)
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    if (isMovingRef.current) return
+    const draggedItem = event.active.data.current?.item
+    if (!isNotesTreeDragItem(draggedItem)) return
+
+    dispatchDragState({
+      type: 'start',
+      item: draggedItem,
+      label: getItemLabel(tree.items, draggedItem, t('notes.sidebar.untitled')),
+    })
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    if (!dragState.activeItem) return
+
+    const target = getDropFolderPath(event.over?.data.current)
+    const validation = getNotesTreeDropValidation(
+      tree,
+      dragState.activeItem,
+      target
+    )
+    dispatchDragState({
+      type: 'over',
+      validTarget: validation.valid ? validation.destinationFolder : null,
+      invalidTarget: target && !validation.valid ? target : null,
+    })
+
+    if (validation.valid) {
+      scheduleFolderExpansion(validation.destinationFolder)
+    } else {
+      clearHoverTimer()
+    }
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const draggedItem = event.active.data.current?.item
+    const target = getDropFolderPath(event.over?.data.current)
+    const validation =
+      isNotesTreeDragItem(draggedItem) && !isMovingRef.current
+        ? getNotesTreeDropValidation(tree, draggedItem, target)
+        : { valid: false as const }
+
+    clearDragState()
+    if (!validation.valid || !onMoveItem) return
+
+    isMovingRef.current = true
+    void Promise.resolve()
+      .then(() => onMoveItem(draggedItem, validation.destinationFolder))
+      .then(
+        () => {
+          isMovingRef.current = false
+        },
+        () => {
+          // The caller reports the localized lifecycle error and restores its snapshot.
+          isMovingRef.current = false
+        }
+      )
+  }
+
   return (
     <div className="notes-explorer-tree" data-workspace={tree.workspace}>
-      {tree.items.map(item => (
-        <TreeItem
-          key={item.kind === 'folder' ? item.path : item.note.id}
-          item={item}
-          depth={0}
-          selectedNoteId={selectedNoteId}
-          collapsedPaths={collapsedPaths}
-          onToggleFolder={toggleFolder}
-          onSelectNote={onSelectNote}
-          workspace={tree.workspace}
-          onContextAction={onContextAction}
-        />
-      ))}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragCancel={clearDragState}
+        onDragEnd={handleDragEnd}
+      >
+        {tree.items.map(item => (
+          <NotesExplorerTreeItem
+            key={item.kind === 'folder' ? item.path : item.note.id}
+            item={item}
+            depth={0}
+            selectedNoteId={selectedNoteId}
+            collapsedPaths={collapsedPaths}
+            workspace={tree.workspace}
+            activeItem={dragState.activeItem}
+            activeDropTarget={dragState.activeDropTarget}
+            invalidDropTarget={dragState.invalidDropTarget}
+            onToggleFolder={toggleFolder}
+            onSelectNote={onSelectNote}
+            onContextAction={onContextAction}
+          />
+        ))}
+        <DragOverlay dropAnimation={null}>
+          {dragState.activeItem ? (
+            <output
+              aria-label={t('notes.tree.dragging', {
+                item: dragState.activeLabel,
+              })}
+              className="notes-tree-drag-overlay"
+            >
+              {dragState.activeLabel}
+            </output>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   )
 }
