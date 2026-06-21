@@ -30,7 +30,12 @@ import { save, open } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
 import { toast } from 'sonner'
 import { useNotesStore } from '@/store/notes-store'
-import { NotesExplorerTree } from '@/components/notes/NotesExplorerTree'
+import {
+  NotesExplorerTree,
+  type NotesTreeContextAction,
+  type NotesTreeItemRef,
+} from '@/components/notes/NotesExplorerTree'
+import { useNotesTreeContextActions } from '@/hooks/use-notes-tree-context-actions'
 import type { NotesWorkspaceView } from '@/store/notes-store'
 import {
   getNoteTitle,
@@ -159,6 +164,10 @@ interface SidebarProps {
   onWorkspaceChange: (view: NotesWorkspaceView) => Promise<void>
   onSelectTag: (tag: string | null) => void
   onCreateNote: () => Promise<void>
+  onContextAction: (
+    action: NotesTreeContextAction,
+    item: NotesTreeItemRef
+  ) => void
   onSearchChange: (q: string) => void
   onClearFilters: () => void
 }
@@ -466,6 +475,7 @@ function Sidebar({
   onWorkspaceChange,
   onSelectTag,
   onCreateNote,
+  onContextAction,
   onSearchChange,
   onClearFilters,
 }: SidebarProps) {
@@ -531,6 +541,7 @@ function Sidebar({
             tree={tree}
             selectedNoteId={selectedNoteId}
             onSelectNote={onSelectNote}
+            onContextAction={onContextAction}
           />
         ) : (
           <NotesList
@@ -988,6 +999,7 @@ async function openNotesVaultFolderFromStore() {
 export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const { t } = useTranslation()
   const [editorMode, setEditorMode] = useState<NotesEditorMode>('edit')
+  const { contextDialog, onContextAction } = useNotesTreeContextActions()
   const notes = useNotesStore(state => state.notes)
   const selectedNoteId = useNotesStore(state => state.selectedNoteId)
   const workspaceView = useNotesStore(state => state.workspaceView)
@@ -1052,6 +1064,12 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     setSelectedTag(null)
   }
 
+  const showLifecycleError = (error: unknown) => {
+    toast.error(t('notes.snackbar.actionFailed'), {
+      description: String(error),
+    })
+  }
+
   async function goToWorkspaceNote(
     view: NotesWorkspaceView,
     noteId: string | null
@@ -1066,12 +1084,6 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     if (useNotesStore.getState().workspaceView === view) {
       await setWorkspaceView(view)
     }
-  }
-
-  function showLifecycleError(error: unknown) {
-    toast.error(t('notes.snackbar.actionFailed'), {
-      description: String(error),
-    })
   }
 
   async function handleArchiveNote() {
@@ -1208,9 +1220,12 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           onWorkspaceChange={setWorkspaceView}
           onSelectTag={setSelectedTag}
           onCreateNote={handleCreateNote}
+          onContextAction={onContextAction}
           onSearchChange={setSearchQuery}
           onClearFilters={handleClearFilters}
         />
+        {contextDialog}
+
         <EditorArea
           note={activeNote}
           workspaceView={workspaceView}

@@ -14,6 +14,12 @@ vi.mock('@/lib/tauri-bindings', () => ({
     migrateNotesVault: vi.fn(),
     openNotesVaultFolder: vi.fn(),
     createNote: vi.fn(),
+    createNotesFolder: vi.fn(),
+    renameNotesFolder: vi.fn(),
+    moveNotesTreeItem: vi.fn(),
+    archiveNotesTreeItem: vi.fn(),
+    trashNotesTreeItem: vi.fn(),
+    restoreNotesTreeItem: vi.fn(),
     updateNote: vi.fn(),
     deleteNote: vi.fn(),
     archiveNote: vi.fn(),
@@ -1008,5 +1014,164 @@ describe('useNotesStore lifecycle actions', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('flushes an edited folder descendant before archiving the folder and reloads the tree', async () => {
+    vi.mocked(commands.archiveNotesTreeItem).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
+    const alphaNote = {
+      id: 'inbox/alpha.md',
+      path: 'inbox/projects/alpha.md',
+      content: '# Alpha',
+      created_at: '2026-06-15T10:00:00.000Z',
+      updated_at: '2026-06-15T10:00:00.000Z',
+      word_count: 2,
+    }
+    useNotesStore.setState({
+      notes: [alphaNote],
+      tree: {
+        workspace: 'inbox',
+        items: [
+          {
+            kind: 'folder',
+            path: 'inbox/projects',
+            name: 'Projects',
+            children: [
+              {
+                kind: 'note',
+                note: alphaNote,
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    useNotesStore.getState().updateNote('inbox/alpha.md', '# Alpha updated')
+
+    await useNotesStore.getState().archiveTreeItem({
+      kind: 'folder',
+      path: 'inbox/projects',
+    })
+
+    expect(commands.updateNote).toHaveBeenCalledWith({
+      id: 'inbox/alpha.md',
+      content: '# Alpha updated',
+    })
+    expect(commands.archiveNotesTreeItem).toHaveBeenCalledWith({
+      kind: 'folder',
+      path: 'inbox/projects',
+    })
+    expect(commands.getNotesWorkspaceTree).toHaveBeenLastCalledWith('inbox')
+    expect(useNotesStore.getState().selectedNoteId).toBeNull()
+    expect(useNotesStore.getState().tree?.items).toEqual([
+      {
+        kind: 'note',
+        note: expect.objectContaining({ id: 'plan-id' }),
+      },
+    ])
+  })
+
+  it('keeps the tree and selection unchanged when trashing a folder fails', async () => {
+    vi.mocked(commands.trashNotesTreeItem).mockResolvedValue({
+      status: 'error',
+      error: 'filesystem move failed',
+    })
+    const tree = {
+      workspace: 'inbox' as const,
+      items: [
+        {
+          kind: 'folder' as const,
+          path: 'inbox/projects',
+          name: 'Projects',
+          children: [],
+        },
+      ],
+    }
+    useNotesStore.setState({ tree, selectedNoteId: 'inbox/alpha.md' })
+
+    await expect(
+      useNotesStore.getState().trashTreeItem({
+        kind: 'folder',
+        path: 'inbox/projects',
+      })
+    ).rejects.toThrow('filesystem move failed')
+
+    expect(useNotesStore.getState().tree).toEqual(tree)
+    expect(useNotesStore.getState().selectedNoteId).toBe('inbox/alpha.md')
+  })
+
+  it('creates an inbox folder and reloads the authoritative tree', async () => {
+    vi.mocked(commands.createNotesFolder).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
+
+    await useNotesStore.getState().createFolder('inbox', 'Projects')
+
+    expect(commands.createNotesFolder).toHaveBeenCalledWith({
+      parent_path: 'inbox',
+      name: 'Projects',
+    })
+    expect(commands.getNotesWorkspaceTree).toHaveBeenLastCalledWith('inbox')
+    expect(useNotesStore.getState().tree?.items).toEqual([
+      {
+        kind: 'note',
+        note: expect.objectContaining({ id: 'plan-id' }),
+      },
+    ])
+  })
+
+  it('renames an inbox folder and reloads the authoritative tree', async () => {
+    vi.mocked(commands.renameNotesFolder).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
+
+    await useNotesStore.getState().renameFolder('inbox/projects', 'Work')
+
+    expect(commands.renameNotesFolder).toHaveBeenCalledWith({
+      path: 'inbox/projects',
+      name: 'Work',
+    })
+    expect(commands.getNotesWorkspaceTree).toHaveBeenLastCalledWith('inbox')
+  })
+
+  it('moves a tree item to an inbox folder and reloads the tree', async () => {
+    vi.mocked(commands.moveNotesTreeItem).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
+
+    await useNotesStore
+      .getState()
+      .moveTreeItem({ kind: 'note', id: 'inbox/alpha.md' }, 'inbox/projects')
+
+    expect(commands.moveNotesTreeItem).toHaveBeenCalledWith({
+      item: { kind: 'note', id: 'inbox/alpha.md' },
+      destination_folder: 'inbox/projects',
+    })
+    expect(commands.getNotesWorkspaceTree).toHaveBeenLastCalledWith('inbox')
+  })
+
+  it('restores a tree item and reloads the active workspace', async () => {
+    vi.mocked(commands.restoreNotesTreeItem).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
+    useNotesStore.setState({ workspaceView: 'archive' })
+
+    await useNotesStore.getState().restoreTreeItem({
+      kind: 'folder',
+      path: 'archive/projects',
+    })
+
+    expect(commands.restoreNotesTreeItem).toHaveBeenCalledWith({
+      kind: 'folder',
+      path: 'archive/projects',
+    })
+    expect(commands.getNotesWorkspaceTree).toHaveBeenLastCalledWith('archive')
   })
 })

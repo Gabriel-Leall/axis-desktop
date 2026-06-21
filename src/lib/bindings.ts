@@ -654,6 +654,54 @@ async createNote(input: CreateNoteInput) : Promise<Result<NoteSummary, string>> 
     else return { status: "error", error: e  as any };
 }
 },
+async createNotesFolder(input: CreateNotesFolderInput) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_notes_folder", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async renameNotesFolder(input: RenameNotesFolderInput) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("rename_notes_folder", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async moveNotesTreeItem(input: MoveNotesTreeItemInput) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("move_notes_tree_item", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async archiveNotesTreeItem(item: NotesTreeItemRef) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("archive_notes_tree_item", { item }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async trashNotesTreeItem(item: NotesTreeItemRef) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("trash_notes_tree_item", { item }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async restoreNotesTreeItem(item: NotesTreeItemRef) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("restore_notes_tree_item", { item }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async updateNote(input: UpdateNoteInput) : Promise<Result<Note, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("update_note", { input }) };
@@ -832,6 +880,7 @@ export type CreateDailyPlanInput = { id: string; plan_date: string; focus_task_i
 export type CreateEventInput = { id: string; title: string; description: string | null; start_date: string; end_date: string; all_day: boolean; color: string | null; created_at: string; updated_at: string }
 export type CreateHabitInput = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; sort_order: number; created_at: string; updated_at: string }
 export type CreateNoteInput = { title: string | null; content: string | null; folder: string | null }
+export type CreateNotesFolderInput = { parent_path: string; name: string }
 export type CreateSubtaskInput = { id: string; task_id: string; title: string; sort_order: number; created_at: string }
 export type CreateTaskInput = { id: string; title: string; description: string | null; priority: string; due_date: string | null; created_at: string; updated_at: string; sort_order: number }
 export type DailyPlan = { id: string; plan_date: string; focus_task_id: string | null; status: string; focus_source: string; created_at: string; updated_at: string; completed_at: string | null }
@@ -846,6 +895,7 @@ export type KanbanColumn = { id: string; board_id: string; name: string; sort_or
 export type KanbanColumnWithCards = { column: KanbanColumn; cards: KanbanCard[] }
 export type KanbanSubtask = { id: string; card_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
 export type MigrateNotesVaultInput = { source_path: string; mode: NoteVaultMigrationMode }
+export type MoveNotesTreeItemInput = { item: NotesTreeItemRef; destination_folder: string }
 export type Note = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
 export type NoteSummary = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
 export type NoteTreeItem = { kind: "folder"; path: string; name: string; children: NoteTreeItem[] } | { kind: "note"; note: NoteSummary }
@@ -853,6 +903,7 @@ export type NoteVaultInfo = { path: string; is_default: boolean }
 export type NoteVaultMigrationMode = "copy" | "move"
 export type NoteVaultMigrationResult = { source_path: string; destination_path: string; mode: NoteVaultMigrationMode; notes_migrated: number; metadata_files_migrated: number; conflicts: string[] }
 export type NoteWorkspaceTree = { workspace: NotesWorkspace; items: NoteTreeItem[] }
+export type NotesTreeItemRef = { kind: "note"; id: string } | { kind: "folder"; path: string }
 export type NotesWorkspace = "inbox" | "archive" | "trash"
 export type OAuthLoopbackResult = { code: string; state: string | null; redirect_uri: string }
 export type PomodoroSession = { id: string; session_type: string; duration_seconds: number; completed: boolean; task_id: string | null; started_at: string; ended_at: string | null; created_at: string }
@@ -883,6 +934,7 @@ export type RecoveryError =
  */
 { type: "ParseError"; message: string }
 export type RenameNoteInput = { id: string; title: string }
+export type RenameNotesFolderInput = { path: string; name: string }
 export type Subtask = { id: string; task_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
 export type Task = { id: string; title: string; description: string | null; priority: string; status: string; due_date: string | null; completed_at: string | null; created_at: string; updated_at: string; sort_order: number }
 export type TaskCountByDay = { day: string; created: number; completed: number }

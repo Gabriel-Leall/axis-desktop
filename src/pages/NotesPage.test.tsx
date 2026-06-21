@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import type * as ReactTypes from 'react'
 import { fireEvent, render, screen, waitFor } from '@/test/test-utils'
+import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { commands } from '@/lib/tauri-bindings'
 import { useNotesStore } from '@/store/notes-store'
 import { NotesPage } from './NotesPage'
@@ -17,7 +19,13 @@ vi.mock('@/lib/tauri-bindings', () => ({
     updateNote: vi.fn(),
     deleteNote: vi.fn(),
     archiveNote: vi.fn(),
+    archiveNotesTreeItem: vi.fn(),
+    createNotesFolder: vi.fn(),
     restoreNote: vi.fn(),
+    restoreNotesTreeItem: vi.fn(),
+    moveNotesTreeItem: vi.fn(),
+    renameNotesFolder: vi.fn(),
+    trashNotesTreeItem: vi.fn(),
     openNotesVaultFolder: vi.fn(),
   },
   unwrapResult: vi.fn(
@@ -135,6 +143,14 @@ describe('NotesPage', () => {
       status: 'ok',
       data: [],
     })
+    vi.mocked(commands.archiveNotesTreeItem).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
+    vi.mocked(commands.restoreNotesTreeItem).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
 
     useNotesStore.setState({
       vaultInfo: null,
@@ -195,6 +211,64 @@ describe('NotesPage', () => {
     expect(
       screen.getByRole('button', { name: 'Paper workspace' })
     ).toBeInTheDocument()
+  })
+
+  it('opens a rename dialog from a folder context menu', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    const folderTrigger = await screen.findByRole('button', {
+      name: 'Collapse Projects',
+    })
+    fireEvent.contextMenu(folderTrigger)
+
+    await user.click(screen.getByRole('menuitem', { name: 'Rename folder' }))
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Rename folder' })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Folder name' })).toHaveValue(
+      'Projects'
+    )
+  })
+
+  it('shows an undoable snackbar after archiving from the context menu', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    const noteButton = await screen.findByRole('button', {
+      name: 'Paper workspace',
+    })
+    fireEvent.contextMenu(noteButton)
+    await user.click(screen.getByRole('menuitem', { name: 'Archive' }))
+
+    await waitFor(() => {
+      expect(commands.archiveNotesTreeItem).toHaveBeenCalledWith({
+        kind: 'note',
+        id: 'inbox/paper-workspace.md',
+      })
+    })
+    expect(toast.success).toHaveBeenCalledWith('Item archived.', {
+      action: expect.objectContaining({ label: 'Undo' }),
+      cancel: expect.objectContaining({ label: 'View archive' }),
+    })
+
+    const options = vi
+      .mocked(toast.success)
+      .mock.calls.at(-1)?.[1] as unknown as {
+      action: { onClick: (event: never) => void }
+      cancel: { onClick: (event: never) => void }
+    }
+    options.action.onClick(undefined as never)
+    options.cancel.onClick(undefined as never)
+
+    await waitFor(() => {
+      expect(commands.restoreNotesTreeItem).toHaveBeenCalledWith({
+        kind: 'note',
+        id: 'inbox/paper-workspace.md',
+      })
+      expect(commands.getNotesWorkspaceTree).toHaveBeenLastCalledWith('archive')
+    })
   })
 
   it('keeps the existing body when changing a title in preview mode', async () => {

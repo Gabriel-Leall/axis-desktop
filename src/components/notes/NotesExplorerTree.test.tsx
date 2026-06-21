@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@/test/test-utils'
+import { fireEvent, render, screen, waitFor } from '@/test/test-utils'
 import userEvent from '@testing-library/user-event'
 import { NotesExplorerTree } from './NotesExplorerTree'
 
@@ -82,5 +82,134 @@ describe('NotesExplorerTree', () => {
     await user.click(screen.getByRole('button', { name: 'Plan' }))
 
     expect(onSelectNote).toHaveBeenCalledWith('plan-id')
+  })
+
+  it('opens lifecycle actions on right click and archives an inbox note', async () => {
+    const user = userEvent.setup()
+    const onContextAction = vi.fn()
+
+    render(
+      <NotesExplorerTree
+        tree={tree}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+        onContextAction={onContextAction}
+      />
+    )
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Plan' }))
+
+    await user.click(screen.getByRole('menuitem', { name: 'Archive' }))
+
+    await waitFor(() => {
+      expect(onContextAction).toHaveBeenCalledWith('archive', {
+        kind: 'note',
+        id: 'plan-id',
+      })
+    })
+  })
+
+  it('offers folder organization actions only in Inbox', async () => {
+    const user = userEvent.setup()
+    const onContextAction = vi.fn()
+
+    render(
+      <NotesExplorerTree
+        tree={tree}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+        onContextAction={onContextAction}
+      />
+    )
+
+    fireEvent.contextMenu(
+      screen.getByRole('button', { name: 'Collapse Projects' })
+    )
+
+    expect(screen.getByRole('menuitem', { name: 'New folder' })).toBeVisible()
+    expect(
+      screen.getByRole('menuitem', { name: 'Rename folder' })
+    ).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Move' })).toBeVisible()
+
+    await user.click(screen.getByRole('menuitem', { name: 'Rename folder' }))
+
+    await waitFor(() => {
+      expect(onContextAction).toHaveBeenCalledWith('rename-folder', {
+        kind: 'folder',
+        path: 'inbox/projects',
+        name: 'Projects',
+      })
+    })
+  })
+
+  it('limits Archive to restore and trash lifecycle actions', async () => {
+    const user = userEvent.setup()
+    const onContextAction = vi.fn()
+
+    render(
+      <NotesExplorerTree
+        tree={{ ...tree, workspace: 'archive' }}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+        onContextAction={onContextAction}
+      />
+    )
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Plan' }))
+
+    expect(screen.getByRole('menuitem', { name: 'Restore note' })).toBeVisible()
+    expect(
+      screen.getByRole('menuitem', { name: 'Move to trash' })
+    ).toBeVisible()
+    expect(
+      screen.queryByRole('menuitem', { name: 'New folder' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('menuitem', { name: 'Move' })
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('menuitem', { name: 'Restore note' }))
+
+    await waitFor(() => {
+      expect(onContextAction).toHaveBeenCalledWith('restore', {
+        kind: 'note',
+        id: 'plan-id',
+      })
+    })
+  })
+
+  it('limits Trash to restoring an item', async () => {
+    const user = userEvent.setup()
+    const onContextAction = vi.fn()
+    render(
+      <NotesExplorerTree
+        tree={{ ...tree, workspace: 'trash' }}
+        selectedNoteId={null}
+        onSelectNote={vi.fn()}
+        onContextAction={onContextAction}
+      />
+    )
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Plan' }))
+
+    expect(screen.getByRole('menuitem', { name: 'Restore note' })).toBeVisible()
+    expect(
+      screen.queryByRole('menuitem', { name: 'Archive' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('menuitem', { name: 'Move to trash' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('menuitem', { name: 'New folder' })
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('menuitem', { name: 'Restore note' }))
+    await waitFor(() => {
+      expect(onContextAction).toHaveBeenCalledWith('restore', {
+        kind: 'note',
+        id: 'plan-id',
+      })
+    })
   })
 })

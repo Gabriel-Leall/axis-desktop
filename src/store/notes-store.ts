@@ -9,6 +9,7 @@ import type {
   NoteVaultInfo,
   NoteVaultMigrationMode,
   NoteVaultMigrationResult,
+  NotesTreeItemRef,
   NoteWorkspaceTree as BindingNoteWorkspaceTree,
 } from '@/lib/tauri-bindings'
 import type { Note, NoteTreeItem, NoteWorkspaceTree } from '@/lib/notes-domain'
@@ -42,7 +43,16 @@ interface NotesState {
   dismissPendingVaultMigration: () => void
   openVaultFolder: () => Promise<void>
   createNote: (content?: string) => Promise<string>
+  createFolder: (parentPath: string, name: string) => Promise<void>
+  renameFolder: (path: string, name: string) => Promise<void>
   updateNote: (id: string, content: string) => void
+  moveTreeItem: (
+    item: NotesTreeItemRef,
+    destinationFolder: string
+  ) => Promise<void>
+  archiveTreeItem: (item: NotesTreeItemRef) => Promise<void>
+  trashTreeItem: (item: NotesTreeItemRef) => Promise<void>
+  restoreTreeItem: (item: NotesTreeItemRef) => Promise<void>
   deleteNote: (id: string) => Promise<string>
   archiveNote: (id: string) => Promise<string>
   restoreNote: (id: string) => Promise<string>
@@ -336,741 +346,870 @@ async function flushPendingSave(notes: Note[]): Promise<boolean> {
   return true
 }
 
+function reconcileSearchResults(
+  previousResults: Note[] | null,
+  notes: Note[]
+): Note[] | null {
+  if (!previousResults) return null
+
+  const notesById = new Map(notes.map(note => [note.id, note]))
+  return previousResults.flatMap(result => {
+    const note = notesById.get(result.id)
+    return note ? [note] : []
+  })
+}
+
 export const useNotesStore = create<NotesState>()(
   devtools(
-    (set, get) => ({
-      vaultInfo: null,
-      vaultError: null,
-      pendingMigrationSourcePath: null,
-      workspaceView: 'inbox',
-      tree: null,
-      notes: [],
-      searchResults: null,
-      selectedNoteId: null,
-      searchQuery: '',
-      selectedTag: null,
-      isSaving: false,
-      isLoading: false,
-      isSearching: false,
-
-      loadNotes: async () => {
-        if (loadNotesInFlight) {
-          return loadNotesInFlight
+    (set, get) => {
+      async function runWorkspaceMutation(
+        actionName: string,
+        execute: () => Promise<void>
+      ) {
+        const snapshot = {
+          tree: get().tree,
+          notes: get().notes,
+          searchResults: get().searchResults,
+          selectedNoteId: get().selectedNoteId,
         }
+        const attemptedPendingSave =
+          debounceTimer !== null && debouncedNoteId !== null
+        let flushedPendingSave = false
 
-        loadNotesInFlight = (async () => {
-          set({ isLoading: true }, undefined, 'loadNotes/start')
+        try {
+          flushedPendingSave = await flushPendingSave(snapshot.notes)
+          if (flushedPendingSave) {
+            set(
+              { isSaving: false },
+              undefined,
+              `${actionName}/flushPendingSave`
+            )
+          }
+
+          await execute()
+          const tree = await loadTreeForWorkspace(get().workspaceView)
+          const notes = flattenNoteTree(tree.items)
+
+          set(
+            state => ({
+              tree,
+              notes,
+              selectedNoteId: notes.some(
+                note => note.id === state.selectedNoteId
+              )
+                ? state.selectedNoteId
+                : null,
+              searchResults: reconcileSearchResults(state.searchResults, notes),
+            }),
+            undefined,
+            `${actionName}/done`
+          )
+        } catch (error) {
+          logger.error(`Failed to ${actionName}: ${String(error)}`)
+          set(
+            {
+              ...snapshot,
+              isSaving:
+                attemptedPendingSave || flushedPendingSave
+                  ? false
+                  : get().isSaving,
+            },
+            undefined,
+            `${actionName}/rollback`
+          )
+          throw error
+        }
+      }
+
+      return {
+        vaultInfo: null,
+        vaultError: null,
+        pendingMigrationSourcePath: null,
+        workspaceView: 'inbox',
+        tree: null,
+        notes: [],
+        searchResults: null,
+        selectedNoteId: null,
+        searchQuery: '',
+        selectedTag: null,
+        isSaving: false,
+        isLoading: false,
+        isSearching: false,
+
+        loadNotes: async () => {
+          if (loadNotesInFlight) {
+            return loadNotesInFlight
+          }
+
+          loadNotesInFlight = (async () => {
+            set({ isLoading: true }, undefined, 'loadNotes/start')
+            try {
+              const currentView = get().workspaceView
+              const [vaultResult, tree] = await Promise.all([
+                withTimeout(
+                  commands.getNotesVaultInfo(),
+                  VAULT_LOAD_TIMEOUT_MS,
+                  'Timed out while loading notes vault info (Tauri IPC)'
+                ),
+                loadTreeForWorkspace(currentView),
+              ])
+              const vaultInfo = unwrapResult(vaultResult)
+              const notes = flattenNoteTree(tree.items)
+
+              set(
+                state => ({
+                  vaultInfo,
+                  vaultError: null,
+                  tree,
+                  ...workspaceStateFromNotes(notes, state.selectedNoteId),
+                  searchResults: state.searchQuery.trim()
+                    ? reconcileSearchResults(state.searchResults, notes)
+                    : null,
+                }),
+                undefined,
+                'loadNotes/done'
+              )
+            } catch (error) {
+              logger.error(`Failed to load notes: ${String(error)}`)
+              set({ vaultError: String(error) }, undefined, 'loadNotes/error')
+            } finally {
+              set({ isLoading: false }, undefined, 'loadNotes/finalize')
+              loadNotesInFlight = null
+            }
+          })()
+
+          return loadNotesInFlight
+        },
+
+        loadWidgetNotes: async () => {
+          cancelPendingSearch()
+          set({ isLoading: true }, undefined, 'loadWidgetNotes/start')
+
           try {
-            const currentView = get().workspaceView
+            const [vaultResult, notes] = await Promise.all([
+              withTimeout(
+                commands.getNotesVaultInfo(),
+                VAULT_LOAD_TIMEOUT_MS,
+                'Timed out while loading notes vault info (Tauri IPC)'
+              ),
+              loadNotesForWorkspace('inbox'),
+            ])
+            const vaultInfo = unwrapResult(vaultResult)
+
+            set(
+              state => ({
+                vaultInfo,
+                vaultError: null,
+                workspaceView: 'inbox',
+                tree: null,
+                ...workspaceStateFromNotes(notes, state.selectedNoteId),
+                searchQuery: '',
+                searchResults: null,
+                selectedTag: null,
+                isSearching: false,
+                isLoading: false,
+              }),
+              undefined,
+              'loadWidgetNotes/done'
+            )
+          } catch (error) {
+            logger.error(
+              `Failed to load notes widget workspace: ${String(error)}`
+            )
+            set(
+              { vaultError: String(error), isLoading: false },
+              undefined,
+              'loadWidgetNotes/error'
+            )
+          }
+        },
+
+        setWorkspaceView: async view => {
+          cancelPendingSearch()
+          set({ isLoading: true }, undefined, 'setWorkspaceView/start')
+
+          try {
+            const tree = await loadTreeForWorkspace(view)
+            const notes = flattenNoteTree(tree.items)
+
+            set(
+              {
+                workspaceView: view,
+                tree,
+                notes,
+                selectedNoteId: null,
+                searchResults: null,
+                isSearching: false,
+                isLoading: false,
+              },
+              undefined,
+              'setWorkspaceView/done'
+            )
+          } catch (error) {
+            logger.error(`Failed to load notes workspace: ${String(error)}`)
+            set(
+              { vaultError: String(error), isLoading: false },
+              undefined,
+              'setWorkspaceView/error'
+            )
+            throw error
+          }
+        },
+
+        loadVaultInfo: async () => {
+          try {
+            const vaultInfo = unwrapResult(await commands.getNotesVaultInfo())
+            set(
+              { vaultInfo, vaultError: null },
+              undefined,
+              'loadVaultInfo/done'
+            )
+            return vaultInfo
+          } catch (error) {
+            logger.error(`Failed to load notes vault info: ${String(error)}`)
+            set(
+              { vaultInfo: null, vaultError: String(error) },
+              undefined,
+              'loadVaultInfo/error'
+            )
+            throw error
+          }
+        },
+
+        setVaultPath: async path => {
+          cancelPendingSearch()
+          set({ isLoading: true }, undefined, 'setVaultPath/start')
+          const previousVaultPath = get().vaultInfo?.path ?? null
+          let vaultChanged = false
+          let nextVaultInfo: NoteVaultInfo | null = null
+
+          try {
+            const flushedPendingSave = await flushPendingSave(get().notes)
+            if (flushedPendingSave) {
+              set(
+                { isSaving: false },
+                undefined,
+                'setVaultPath/flushPendingSave'
+              )
+            }
+
+            const vaultInfo = unwrapResult(
+              await commands.setNotesVaultPath(path)
+            )
+            nextVaultInfo = vaultInfo
+            vaultChanged = true
+            const tree = await loadTreeForWorkspace('inbox')
+
+            set(
+              {
+                ...resetWorkspaceForVault(vaultInfo, tree),
+                pendingMigrationSourcePath:
+                  previousVaultPath && previousVaultPath !== vaultInfo.path
+                    ? previousVaultPath
+                    : null,
+                isLoading: false,
+              },
+              undefined,
+              'setVaultPath/done'
+            )
+
+            return vaultInfo
+          } catch (error) {
+            logger.error(`Failed to set notes vault path: ${String(error)}`)
+            set(
+              vaultChanged
+                ? {
+                    vaultInfo: nextVaultInfo,
+                    vaultError: String(error),
+                    tree: null,
+                    notes: [],
+                    selectedNoteId: null,
+                    searchQuery: '',
+                    searchResults: null,
+                    selectedTag: null,
+                    isSearching: false,
+                    pendingMigrationSourcePath:
+                      previousVaultPath &&
+                      nextVaultInfo &&
+                      previousVaultPath !== nextVaultInfo.path
+                        ? previousVaultPath
+                        : null,
+                    isLoading: false,
+                  }
+                : {
+                    vaultError: String(error),
+                    isLoading: false,
+                  },
+              undefined,
+              'setVaultPath/error'
+            )
+            throw error
+          }
+        },
+
+        resetVaultPath: async () => {
+          cancelPendingSearch()
+          set({ isLoading: true }, undefined, 'resetVaultPath/start')
+          const previousVaultPath = get().vaultInfo?.path ?? null
+          let vaultChanged = false
+          let nextVaultInfo: NoteVaultInfo | null = null
+
+          try {
+            const flushedPendingSave = await flushPendingSave(get().notes)
+            if (flushedPendingSave) {
+              set(
+                { isSaving: false },
+                undefined,
+                'resetVaultPath/flushPendingSave'
+              )
+            }
+
+            const vaultInfo = unwrapResult(await commands.resetNotesVaultPath())
+            nextVaultInfo = vaultInfo
+            vaultChanged = true
+            const tree = await loadTreeForWorkspace('inbox')
+
+            set(
+              {
+                ...resetWorkspaceForVault(vaultInfo, tree),
+                pendingMigrationSourcePath:
+                  previousVaultPath && previousVaultPath !== vaultInfo.path
+                    ? previousVaultPath
+                    : null,
+                isLoading: false,
+              },
+              undefined,
+              'resetVaultPath/done'
+            )
+
+            return vaultInfo
+          } catch (error) {
+            logger.error(`Failed to reset notes vault path: ${String(error)}`)
+            set(
+              vaultChanged
+                ? {
+                    vaultInfo: nextVaultInfo,
+                    vaultError: String(error),
+                    tree: null,
+                    notes: [],
+                    selectedNoteId: null,
+                    searchQuery: '',
+                    searchResults: null,
+                    selectedTag: null,
+                    isSearching: false,
+                    pendingMigrationSourcePath:
+                      previousVaultPath &&
+                      nextVaultInfo &&
+                      previousVaultPath !== nextVaultInfo.path
+                        ? previousVaultPath
+                        : null,
+                    isLoading: false,
+                  }
+                : {
+                    vaultError: String(error),
+                    isLoading: false,
+                  },
+              undefined,
+              'resetVaultPath/error'
+            )
+            throw error
+          }
+        },
+
+        migratePendingVault: async mode => {
+          const sourcePath = get().pendingMigrationSourcePath
+          if (!sourcePath) {
+            throw new Error('No pending notes vault migration source')
+          }
+
+          cancelPendingSearch()
+          set({ isLoading: true }, undefined, 'migratePendingVault/start')
+
+          try {
+            const result = unwrapResult(
+              await commands.migrateNotesVault({
+                source_path: sourcePath,
+                mode,
+              })
+            )
             const [vaultResult, tree] = await Promise.all([
               withTimeout(
                 commands.getNotesVaultInfo(),
                 VAULT_LOAD_TIMEOUT_MS,
                 'Timed out while loading notes vault info (Tauri IPC)'
               ),
-              loadTreeForWorkspace(currentView),
+              loadTreeForWorkspace('inbox'),
             ])
             const vaultInfo = unwrapResult(vaultResult)
-            const notes = flattenNoteTree(tree.items)
 
             set(
-              state => ({
-                vaultInfo,
-                vaultError: null,
-                tree,
-                ...workspaceStateFromNotes(notes, state.selectedNoteId),
-                searchResults: state.searchQuery.trim()
-                  ? state.searchResults
-                  : null,
-              }),
+              {
+                ...resetWorkspaceForVault(vaultInfo, tree),
+                pendingMigrationSourcePath: null,
+                isLoading: false,
+              },
               undefined,
-              'loadNotes/done'
+              'migratePendingVault/done'
             )
+
+            return result
           } catch (error) {
-            logger.error(`Failed to load notes: ${String(error)}`)
-            set({ vaultError: String(error) }, undefined, 'loadNotes/error')
-          } finally {
-            set({ isLoading: false }, undefined, 'loadNotes/finalize')
-            loadNotesInFlight = null
-          }
-        })()
-
-        return loadNotesInFlight
-      },
-
-      loadWidgetNotes: async () => {
-        cancelPendingSearch()
-        set({ isLoading: true }, undefined, 'loadWidgetNotes/start')
-
-        try {
-          const [vaultResult, notes] = await Promise.all([
-            withTimeout(
-              commands.getNotesVaultInfo(),
-              VAULT_LOAD_TIMEOUT_MS,
-              'Timed out while loading notes vault info (Tauri IPC)'
-            ),
-            loadNotesForWorkspace('inbox'),
-          ])
-          const vaultInfo = unwrapResult(vaultResult)
-
-          set(
-            state => ({
-              vaultInfo,
-              vaultError: null,
-              workspaceView: 'inbox',
-              tree: null,
-              ...workspaceStateFromNotes(notes, state.selectedNoteId),
-              searchQuery: '',
-              searchResults: null,
-              selectedTag: null,
-              isSearching: false,
-              isLoading: false,
-            }),
-            undefined,
-            'loadWidgetNotes/done'
-          )
-        } catch (error) {
-          logger.error(
-            `Failed to load notes widget workspace: ${String(error)}`
-          )
-          set(
-            { vaultError: String(error), isLoading: false },
-            undefined,
-            'loadWidgetNotes/error'
-          )
-        }
-      },
-
-      setWorkspaceView: async view => {
-        cancelPendingSearch()
-        set({ isLoading: true }, undefined, 'setWorkspaceView/start')
-
-        try {
-          const tree = await loadTreeForWorkspace(view)
-          const notes = flattenNoteTree(tree.items)
-
-          set(
-            {
-              workspaceView: view,
-              tree,
-              notes,
-              selectedNoteId: null,
-              searchResults: null,
-              isSearching: false,
-              isLoading: false,
-            },
-            undefined,
-            'setWorkspaceView/done'
-          )
-        } catch (error) {
-          logger.error(`Failed to load notes workspace: ${String(error)}`)
-          set(
-            { vaultError: String(error), isLoading: false },
-            undefined,
-            'setWorkspaceView/error'
-          )
-          throw error
-        }
-      },
-
-      loadVaultInfo: async () => {
-        try {
-          const vaultInfo = unwrapResult(await commands.getNotesVaultInfo())
-          set({ vaultInfo, vaultError: null }, undefined, 'loadVaultInfo/done')
-          return vaultInfo
-        } catch (error) {
-          logger.error(`Failed to load notes vault info: ${String(error)}`)
-          set(
-            { vaultInfo: null, vaultError: String(error) },
-            undefined,
-            'loadVaultInfo/error'
-          )
-          throw error
-        }
-      },
-
-      setVaultPath: async path => {
-        cancelPendingSearch()
-        set({ isLoading: true }, undefined, 'setVaultPath/start')
-        const previousVaultPath = get().vaultInfo?.path ?? null
-        let vaultChanged = false
-        let nextVaultInfo: NoteVaultInfo | null = null
-
-        try {
-          const flushedPendingSave = await flushPendingSave(get().notes)
-          if (flushedPendingSave) {
-            set({ isSaving: false }, undefined, 'setVaultPath/flushPendingSave')
-          }
-
-          const vaultInfo = unwrapResult(await commands.setNotesVaultPath(path))
-          nextVaultInfo = vaultInfo
-          vaultChanged = true
-          const tree = await loadTreeForWorkspace('inbox')
-
-          set(
-            {
-              ...resetWorkspaceForVault(vaultInfo, tree),
-              pendingMigrationSourcePath:
-                previousVaultPath && previousVaultPath !== vaultInfo.path
-                  ? previousVaultPath
-                  : null,
-              isLoading: false,
-            },
-            undefined,
-            'setVaultPath/done'
-          )
-
-          return vaultInfo
-        } catch (error) {
-          logger.error(`Failed to set notes vault path: ${String(error)}`)
-          set(
-            vaultChanged
-              ? {
-                  vaultInfo: nextVaultInfo,
-                  vaultError: String(error),
-                  tree: null,
-                  notes: [],
-                  selectedNoteId: null,
-                  searchQuery: '',
-                  searchResults: null,
-                  selectedTag: null,
-                  isSearching: false,
-                  pendingMigrationSourcePath:
-                    previousVaultPath &&
-                    nextVaultInfo &&
-                    previousVaultPath !== nextVaultInfo.path
-                      ? previousVaultPath
-                      : null,
-                  isLoading: false,
-                }
-              : {
-                  vaultError: String(error),
-                  isLoading: false,
-                },
-            undefined,
-            'setVaultPath/error'
-          )
-          throw error
-        }
-      },
-
-      resetVaultPath: async () => {
-        cancelPendingSearch()
-        set({ isLoading: true }, undefined, 'resetVaultPath/start')
-        const previousVaultPath = get().vaultInfo?.path ?? null
-        let vaultChanged = false
-        let nextVaultInfo: NoteVaultInfo | null = null
-
-        try {
-          const flushedPendingSave = await flushPendingSave(get().notes)
-          if (flushedPendingSave) {
+            logger.error(`Failed to migrate notes vault: ${String(error)}`)
             set(
-              { isSaving: false },
+              { vaultError: String(error), isLoading: false },
               undefined,
-              'resetVaultPath/flushPendingSave'
+              'migratePendingVault/error'
             )
+            throw error
           }
+        },
 
-          const vaultInfo = unwrapResult(await commands.resetNotesVaultPath())
-          nextVaultInfo = vaultInfo
-          vaultChanged = true
-          const tree = await loadTreeForWorkspace('inbox')
-
+        dismissPendingVaultMigration: () =>
           set(
-            {
-              ...resetWorkspaceForVault(vaultInfo, tree),
-              pendingMigrationSourcePath:
-                previousVaultPath && previousVaultPath !== vaultInfo.path
-                  ? previousVaultPath
-                  : null,
-              isLoading: false,
-            },
+            { pendingMigrationSourcePath: null },
             undefined,
-            'resetVaultPath/done'
-          )
+            'dismissPendingVaultMigration'
+          ),
 
-          return vaultInfo
-        } catch (error) {
-          logger.error(`Failed to reset notes vault path: ${String(error)}`)
-          set(
-            vaultChanged
-              ? {
-                  vaultInfo: nextVaultInfo,
-                  vaultError: String(error),
-                  tree: null,
-                  notes: [],
-                  selectedNoteId: null,
-                  searchQuery: '',
-                  searchResults: null,
-                  selectedTag: null,
-                  isSearching: false,
-                  pendingMigrationSourcePath:
-                    previousVaultPath &&
-                    nextVaultInfo &&
-                    previousVaultPath !== nextVaultInfo.path
-                      ? previousVaultPath
-                      : null,
-                  isLoading: false,
-                }
-              : {
-                  vaultError: String(error),
-                  isLoading: false,
-                },
-            undefined,
-            'resetVaultPath/error'
-          )
-          throw error
-        }
-      },
-
-      migratePendingVault: async mode => {
-        const sourcePath = get().pendingMigrationSourcePath
-        if (!sourcePath) {
-          throw new Error('No pending notes vault migration source')
-        }
-
-        cancelPendingSearch()
-        set({ isLoading: true }, undefined, 'migratePendingVault/start')
-
-        try {
-          const result = unwrapResult(
-            await commands.migrateNotesVault({
-              source_path: sourcePath,
-              mode,
-            })
-          )
-          const [vaultResult, tree] = await Promise.all([
-            withTimeout(
-              commands.getNotesVaultInfo(),
-              VAULT_LOAD_TIMEOUT_MS,
-              'Timed out while loading notes vault info (Tauri IPC)'
-            ),
-            loadTreeForWorkspace('inbox'),
-          ])
-          const vaultInfo = unwrapResult(vaultResult)
-
-          set(
-            {
-              ...resetWorkspaceForVault(vaultInfo, tree),
-              pendingMigrationSourcePath: null,
-              isLoading: false,
-            },
-            undefined,
-            'migratePendingVault/done'
-          )
-
-          return result
-        } catch (error) {
-          logger.error(`Failed to migrate notes vault: ${String(error)}`)
-          set(
-            { vaultError: String(error), isLoading: false },
-            undefined,
-            'migratePendingVault/error'
-          )
-          throw error
-        }
-      },
-
-      dismissPendingVaultMigration: () =>
-        set(
-          { pendingMigrationSourcePath: null },
-          undefined,
-          'dismissPendingVaultMigration'
-        ),
-
-      openVaultFolder: async () => {
-        try {
-          unwrapResult(await commands.openNotesVaultFolder())
-        } catch (error) {
-          logger.error(`Failed to open notes vault folder: ${String(error)}`)
-          throw error
-        }
-      },
-
-      createNote: async (content = '') => {
-        set({ isSaving: true }, undefined, 'createNote/start')
-
-        try {
-          const currentView = get().workspaceView
-          const createdNote = mapBindingNote(
-            unwrapResult(
-              await commands.createNote({
-                title: null,
-                content,
-                folder: null,
-              })
-            )
-          )
-          const currentTree =
-            currentView === 'inbox'
-              ? get().tree
-              : await loadTreeForWorkspace('inbox').catch(error => {
-                  logger.error(
-                    `Failed to reload inbox tree after create: ${String(error)}`
-                  )
-                  return null
-                })
-          const inboxTree = prependNoteToTree(currentTree, createdNote) ?? {
-            workspace: 'inbox' as const,
-            items: [{ kind: 'note' as const, note: createdNote }],
-          }
-          const inboxNotes = flattenNoteTree(inboxTree.items)
-
-          set(
-            {
-              workspaceView: 'inbox',
-              tree: inboxTree,
-              notes: inboxNotes,
-              selectedNoteId: createdNote.id,
-              searchQuery: '',
-              searchResults: null,
-              selectedTag: null,
-              isSaving: false,
-            },
-            undefined,
-            'createNote/done'
-          )
-
-          return createdNote.id
-        } catch (error) {
-          logger.error(`Failed to create note: ${String(error)}`)
-          set({ isSaving: false }, undefined, 'createNote/error')
-          throw error
-        }
-      },
-
-      updateNote: (id, content) => {
-        const wordCount = countWords(content)
-        const updatedAt = new Date().toISOString()
-
-        if (!get().notes.some(note => note.id === id)) {
-          return
-        }
-
-        set(
-          state => ({
-            notes: state.notes.map(n =>
-              n.id === id
-                ? {
-                    ...n,
-                    content,
-                    word_count: wordCount,
-                    updated_at: updatedAt,
-                  }
-                : n
-            ),
-            tree: updateNoteInTree(state.tree, {
-              ...(state.notes.find(note => note.id === id) ?? {
-                id,
-                content,
-                created_at: updatedAt,
-                updated_at: updatedAt,
-                word_count: wordCount,
-              }),
-              content,
-              word_count: wordCount,
-              updated_at: updatedAt,
-            }),
-            isSaving: true,
-          }),
-          undefined,
-          'updateNote/optimistic'
-        )
-
-        if (debounceTimer) {
-          clearTimeout(debounceTimer)
-        }
-
-        debouncedNoteId = id
-        debounceTimer = setTimeout(async () => {
+        openVaultFolder: async () => {
           try {
-            const savedNote = mapBindingNote(
+            unwrapResult(await commands.openNotesVaultFolder())
+          } catch (error) {
+            logger.error(`Failed to open notes vault folder: ${String(error)}`)
+            throw error
+          }
+        },
+
+        createNote: async (content = '') => {
+          set({ isSaving: true }, undefined, 'createNote/start')
+
+          try {
+            const currentView = get().workspaceView
+            const createdNote = mapBindingNote(
               unwrapResult(
-                await commands.updateNote({
-                  id,
+                await commands.createNote({
+                  title: null,
                   content,
+                  folder: null,
                 })
               )
             )
+            const currentTree =
+              currentView === 'inbox'
+                ? get().tree
+                : await loadTreeForWorkspace('inbox').catch(error => {
+                    logger.error(
+                      `Failed to reload inbox tree after create: ${String(error)}`
+                    )
+                    return null
+                  })
+            const inboxTree = prependNoteToTree(currentTree, createdNote) ?? {
+              workspace: 'inbox' as const,
+              items: [{ kind: 'note' as const, note: createdNote }],
+            }
+            const inboxNotes = flattenNoteTree(inboxTree.items)
+
+            set(
+              {
+                workspaceView: 'inbox',
+                tree: inboxTree,
+                notes: inboxNotes,
+                selectedNoteId: createdNote.id,
+                searchQuery: '',
+                searchResults: null,
+                selectedTag: null,
+                isSaving: false,
+              },
+              undefined,
+              'createNote/done'
+            )
+
+            return createdNote.id
+          } catch (error) {
+            logger.error(`Failed to create note: ${String(error)}`)
+            set({ isSaving: false }, undefined, 'createNote/error')
+            throw error
+          }
+        },
+
+        createFolder: (parentPath, name) =>
+          runWorkspaceMutation('createFolder', async () => {
+            unwrapResult(
+              await commands.createNotesFolder({
+                parent_path: parentPath,
+                name,
+              })
+            )
+          }),
+
+        renameFolder: (path, name) =>
+          runWorkspaceMutation('renameFolder', async () => {
+            unwrapResult(await commands.renameNotesFolder({ path, name }))
+          }),
+
+        updateNote: (id, content) => {
+          const wordCount = countWords(content)
+          const updatedAt = new Date().toISOString()
+
+          if (!get().notes.some(note => note.id === id)) {
+            return
+          }
+
+          set(
+            state => ({
+              notes: state.notes.map(n =>
+                n.id === id
+                  ? {
+                      ...n,
+                      content,
+                      word_count: wordCount,
+                      updated_at: updatedAt,
+                    }
+                  : n
+              ),
+              tree: updateNoteInTree(state.tree, {
+                ...(state.notes.find(note => note.id === id) ?? {
+                  id,
+                  content,
+                  created_at: updatedAt,
+                  updated_at: updatedAt,
+                  word_count: wordCount,
+                }),
+                content,
+                word_count: wordCount,
+                updated_at: updatedAt,
+              }),
+              isSaving: true,
+            }),
+            undefined,
+            'updateNote/optimistic'
+          )
+
+          if (debounceTimer) {
+            clearTimeout(debounceTimer)
+          }
+
+          debouncedNoteId = id
+          debounceTimer = setTimeout(async () => {
+            try {
+              const savedNote = mapBindingNote(
+                unwrapResult(
+                  await commands.updateNote({
+                    id,
+                    content,
+                  })
+                )
+              )
+
+              set(
+                state => ({
+                  notes: state.notes.map(note =>
+                    note.id === savedNote.id ? savedNote : note
+                  ),
+                  tree: updateNoteInTree(state.tree, savedNote),
+                  isSaving: false,
+                }),
+                undefined,
+                'updateNote/saved'
+              )
+            } catch (error) {
+              logger.error(`Failed to update note: ${String(error)}`)
+              set({ isSaving: false }, undefined, 'updateNote/error')
+              await get().loadNotes()
+            } finally {
+              debounceTimer = null
+              debouncedNoteId = null
+            }
+          }, DEBOUNCE_MS)
+        },
+
+        archiveTreeItem: item =>
+          runWorkspaceMutation('archiveTreeItem', async () => {
+            unwrapResult(await commands.archiveNotesTreeItem(item))
+          }),
+
+        moveTreeItem: (item, destinationFolder) =>
+          runWorkspaceMutation('moveTreeItem', async () => {
+            unwrapResult(
+              await commands.moveNotesTreeItem({
+                item,
+                destination_folder: destinationFolder,
+              })
+            )
+          }),
+
+        trashTreeItem: item =>
+          runWorkspaceMutation('trashTreeItem', async () => {
+            unwrapResult(await commands.trashNotesTreeItem(item))
+          }),
+
+        restoreTreeItem: item =>
+          runWorkspaceMutation('restoreTreeItem', async () => {
+            unwrapResult(await commands.restoreNotesTreeItem(item))
+          }),
+
+        deleteNote: async id => {
+          const snapshot = {
+            tree: get().tree,
+            notes: get().notes,
+            searchResults: get().searchResults,
+            selectedNoteId: get().selectedNoteId,
+          }
+          const pendingNote = snapshot.notes.find(note => note.id === id)
+          const shouldFlushPendingSave =
+            Boolean(debounceTimer) &&
+            debouncedNoteId === id &&
+            Boolean(pendingNote)
+
+          try {
+            if (shouldFlushPendingSave && pendingNote && debounceTimer) {
+              clearTimeout(debounceTimer)
+              debounceTimer = null
+              debouncedNoteId = null
+              unwrapResult(
+                await commands.updateNote({
+                  id,
+                  content: pendingNote.content,
+                })
+              )
+              set({ isSaving: false }, undefined, 'deleteNote/flushPendingSave')
+            }
 
             set(
               state => ({
-                notes: state.notes.map(note =>
-                  note.id === savedNote.id ? savedNote : note
+                notes: removeNoteFromList(state.notes, id),
+                tree: removeNoteFromTree(state.tree, id),
+                searchResults: state.searchResults
+                  ? removeNoteFromList(state.searchResults, id)
+                  : null,
+                selectedNoteId: nextSelectedNoteId(
+                  state.selectedNoteId,
+                  id,
+                  removeNoteFromList(state.notes, id)
                 ),
-                tree: updateNoteInTree(state.tree, savedNote),
-                isSaving: false,
               }),
               undefined,
-              'updateNote/saved'
+              'deleteNote/optimistic'
             )
+            const trashedNote = mapBindingNote(
+              unwrapResult(await commands.deleteNote(id))
+            )
+            return trashedNote.id
           } catch (error) {
-            logger.error(`Failed to update note: ${String(error)}`)
-            set({ isSaving: false }, undefined, 'updateNote/error')
-            await get().loadNotes()
-          } finally {
-            debounceTimer = null
-            debouncedNoteId = null
-          }
-        }, DEBOUNCE_MS)
-      },
-
-      deleteNote: async id => {
-        const snapshot = {
-          tree: get().tree,
-          notes: get().notes,
-          searchResults: get().searchResults,
-          selectedNoteId: get().selectedNoteId,
-        }
-        const pendingNote = snapshot.notes.find(note => note.id === id)
-        const shouldFlushPendingSave =
-          Boolean(debounceTimer) &&
-          debouncedNoteId === id &&
-          Boolean(pendingNote)
-
-        try {
-          if (shouldFlushPendingSave && pendingNote && debounceTimer) {
-            clearTimeout(debounceTimer)
-            debounceTimer = null
-            debouncedNoteId = null
-            unwrapResult(
-              await commands.updateNote({
-                id,
-                content: pendingNote.content,
-              })
+            logger.error(`Failed to delete note: ${String(error)}`)
+            set(
+              {
+                ...snapshot,
+                isSaving: shouldFlushPendingSave ? false : get().isSaving,
+              },
+              undefined,
+              'deleteNote/rollback'
             )
-            set({ isSaving: false }, undefined, 'deleteNote/flushPendingSave')
+            throw error
           }
+        },
 
-          set(
-            state => ({
-              notes: removeNoteFromList(state.notes, id),
-              tree: removeNoteFromTree(state.tree, id),
-              searchResults: state.searchResults
-                ? removeNoteFromList(state.searchResults, id)
-                : null,
-              selectedNoteId: nextSelectedNoteId(
-                state.selectedNoteId,
-                id,
-                removeNoteFromList(state.notes, id)
-              ),
-            }),
-            undefined,
-            'deleteNote/optimistic'
-          )
-          const trashedNote = mapBindingNote(
-            unwrapResult(await commands.deleteNote(id))
-          )
-          return trashedNote.id
-        } catch (error) {
-          logger.error(`Failed to delete note: ${String(error)}`)
-          set(
-            {
-              ...snapshot,
-              isSaving: shouldFlushPendingSave ? false : get().isSaving,
-            },
-            undefined,
-            'deleteNote/rollback'
-          )
-          throw error
-        }
-      },
-
-      archiveNote: async id => {
-        const snapshot = {
-          tree: get().tree,
-          notes: get().notes,
-          searchResults: get().searchResults,
-          selectedNoteId: get().selectedNoteId,
-        }
-        const pendingNote = snapshot.notes.find(note => note.id === id)
-        const shouldFlushPendingSave =
-          Boolean(debounceTimer) &&
-          debouncedNoteId === id &&
-          Boolean(pendingNote)
-
-        try {
-          if (shouldFlushPendingSave && pendingNote && debounceTimer) {
-            clearTimeout(debounceTimer)
-            debounceTimer = null
-            debouncedNoteId = null
-            unwrapResult(
-              await commands.updateNote({
-                id,
-                content: pendingNote.content,
-              })
-            )
-            set({ isSaving: false }, undefined, 'archiveNote/flushPendingSave')
+        archiveNote: async id => {
+          const snapshot = {
+            tree: get().tree,
+            notes: get().notes,
+            searchResults: get().searchResults,
+            selectedNoteId: get().selectedNoteId,
           }
+          const pendingNote = snapshot.notes.find(note => note.id === id)
+          const shouldFlushPendingSave =
+            Boolean(debounceTimer) &&
+            debouncedNoteId === id &&
+            Boolean(pendingNote)
 
-          set(
-            state => ({
-              notes: removeNoteFromList(state.notes, id),
-              tree: removeNoteFromTree(state.tree, id),
-              searchResults: state.searchResults
-                ? removeNoteFromList(state.searchResults, id)
-                : null,
-              selectedNoteId: nextSelectedNoteId(
-                state.selectedNoteId,
-                id,
-                removeNoteFromList(state.notes, id)
-              ),
-            }),
-            undefined,
-            'archiveNote/optimistic'
-          )
-          const archivedNote = mapBindingNote(
-            unwrapResult(await commands.archiveNote(id))
-          )
-          return archivedNote.id
-        } catch (error) {
-          logger.error(`Failed to archive note: ${String(error)}`)
-          set(
-            {
-              ...snapshot,
-              isSaving: shouldFlushPendingSave ? false : get().isSaving,
-            },
-            undefined,
-            'archiveNote/rollback'
-          )
-          throw error
-        }
-      },
-
-      restoreNote: async id => {
-        try {
-          const currentView = get().workspaceView
-          cancelPendingSearch()
-          const restoredNote = mapBindingNote(
-            unwrapResult(await commands.restoreNote(id))
-          )
-
-          set(
-            state => ({
-              notes:
-                currentView === 'inbox'
-                  ? [
-                      restoredNote,
-                      ...state.notes.filter(
-                        note => note.id !== restoredNote.id
-                      ),
-                    ]
-                  : removeNoteFromList(state.notes, id),
-              tree:
-                currentView === 'inbox'
-                  ? prependNoteToTree(state.tree, restoredNote)
-                  : removeNoteFromTree(state.tree, id),
-              selectedNoteId: currentView === 'inbox' ? restoredNote.id : null,
-              searchResults: null,
-              isSearching: false,
-            }),
-            undefined,
-            'restoreNote/done'
-          )
-
-          return restoredNote.id
-        } catch (error) {
-          logger.error(`Failed to restore note: ${String(error)}`)
-          throw error
-        }
-      },
-
-      selectNote: id => set({ selectedNoteId: id }, undefined, 'selectNote'),
-
-      setSearchQuery: query => {
-        const trimmedQuery = query.trim()
-        set({ searchQuery: query }, undefined, 'setSearchQuery')
-
-        cancelPendingSearch()
-
-        if (get().workspaceView !== 'inbox') {
-          set(
-            { searchResults: null, isSearching: false },
-            undefined,
-            'searchNotes/localWorkspace'
-          )
-          return
-        }
-
-        if (!trimmedQuery) {
-          set(
-            { searchResults: null, isSearching: false },
-            undefined,
-            'searchNotes/reset'
-          )
-          return
-        }
-
-        set({ isSearching: true }, undefined, 'searchNotes/start')
-        const currentRequestId = ++searchRequestId
-
-        searchDebounceTimer = setTimeout(async () => {
           try {
-            const result = unwrapResult(
-              await commands.searchNotes(trimmedQuery)
-            ).map(mapBindingNote)
-
-            if (currentRequestId !== searchRequestId) {
-              return
+            if (shouldFlushPendingSave && pendingNote && debounceTimer) {
+              clearTimeout(debounceTimer)
+              debounceTimer = null
+              debouncedNoteId = null
+              unwrapResult(
+                await commands.updateNote({
+                  id,
+                  content: pendingNote.content,
+                })
+              )
+              set(
+                { isSaving: false },
+                undefined,
+                'archiveNote/flushPendingSave'
+              )
             }
 
             set(
-              { searchResults: result, isSearching: false },
+              state => ({
+                notes: removeNoteFromList(state.notes, id),
+                tree: removeNoteFromTree(state.tree, id),
+                searchResults: state.searchResults
+                  ? removeNoteFromList(state.searchResults, id)
+                  : null,
+                selectedNoteId: nextSelectedNoteId(
+                  state.selectedNoteId,
+                  id,
+                  removeNoteFromList(state.notes, id)
+                ),
+              }),
               undefined,
-              'searchNotes/done'
+              'archiveNote/optimistic'
             )
+            const archivedNote = mapBindingNote(
+              unwrapResult(await commands.archiveNote(id))
+            )
+            return archivedNote.id
           } catch (error) {
-            logger.error(`Failed to search notes: ${String(error)}`)
-            if (currentRequestId !== searchRequestId) {
-              return
-            }
+            logger.error(`Failed to archive note: ${String(error)}`)
+            set(
+              {
+                ...snapshot,
+                isSaving: shouldFlushPendingSave ? false : get().isSaving,
+              },
+              undefined,
+              'archiveNote/rollback'
+            )
+            throw error
+          }
+        },
+
+        restoreNote: async id => {
+          try {
+            const currentView = get().workspaceView
+            cancelPendingSearch()
+            const restoredNote = mapBindingNote(
+              unwrapResult(await commands.restoreNote(id))
+            )
 
             set(
-              { searchResults: [], isSearching: false },
+              state => ({
+                notes:
+                  currentView === 'inbox'
+                    ? [
+                        restoredNote,
+                        ...state.notes.filter(
+                          note => note.id !== restoredNote.id
+                        ),
+                      ]
+                    : removeNoteFromList(state.notes, id),
+                tree:
+                  currentView === 'inbox'
+                    ? prependNoteToTree(state.tree, restoredNote)
+                    : removeNoteFromTree(state.tree, id),
+                selectedNoteId:
+                  currentView === 'inbox' ? restoredNote.id : null,
+                searchResults: null,
+                isSearching: false,
+              }),
               undefined,
-              'searchNotes/error'
+              'restoreNote/done'
             )
+
+            return restoredNote.id
+          } catch (error) {
+            logger.error(`Failed to restore note: ${String(error)}`)
+            throw error
           }
-        }, SEARCH_DEBOUNCE_MS)
-      },
+        },
 
-      setSelectedTag: tag =>
-        set({ selectedTag: tag }, undefined, 'setSelectedTag'),
+        selectNote: id => set({ selectedNoteId: id }, undefined, 'selectNote'),
 
-      filteredNotes: () => {
-        const {
-          notes,
-          searchQuery,
-          searchResults,
-          selectedTag,
-          workspaceView,
-        } = get()
-        const hasSearch = searchQuery.trim().length > 0
-        const usesRemoteSearch =
-          workspaceView === 'inbox' && hasSearch && searchResults !== null
-        const base = usesRemoteSearch ? searchResults : notes
+        setSearchQuery: query => {
+          const trimmedQuery = query.trim()
+          set({ searchQuery: query }, undefined, 'setSearchQuery')
 
-        return base.filter(note => {
-          if (
-            hasSearch &&
-            !usesRemoteSearch &&
-            !noteMatchesQuery(note, searchQuery)
-          ) {
-            return false
+          cancelPendingSearch()
+
+          if (get().workspaceView !== 'inbox') {
+            set(
+              { searchResults: null, isSearching: false },
+              undefined,
+              'searchNotes/localWorkspace'
+            )
+            return
           }
-          if (selectedTag && !noteHasTag(note, selectedTag)) {
-            return false
-          }
-          return true
-        })
-      },
 
-      selectedNote: () => {
-        const { notes, selectedNoteId } = get()
-        if (!selectedNoteId) return null
-        return notes.find(n => n.id === selectedNoteId) ?? null
-      },
-    }),
+          if (!trimmedQuery) {
+            set(
+              { searchResults: null, isSearching: false },
+              undefined,
+              'searchNotes/reset'
+            )
+            return
+          }
+
+          set({ isSearching: true }, undefined, 'searchNotes/start')
+          const currentRequestId = ++searchRequestId
+
+          searchDebounceTimer = setTimeout(async () => {
+            try {
+              const result = unwrapResult(
+                await commands.searchNotes(trimmedQuery)
+              ).map(mapBindingNote)
+
+              if (currentRequestId !== searchRequestId) {
+                return
+              }
+
+              set(
+                { searchResults: result, isSearching: false },
+                undefined,
+                'searchNotes/done'
+              )
+            } catch (error) {
+              logger.error(`Failed to search notes: ${String(error)}`)
+              if (currentRequestId !== searchRequestId) {
+                return
+              }
+
+              set(
+                { searchResults: [], isSearching: false },
+                undefined,
+                'searchNotes/error'
+              )
+            }
+          }, SEARCH_DEBOUNCE_MS)
+        },
+
+        setSelectedTag: tag =>
+          set({ selectedTag: tag }, undefined, 'setSelectedTag'),
+
+        filteredNotes: () => {
+          const {
+            notes,
+            searchQuery,
+            searchResults,
+            selectedTag,
+            workspaceView,
+          } = get()
+          const hasSearch = searchQuery.trim().length > 0
+          const usesRemoteSearch =
+            workspaceView === 'inbox' && hasSearch && searchResults !== null
+          const base = usesRemoteSearch ? searchResults : notes
+
+          return base.filter(note => {
+            if (
+              hasSearch &&
+              !usesRemoteSearch &&
+              !noteMatchesQuery(note, searchQuery)
+            ) {
+              return false
+            }
+            if (selectedTag && !noteHasTag(note, selectedTag)) {
+              return false
+            }
+            return true
+          })
+        },
+
+        selectedNote: () => {
+          const { notes, selectedNoteId } = get()
+          if (!selectedNoteId) return null
+          return notes.find(n => n.id === selectedNoteId) ?? null
+        },
+      }
+    },
     { name: 'notes-store' }
   )
 )

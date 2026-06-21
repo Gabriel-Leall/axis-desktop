@@ -112,6 +112,38 @@ Permanent delete:
 - Add it only with explicit UX, retention, undo/recovery expectations, tests,
   and documentation.
 
+## Folder and Tree-Item Lifecycle
+
+The Notes explorer renders the physical workspace tree and routes all
+right-click actions through typed Tauri commands. The frontend may identify a
+tree item by a stable note ID or a vault-relative folder path, but it must never
+derive an absolute filesystem path.
+
+Normal organization is Inbox-only:
+
+- `create_notes_folder` creates a child folder only inside `inbox/`.
+- `rename_notes_folder` renames Inbox folders only.
+- `move_notes_tree_item` moves a note or folder only to an existing Inbox
+  folder.
+- Archive and Trash are lifecycle workspaces, not normal organization roots.
+  They expose restore and trash actions only when valid for the item's current
+  state.
+
+Archive, trash, and restore accept both notes and folders. Moving a folder
+applies to its whole Markdown subtree, preserves manifest-owned note UUIDs, and
+rebinds every descendant path atomically. A target collision, a path outside
+the vault, an Inbox-rule violation, or a move into the folder's own descendant
+is rejected before the filesystem changes. If metadata persistence fails after
+a filesystem move, the command restores the source directory and leaves the
+previous manifest mapping intact.
+
+The Zustand store flushes a pending editor save before any tree mutation. It
+then reloads the backend's authoritative workspace tree on success, keeping a
+selected stable note ID only when it remains visible. On command failure it
+retains the previous tree, search state, and selection. The context menu closes
+before opening a create, rename, or move dialog so Radix focus restoration does
+not conflict with the dialog focus trap.
+
 Vault migration:
 
 - `migrate_notes_vault` copies or moves notes from a source vault into the
