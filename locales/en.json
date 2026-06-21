@@ -225,6 +225,8 @@
   "notes.contextMenu.dialog.move": "Move here",
   "notes.sidebar.expandFolder": "Expand {{name}}",
   "notes.sidebar.collapseFolder": "Collapse {{name}}",
+  "notes.tree.dragging": "Dragging {{item}}",
+  "notes.tree.invalidDestination": "This folder cannot contain the dragged item",
   "notes.sidebar.allNotes": "All notes",
   "notes.sidebar.allNotesInWorkspace": "All in {{workspace}}",
   "notes.sidebar.tagsTitle": "Tags",

@@ -144,6 +144,20 @@ retains the previous tree, search state, and selection. The context menu closes
 before opening a create, rename, or move dialog so Radix focus restoration does
 not conflict with the dialog focus trap.
 
+Tree drag and drop:
+
+- The explorer lets the user begin a drag from any Inbox note or folder row.
+- Only existing Inbox folders are valid targets. A drop makes the source a
+  direct child of that folder; it does not reorder siblings.
+- The frontend validates targets from the physical tree before sending the
+  existing moveTreeItem intent. It rejects note targets, Archive, Trash, the
+  source folder, its descendants, and no-op moves to the current parent.
+- A valid collapsed destination opens after 600 ms of hover. The editor stays
+  mounted while the store performs its durable operation.
+- Context-menu move remains the accessible alternative. Drag failure is shown
+  through the existing localized lifecycle snackbar while the store retains its
+  previous tree and selection snapshot.
+
 Vault migration:
 
 - `migrate_notes_vault` copies or moves notes from a source vault into the

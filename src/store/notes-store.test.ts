@@ -1156,6 +1156,34 @@ describe('useNotesStore lifecycle actions', () => {
     expect(commands.getNotesWorkspaceTree).toHaveBeenLastCalledWith('inbox')
   })
 
+  it('preserves the tree and selection when moving a tree item fails', async () => {
+    vi.mocked(commands.moveNotesTreeItem).mockResolvedValue({
+      status: 'error',
+      error: 'filesystem move failed',
+    })
+    const tree = {
+      workspace: 'inbox' as const,
+      items: [
+        {
+          kind: 'folder' as const,
+          path: 'inbox/projects',
+          name: 'Projects',
+          children: [],
+        },
+      ],
+    }
+    useNotesStore.setState({ tree, selectedNoteId: 'inbox/alpha.md' })
+
+    await expect(
+      useNotesStore
+        .getState()
+        .moveTreeItem({ kind: 'folder', path: 'inbox/projects' }, 'inbox')
+    ).rejects.toThrow('filesystem move failed')
+
+    expect(useNotesStore.getState().tree).toEqual(tree)
+    expect(useNotesStore.getState().selectedNoteId).toBe('inbox/alpha.md')
+  })
+
   it('restores a tree item and reloads the active workspace', async () => {
     vi.mocked(commands.restoreNotesTreeItem).mockResolvedValue({
       status: 'ok',

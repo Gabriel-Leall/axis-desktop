@@ -181,6 +181,18 @@ export function useNotesTreeContextActions() {
     }
   }
 
+  async function onMoveTreeItem(
+    item: NotesTreeItemRef,
+    destinationFolder: string
+  ) {
+    try {
+      await moveTreeItem(item, destinationFolder)
+    } catch (error) {
+      showError(error)
+      throw error
+    }
+  }
+
   const contextDialog = (
     <NotesTreeActionDialog
       key={
@@ -196,5 +208,5 @@ export function useNotesTreeContextActions() {
     />
   )
 
-  return { contextDialog, onContextAction }
+  return { contextDialog, onContextAction, onMoveTreeItem }
 }

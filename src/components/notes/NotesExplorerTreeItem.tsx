@@ -21,6 +21,7 @@ export interface NotesExplorerTreeItemProps {
   workspace: NoteWorkspaceTree['workspace']
   activeItem: NotesTreeDragItem | null
   activeDropTarget: string | null
+  invalidDropTarget: string | null
   onToggleFolder: (path: string) => void
   onSelectNote: (id: string) => void
   onContextAction?: (
@@ -130,6 +131,7 @@ export function NotesExplorerTreeItem({
   workspace,
   activeItem,
   activeDropTarget,
+  invalidDropTarget,
   onToggleFolder,
   onSelectNote,
   onContextAction,
@@ -161,7 +163,9 @@ export function NotesExplorerTreeItem({
     item.kind === 'folder' && activeItem
       ? activeDropTarget === item.path
         ? 'valid'
-        : 'invalid'
+        : invalidDropTarget === item.path
+          ? 'invalid'
+          : undefined
       : undefined
 
   if (item.kind === 'note') {
@@ -221,6 +225,11 @@ export function NotesExplorerTreeItem({
           data-drop-target={isInbox ? 'true' : undefined}
           data-drop-state={dropState}
           data-dragging={isActiveDrag ? 'true' : undefined}
+          aria-description={
+            dropState === 'invalid'
+              ? t('notes.tree.invalidDestination')
+              : undefined
+          }
           className="notes-explorer-tree-folder-row flex w-full items-center gap-1.5 rounded-md py-1.5 pe-2 text-start text-muted-foreground transition-colors hover:bg-background/55 hover:text-foreground"
           style={{ paddingInlineStart }}
           {...attributes}
@@ -249,6 +258,7 @@ export function NotesExplorerTreeItem({
             workspace={workspace}
             activeItem={activeItem}
             activeDropTarget={activeDropTarget}
+            invalidDropTarget={invalidDropTarget}
             onToggleFolder={onToggleFolder}
             onSelectNote={onSelectNote}
             onContextAction={onContextAction}

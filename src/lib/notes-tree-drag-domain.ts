@@ -126,7 +126,10 @@ function removeTreeItem(
   return { items: nextItems, removed: null }
 }
 
-function moveItemToFolder(item: NoteTreeItem, destinationFolder: string): NoteTreeItem {
+function moveItemToFolder(
+  item: NoteTreeItem,
+  destinationFolder: string
+): NoteTreeItem {
   if (item.kind === 'note') {
     const filename = item.note.path?.split('/').at(-1)
     return {

@@ -225,6 +225,8 @@
   "notes.contextMenu.dialog.move": "Mover para cá",
   "notes.sidebar.expandFolder": "Expandir {{name}}",
   "notes.sidebar.collapseFolder": "Recolher {{name}}",
+  "notes.tree.dragging": "Arrastando {{item}}",
+  "notes.tree.invalidDestination": "Esta pasta não pode receber o item arrastado",
   "notes.sidebar.allNotes": "Todas as notas",
   "notes.sidebar.allNotesInWorkspace": "Tudo em {{workspace}}",
   "notes.sidebar.tagsTitle": "Tags",
