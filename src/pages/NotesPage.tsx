@@ -999,7 +999,8 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   async function handleCreateNote() {
     try {
       setSelectedTag(null)
-      await createNote('')
+      const createdNoteId = await createNote('')
+      selectNote(createdNoteId)
     } catch (error) {
       logger.error(`Failed to create note from UI: ${String(error)}`)
     }
