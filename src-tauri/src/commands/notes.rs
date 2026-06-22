@@ -860,6 +860,23 @@ fn next_unique_path(root: &Path, folder: &str, base_file_name: &str) -> Result<P
     }
 }
 
+fn create_note_at_path(
+    root: &Path,
+    folder: &str,
+    title: Option<String>,
+    content: Option<String>,
+) -> Result<NoteSummary, String> {
+    let folder_path = resolve_inbox_folder(root, folder)?;
+    let folder = relative_note_path(root, &folder_path)?;
+    let content = new_note_content(content);
+    let file_title = title.unwrap_or_else(|| "Untitled".to_string());
+    let base_name = ensure_md_filename(&file_title);
+    let abs = next_unique_path(root, &folder, &base_name)?;
+
+    write_atomic(&abs, &content)?;
+    Ok(summary_from_note(&note_from_file(root, &abs)?))
+}
+
 #[path = "notes/lifecycle.rs"]
 mod lifecycle;
 use lifecycle::*;
@@ -1223,24 +1240,8 @@ pub async fn get_note(app: AppHandle, id: String) -> Result<Note, String> {
 #[specta::specta]
 pub async fn create_note(app: AppHandle, input: CreateNoteInput) -> Result<NoteSummary, String> {
     let root = notes_root(&app)?;
-    let _folder = input.folder.unwrap_or_else(|| INBOX_DIR.to_string());
-
-    let content = new_note_content(input.content);
-
-    let file_title = input
-        .title
-        .unwrap_or_else(|| "Untitled".to_string());
-    let base_name = ensure_md_filename(&file_title);
-    let abs = next_unique_path(&root, INBOX_DIR, &base_name)?;
-
-    if let Some(parent) = abs.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create note parent folder: {e}"))?;
-    }
-
-    write_atomic(&abs, &content)?;
-    let note = note_from_file(&root, &abs)?;
-    Ok(summary_from_note(&note))
+    let folder = input.folder.as_deref().unwrap_or(INBOX_DIR);
+    create_note_at_path(&root, folder, input.title, input.content)
 }
 
 #[tauri::command]

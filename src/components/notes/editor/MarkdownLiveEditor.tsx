@@ -54,6 +54,16 @@ export function MarkdownLiveEditor({
 
       createdView = view
       viewRef.current = view
+
+      const latestValue = latestValueRef.current
+      if (view.state.doc.toString() !== latestValue) {
+        applyingExternalValueRef.current = true
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: latestValue },
+          selection: { anchor: 0 },
+        })
+        applyingExternalValueRef.current = false
+      }
     })
 
     return () => {

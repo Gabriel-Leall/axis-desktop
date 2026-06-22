@@ -145,6 +145,16 @@ describe('NotesPage', () => {
       status: 'ok',
       data: [],
     })
+    vi.mocked(commands.createNote).mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...note,
+        id: 'inbox/projects/Untitled.md',
+        path: 'inbox/projects/Untitled.md',
+        title: 'Untitled',
+        content: '',
+      },
+    })
     vi.mocked(commands.archiveNotesTreeItem).mockResolvedValue({
       status: 'ok',
       data: null,
@@ -237,6 +247,24 @@ describe('NotesPage', () => {
     expect(screen.getByRole('textbox', { name: 'Folder name' })).toHaveValue(
       'Projects'
     )
+  })
+
+  it('creates a note inside the folder selected from its context menu', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    fireEvent.contextMenu(
+      await screen.findByRole('button', { name: 'Collapse Projects' })
+    )
+    await user.click(screen.getByRole('menuitem', { name: 'New note' }))
+
+    await waitFor(() => {
+      expect(commands.createNote).toHaveBeenCalledWith({
+        title: null,
+        content: '',
+        folder: 'inbox/projects',
+      })
+    })
   })
 
   it('shows an undoable snackbar after archiving from the context menu', async () => {

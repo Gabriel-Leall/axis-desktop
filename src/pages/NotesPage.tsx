@@ -984,10 +984,10 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
 
   const displayedNotes = filteredNotes()
   const selectedNote = selectedNoteId
-    ? notes.find(note => note.id === selectedNoteId)
-    : undefined
-  const activeNote = selectedNote ?? notes.at(0) ?? null
-  const effectiveSelectedNoteId = selectedNoteId ?? activeNote?.id ?? null
+    ? displayedNotes.find(note => note.id === selectedNoteId) ?? null
+    : null
+  const activeNote = selectedNote ?? displayedNotes.at(0) ?? null
+  const effectiveSelectedNoteId = activeNote?.id ?? null
 
   useEffect(() => {
     if (

@@ -27,6 +27,7 @@ describe('MarkdownLiveEditor', () => {
     await user.keyboard('{End} item')
 
     expect(onChange).toHaveBeenLastCalledWith('- first item')
+    const callsBeforeExternalSync = onChange.mock.calls.length
 
     rerender(
       <MarkdownLiveEditor
@@ -41,22 +42,52 @@ describe('MarkdownLiveEditor', () => {
       await screen.findByRole('textbox', { name: 'Start writing' })
     ).toHaveTextContent('- second')
     expect(container.querySelectorAll('.cm-editor')).toHaveLength(1)
+    expect(onChange).toHaveBeenCalledTimes(callsBeforeExternalSync)
   })
 
   it('renders a read-only editor surface', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
     render(
       <MarkdownLiveEditor
         noteId="readonly"
         value="- archived"
         placeholder="Start writing"
         readOnly
+        onChange={onChange}
+      />
+    )
+
+    const editor = await screen.findByRole('textbox', { name: 'Start writing' })
+    expect(editor).toHaveAttribute('contenteditable', 'false')
+
+    await user.click(editor)
+    await user.keyboard(' ignored')
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('uses the latest note value when props change while the editor loads', async () => {
+    const { rerender } = render(
+      <MarkdownLiveEditor
+        noteId="first"
+        value="first draft"
+        placeholder="Start writing"
         onChange={vi.fn()}
       />
     )
 
-    expect(await screen.findByRole('textbox', { name: 'Start writing' })).toHaveAttribute(
-      'contenteditable',
-      'false'
+    rerender(
+      <MarkdownLiveEditor
+        noteId="second"
+        value="second draft"
+        placeholder="Start writing"
+        onChange={vi.fn()}
+      />
     )
+
+    expect(
+      await screen.findByRole('textbox', { name: 'Start writing' })
+    ).toHaveTextContent('second draft')
   })
 })

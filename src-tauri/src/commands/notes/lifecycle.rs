@@ -296,4 +296,3 @@ pub(super) fn restore_notes_tree_item_to_inbox(
 
     Ok(())
 }
-

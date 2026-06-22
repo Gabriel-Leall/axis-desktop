@@ -482,6 +482,60 @@ describe('useNotesStore lifecycle actions', () => {
     expect(useNotesStore.getState().selectedNoteId).toBe('inbox/new.md')
   })
 
+  it('creates a note in the requested Inbox folder', async () => {
+    vi.mocked(commands.createNote).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'inbox/projects/new.md',
+        path: 'inbox/projects/new.md',
+        title: 'Untitled',
+        content: '',
+        created_at: '2026-06-22T12:00:00.000Z',
+        updated_at: '2026-06-22T12:00:00.000Z',
+        word_count: 0,
+        tags: [],
+        wiki_links: [],
+        has_attachments: false,
+        excerpt: '',
+      },
+    })
+    useNotesStore.setState({
+      workspaceView: 'inbox',
+      tree: {
+        workspace: 'inbox',
+        items: [
+          {
+            kind: 'folder',
+            path: 'inbox/projects',
+            name: 'Projects',
+            children: [],
+          },
+        ],
+      },
+    })
+
+    await useNotesStore.getState().createNote('', 'inbox/projects')
+
+    expect(commands.createNote).toHaveBeenCalledWith({
+      title: null,
+      content: '',
+      folder: 'inbox/projects',
+    })
+    expect(useNotesStore.getState().tree?.items).toEqual([
+      {
+        kind: 'folder',
+        path: 'inbox/projects',
+        name: 'Projects',
+        children: [
+          {
+            kind: 'note',
+            note: expect.objectContaining({ id: 'inbox/projects/new.md' }),
+          },
+        ],
+      },
+    ])
+  })
+
   it('renames a file-backed title without changing the selected stable ID', async () => {
     const originalNote = {
       id: 'stable-note-id',
@@ -537,7 +591,7 @@ describe('useNotesStore lifecycle actions', () => {
     })
 
     await expect(
-      useNotesStore.getState().renameNote('inbox/alpha.md', 'Duplicate')
+      useNotesStore.getState().renameNote('stable-note-id', 'Duplicate')
     ).rejects.toThrow('A note with this name already exists')
 
     expect(commands.getNotesWorkspaceTree).toHaveBeenCalledWith('inbox')

@@ -133,7 +133,7 @@ export function useNotesTreeContextActions() {
   ) {
     try {
       if (action === 'create-note') {
-        await createNote('')
+        await createNote('', item.kind === 'folder' ? item.path : 'inbox')
         return
       }
       if (action === 'create-folder' && item.kind === 'folder') {
