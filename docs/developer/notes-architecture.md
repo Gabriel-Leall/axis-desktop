@@ -249,6 +249,14 @@ Notes Page:
 - Owns empty states, filter-aware feedback, and snackbar actions for note
   lifecycle operations.
 - Offers the user-facing action to open the vault folder.
+- Uses one imperative CodeMirror `EditorView` for the active writing surface.
+  React does not control the document on every keystroke: document changes are
+  sent to the store through the editor update listener, and note navigation
+  replaces the document inside the existing view.
+- Edit mode applies Markdown syntax-tree decorations only to visible ranges.
+  Closed markers are hidden away from the active selection while semantic
+  formatting remains visible. Preview is a strict read-only rendering path and
+  has no editor save callback.
 
 Dashboard notes widget:
 

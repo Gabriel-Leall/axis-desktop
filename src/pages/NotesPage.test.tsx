@@ -16,6 +16,7 @@ vi.mock('@/lib/tauri-bindings', () => ({
     getTrashedNotes: vi.fn(),
     getNotesVaultInfo: vi.fn(),
     createNote: vi.fn(),
+    renameNote: vi.fn(),
     updateNote: vi.fn(),
     deleteNote: vi.fn(),
     archiveNote: vi.fn(),
@@ -38,27 +39,6 @@ vi.mock('@/lib/tauri-bindings', () => ({
 
 vi.mock('@toast-ui/react-editor', async () => {
   const React = await vi.importActual<typeof ReactTypes>('react')
-
-  const Editor = React.forwardRef<
-    { getInstance: () => { getMarkdown: () => string } },
-    { initialValue?: string; placeholder?: string; onChange?: () => void }
-  >(function MockToastEditor(
-    { initialValue = '', placeholder, onChange },
-    ref
-  ) {
-    React.useImperativeHandle(ref, () => ({
-      getInstance: () => ({
-        getMarkdown: () => initialValue,
-      }),
-    }))
-
-    return React.createElement('textarea', {
-      'aria-label': placeholder,
-      defaultValue: initialValue,
-      onChange,
-    })
-  })
-
   function Viewer({ initialValue = '' }: { initialValue?: string }) {
     return React.createElement(
       'article',
@@ -67,7 +47,29 @@ vi.mock('@toast-ui/react-editor', async () => {
     )
   }
 
-  return { Editor, Viewer }
+  return { Viewer }
+})
+
+vi.mock('@/components/notes/editor/MarkdownLiveEditor', async () => {
+  const React = await vi.importActual<typeof ReactTypes>('react')
+
+  return {
+    MarkdownLiveEditor: ({
+      value,
+      placeholder,
+      onChange,
+    }: {
+      value: string
+      placeholder: string
+      onChange: (content: string) => void
+    }) =>
+      React.createElement('textarea', {
+        'aria-label': placeholder,
+        value,
+        onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) =>
+          onChange(event.target.value),
+      }),
+  }
 })
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
@@ -91,7 +93,7 @@ const note = {
   id: 'inbox/paper-workspace.md',
   path: 'inbox/paper-workspace.md',
   title: 'Paper workspace',
-  content: '# Paper workspace\n\nA note with preview content.',
+  content: 'A note with preview content.',
   created_at: '2026-06-19T10:00:00.000Z',
   updated_at: '2026-06-19T10:00:00.000Z',
   word_count: 7,
@@ -151,6 +153,14 @@ describe('NotesPage', () => {
       status: 'ok',
       data: null,
     })
+    vi.mocked(commands.renameNote).mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...note,
+        title: 'Renamed workspace',
+        path: 'inbox/renamed-workspace.md',
+      },
+    })
 
     useNotesStore.setState({
       vaultInfo: null,
@@ -169,7 +179,7 @@ describe('NotesPage', () => {
     })
   })
 
-  it('switches between edit, preview, and split writing modes', async () => {
+  it('switches between live edit and read-only preview modes', async () => {
     render(<NotesPage />)
 
     await waitFor(() => {
@@ -194,12 +204,9 @@ describe('NotesPage', () => {
       'A note with preview content.'
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Split mode' }))
-
-    expect(screen.getByLabelText('Start writing...')).toBeInTheDocument()
-    expect(screen.getByTestId('notes-markdown-preview')).toHaveTextContent(
-      'A note with preview content.'
-    )
+    expect(
+      screen.queryByRole('button', { name: 'Split mode' })
+    ).not.toBeInTheDocument()
   })
 
   it('renders the physical vault tree in the Notes sidebar', async () => {
@@ -271,7 +278,7 @@ describe('NotesPage', () => {
     })
   })
 
-  it('keeps the existing body when changing a title in preview mode', async () => {
+  it('renames the file-backed title without changing the Markdown body', async () => {
     render(<NotesPage />)
 
     await screen.findByDisplayValue('Paper workspace')
@@ -279,9 +286,18 @@ describe('NotesPage', () => {
     fireEvent.change(screen.getByDisplayValue('Paper workspace'), {
       target: { value: 'Renamed workspace' },
     })
+    fireEvent.keyDown(screen.getByDisplayValue('Renamed workspace'), {
+      key: 'Enter',
+    })
 
+    await waitFor(() => {
+      expect(commands.renameNote).toHaveBeenCalledWith({
+        id: note.id,
+        title: 'Renamed workspace',
+      })
+    })
     expect(useNotesStore.getState().selectedNote()?.content).toBe(
-      '# Renamed workspace\n\nA note with preview content.'
+      'A note with preview content.'
     )
   })
 

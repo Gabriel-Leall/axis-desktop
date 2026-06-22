@@ -1,9 +1,14 @@
-import { syntaxTree } from '@codemirror/language'
+import {
+  HighlightStyle,
+  syntaxHighlighting,
+  syntaxTree,
+} from '@codemirror/language'
+import { tags } from '@lezer/highlight'
 import { RangeSetBuilder } from '@codemirror/state'
 import {
   Decoration,
   type DecorationSet,
-  EditorView,
+  type EditorView,
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view'
@@ -30,6 +35,20 @@ const markerNodeNames = new Set([
 ])
 
 const hiddenMarker = Decoration.replace({})
+
+export const markdownLivePreviewPresentation = syntaxHighlighting(
+  HighlightStyle.define([
+    { tag: tags.heading, fontWeight: '700' },
+    { tag: tags.strong, fontWeight: '700' },
+    { tag: tags.emphasis, fontStyle: 'italic' },
+    {
+      tag: tags.monospace,
+      fontFamily: 'var(--font-geist-mono), ui-monospace, monospace',
+      backgroundColor: 'color-mix(in oklab, var(--muted) 70%, transparent)',
+    },
+    { tag: tags.link, color: 'var(--primary)', textDecoration: 'underline' },
+  ])
+)
 
 export function selectionTouchesRange(
   ranges: readonly MarkdownSelectionRange[],

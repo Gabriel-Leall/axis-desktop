@@ -512,15 +512,6 @@
   gap: 1.25rem;
 }
 
-.notes-paper-writing-grid.is-split {
-  grid-template-columns: minmax(0, 1.05fr) minmax(18rem, 0.95fr);
-}
-
-.notes-paper-writing-grid.is-split .notes-inline-editor:first-child {
-  border-inline-end: 1px solid var(--notes-hairline);
-  padding-inline-end: 1.25rem;
-}
-
 .notes-paper-preview {
   border: 1px solid var(--notes-hairline);
   border-radius: 1rem;
@@ -535,19 +526,6 @@
   padding: 2rem;
   box-shadow: 0 18px 48px -42px
     color-mix(in oklab, var(--foreground) 45%, transparent);
-}
-
-@media (max-width: 980px) {
-  .notes-paper-writing-grid.is-split {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .notes-paper-writing-grid.is-split .notes-inline-editor:first-child {
-    border-inline-end: 0;
-    border-bottom: 1px solid var(--notes-hairline);
-    padding-inline-end: 0;
-    padding-bottom: 1.25rem;
-  }
 }
 
 .notes-paper-widget {
@@ -588,6 +566,47 @@
 /* ═══════════════════════════════════════════════════════════
    NOTES EDITOR - Inline (Toast UI) overrides
    ═══════════════════════════════════════════════════════════ */
+.notes-codemirror {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--notes-hairline);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--notes-cream-sweet) 36%, transparent);
+}
+
+.notes-codemirror .cm-editor {
+  min-height: 100%;
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.notes-codemirror .cm-scroller {
+  min-height: 100%;
+  padding: 1.5rem 1.75rem;
+}
+
+.notes-codemirror .cm-content {
+  caret-color: var(--foreground);
+}
+
+.notes-codemirror .cm-content ::selection,
+.notes-codemirror .cm-selectionBackground {
+  background: color-mix(in oklab, var(--primary) 22%, transparent) !important;
+}
+
+.notes-codemirror .cm-cursor,
+.notes-codemirror .cm-dropCursor {
+  border-inline-start-color: var(--foreground);
+}
+
+.notes-codemirror .cm-tooltip-autocomplete {
+  border-color: var(--notes-hairline);
+  background: var(--popover);
+  color: var(--popover-foreground);
+}
 .notes-inline-editor .toastui-editor-defaultUI {
   height: 100%;
   border: 0;

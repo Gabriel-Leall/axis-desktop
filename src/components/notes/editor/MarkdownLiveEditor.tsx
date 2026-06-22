@@ -5,7 +5,10 @@ import { Compartment, EditorState } from '@codemirror/state'
 import { placeholder } from '@codemirror/view'
 import { EditorView } from '@codemirror/view'
 import { createMarkdownCommandExtensions } from './markdown-editor-commands'
-import { createMarkdownLivePreview } from './markdown-live-preview'
+import {
+  createMarkdownLivePreview,
+  markdownLivePreviewPresentation,
+} from './markdown-live-preview'
 
 interface MarkdownLiveEditorProps {
   noteId: string
@@ -27,25 +30,32 @@ export function MarkdownLiveEditor({
   const onChangeRef = useRef(onChange)
   const applyingExternalValueRef = useRef(false)
   const editableCompartmentRef = useRef(new Compartment())
+  const initialConfigRef = useRef({ value, placeholderText, readOnly })
 
-  onChangeRef.current = onChange
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
 
   useEffect(() => {
     const host = hostRef.current
     if (!host) return
 
+    const initialConfig = initialConfigRef.current
     const editableCompartment = editableCompartmentRef.current
     const state = EditorState.create({
-      doc: value,
+      doc: initialConfig.value,
       extensions: [
         markdown({ extensions: [GFM] }),
         EditorView.lineWrapping,
-        EditorView.contentAttributes.of({ 'aria-label': placeholderText }),
-        placeholder(placeholderText),
+        EditorView.contentAttributes.of({
+          'aria-label': initialConfig.placeholderText,
+        }),
+        placeholder(initialConfig.placeholderText),
         editableCompartment.of([
-          EditorView.editable.of(!readOnly),
-          EditorState.readOnly.of(readOnly),
+          EditorView.editable.of(!initialConfig.readOnly),
+          EditorState.readOnly.of(initialConfig.readOnly),
         ]),
+        markdownLivePreviewPresentation,
         createMarkdownLivePreview(),
         createMarkdownCommandExtensions(),
         EditorView.updateListener.of(update => {
