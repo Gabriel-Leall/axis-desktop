@@ -21,7 +21,9 @@ describe('MarkdownLiveEditor', () => {
       />
     )
 
-    await user.click(screen.getByRole('textbox', { name: 'Start writing' }))
+    await user.click(
+      await screen.findByRole('textbox', { name: 'Start writing' })
+    )
     await user.keyboard('{End} item')
 
     expect(onChange).toHaveBeenLastCalledWith('- first item')
@@ -35,13 +37,13 @@ describe('MarkdownLiveEditor', () => {
       />
     )
 
-    expect(screen.getByRole('textbox', { name: 'Start writing' })).toHaveTextContent(
-      '- second'
-    )
+    expect(
+      await screen.findByRole('textbox', { name: 'Start writing' })
+    ).toHaveTextContent('- second')
     expect(container.querySelectorAll('.cm-editor')).toHaveLength(1)
   })
 
-  it('renders a read-only editor surface', () => {
+  it('renders a read-only editor surface', async () => {
     render(
       <MarkdownLiveEditor
         noteId="readonly"
@@ -52,7 +54,7 @@ describe('MarkdownLiveEditor', () => {
       />
     )
 
-    expect(screen.getByRole('textbox', { name: 'Start writing' })).toHaveAttribute(
+    expect(await screen.findByRole('textbox', { name: 'Start writing' })).toHaveAttribute(
       'contenteditable',
       'false'
     )
