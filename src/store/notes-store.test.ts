@@ -16,6 +16,7 @@ vi.mock('@/lib/tauri-bindings', () => ({
     createNote: vi.fn(),
     createNotesFolder: vi.fn(),
     renameNotesFolder: vi.fn(),
+    renameNote: vi.fn(),
     moveNotesTreeItem: vi.fn(),
     archiveNotesTreeItem: vi.fn(),
     trashNotesTreeItem: vi.fn(),
@@ -125,6 +126,22 @@ describe('useNotesStore lifecycle actions', () => {
         wiki_links: [],
         has_attachments: false,
         excerpt: 'New',
+      },
+    })
+    vi.mocked(commands.renameNote).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'stable-note-id',
+        path: 'inbox/IHC errors.md',
+        title: 'IHC errors',
+        content: '- body only',
+        created_at: '2026-06-15T13:00:00.000Z',
+        updated_at: '2026-06-15T14:00:00.000Z',
+        word_count: 3,
+        tags: [],
+        wiki_links: [],
+        has_attachments: false,
+        excerpt: 'body only',
       },
     })
     vi.mocked(commands.getNotesVaultInfo).mockResolvedValue({
@@ -463,6 +480,67 @@ describe('useNotesStore lifecycle actions', () => {
       'plan-id',
     ])
     expect(useNotesStore.getState().selectedNoteId).toBe('inbox/new.md')
+  })
+
+  it('renames a file-backed title without changing the selected stable ID', async () => {
+    const originalNote = {
+      id: 'stable-note-id',
+      path: 'inbox/Untitled.md',
+      title: 'Untitled',
+      content: '- body only',
+      created_at: '2026-06-15T13:00:00.000Z',
+      updated_at: '2026-06-15T13:00:00.000Z',
+      word_count: 3,
+      tags: [],
+      wiki_links: [],
+      has_attachments: false,
+      excerpt: 'body only',
+    }
+    useNotesStore.setState({
+      notes: [originalNote],
+      tree: {
+        workspace: 'inbox',
+        items: [{ kind: 'note', note: originalNote }],
+      },
+      searchResults: [originalNote],
+      selectedNoteId: originalNote.id,
+    })
+
+    await useNotesStore.getState().renameNote(originalNote.id, 'IHC errors')
+
+    expect(commands.renameNote).toHaveBeenCalledWith({
+      id: originalNote.id,
+      title: 'IHC errors',
+    })
+    expect(useNotesStore.getState().selectedNoteId).toBe(originalNote.id)
+    expect(useNotesStore.getState().selectedNote()).toMatchObject({
+      id: originalNote.id,
+      path: 'inbox/IHC errors.md',
+      title: 'IHC errors',
+      content: '- body only',
+    })
+    expect(useNotesStore.getState().tree?.items).toEqual([
+      {
+        kind: 'note',
+        note: expect.objectContaining({
+          id: originalNote.id,
+          path: 'inbox/IHC errors.md',
+        }),
+      },
+    ])
+  })
+
+  it('reloads the authoritative workspace after a note rename fails', async () => {
+    vi.mocked(commands.renameNote).mockResolvedValue({
+      status: 'error',
+      error: 'A note with this name already exists',
+    })
+
+    await expect(
+      useNotesStore.getState().renameNote('inbox/alpha.md', 'Duplicate')
+    ).rejects.toThrow('A note with this name already exists')
+
+    expect(commands.getNotesWorkspaceTree).toHaveBeenCalledWith('inbox')
   })
 
   it('adds a newly created inbox note to the physical tree', async () => {

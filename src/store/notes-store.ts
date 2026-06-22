@@ -45,6 +45,7 @@ interface NotesState {
   createNote: (content?: string) => Promise<string>
   createFolder: (parentPath: string, name: string) => Promise<void>
   renameFolder: (path: string, name: string) => Promise<void>
+  renameNote: (id: string, title: string) => Promise<void>
   updateNote: (id: string, content: string) => void
   moveTreeItem: (
     item: NotesTreeItemRef,
@@ -846,6 +847,37 @@ export const useNotesStore = create<NotesState>()(
           runWorkspaceMutation('renameFolder', async () => {
             unwrapResult(await commands.renameNotesFolder({ path, name }))
           }),
+
+        renameNote: async (id, title) => {
+          try {
+            const flushedPendingSave = await flushPendingSave(get().notes)
+            if (flushedPendingSave) {
+              set({ isSaving: false }, undefined, 'renameNote/flushPendingSave')
+            }
+
+            const renamedNote = mapBindingNote(
+              unwrapResult(await commands.renameNote({ id, title }))
+            )
+
+            set(
+              state => ({
+                notes: state.notes.map(note =>
+                  note.id === id ? renamedNote : note
+                ),
+                tree: updateNoteInTree(state.tree, renamedNote),
+                searchResults: state.searchResults?.map(note =>
+                  note.id === id ? renamedNote : note
+                ) ?? null,
+              }),
+              undefined,
+              'renameNote/done'
+            )
+          } catch (error) {
+            logger.error(`Failed to rename note: ${String(error)}`)
+            await get().loadNotes()
+            throw error
+          }
+        },
 
         updateNote: (id, content) => {
           const wordCount = countWords(content)
