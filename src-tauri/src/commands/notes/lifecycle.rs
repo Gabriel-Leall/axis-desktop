@@ -168,7 +168,6 @@ pub(super) fn move_folder_to_path(
 
     Ok(())
 }
-
 pub(super) fn rename_notes_folder_at_path(
     root: &Path,
     folder_path: &str,

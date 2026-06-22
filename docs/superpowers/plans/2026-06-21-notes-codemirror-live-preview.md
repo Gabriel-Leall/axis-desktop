@@ -383,4 +383,3 @@ Expected: no whitespace errors.
     gh pr create --base main --head feature/notes-codemirror-live-preview --title "feat(notes): add CodeMirror live preview" --fill
 
 Expected: a non-draft PR exists for CodeRabbit, Qodo, and GitHub review.
-
