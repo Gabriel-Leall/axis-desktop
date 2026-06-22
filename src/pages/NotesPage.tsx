@@ -17,7 +17,6 @@ import {
   Download,
   Upload,
   Copy,
-  FolderOpen,
   X,
   Eye,
   PencilLine,
@@ -423,6 +422,7 @@ function Sidebar({
 }: SidebarProps) {
   const { t } = useTranslation()
   const hasActiveFilters = searchQuery.trim().length > 0 || selectedTag !== null
+  const [createMenuOpen, setCreateMenuOpen] = useState(false)
 
   return (
     <aside className="notes-paper-sidebar notes-explorer flex h-full w-56 shrink-0 flex-col text-card-foreground">
@@ -440,16 +440,6 @@ function Sidebar({
             {t('notes.sidebar.vaultWorkspace')}
           </p>
         </div>
-        {workspaceView === 'inbox' && (
-          <button
-            type="button"
-            onClick={() => void onCreateNote()}
-            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
-            aria-label={t('notes.sidebar.newNote')}
-          >
-            <Plus className="size-3.5" />
-          </button>
-        )}
       </div>
 
       <SidebarSearch
@@ -463,12 +453,54 @@ function Sidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1">
         <div className="flex items-center justify-between px-2 pb-1 pt-2">
-          <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground/75">
-            {t('notes.sidebar.title')}
-          </span>
-          <span className="text-[10px] text-muted-foreground/65">
-            {allNotes.length}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground/75">
+              {t('notes.sidebar.title')}
+            </span>
+            <span className="text-[10px] text-muted-foreground/65">
+              {allNotes.length}
+            </span>
+          </div>
+          {workspaceView === 'inbox' && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setCreateMenuOpen(open => !open)}
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
+                aria-label={t('notes.sidebar.newNote')}
+                aria-expanded={createMenuOpen}
+              >
+                <Plus className="size-3.5" />
+              </button>
+              {createMenuOpen && (
+                <div className="absolute end-0 top-full z-20 mt-1 min-w-36 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateMenuOpen(false)
+                      void onCreateNote()
+                    }}
+                    className="flex w-full rounded-sm px-2 py-1.5 text-start text-xs hover:bg-accent"
+                  >
+                    {t('notes.sidebar.newNote')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateMenuOpen(false)
+                      onContextAction('create-folder', {
+                        kind: 'folder',
+                        path: 'inbox',
+                      })
+                    }}
+                    className="flex w-full rounded-sm px-2 py-1.5 text-start text-xs hover:bg-accent"
+                  >
+                    {t('notes.contextMenu.newFolder')}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         {notes.length === 0 ? (
           <SidebarEmptyState
@@ -748,7 +780,7 @@ function EditorArea({
   onRestore,
   onContentChange,
   onRename,
-  onOpenVaultFolder,
+  onCreateNote,
   onEditorModeChange,
 }: {
   note: Note | null
@@ -760,7 +792,7 @@ function EditorArea({
   onRestore: () => Promise<void>
   onContentChange: (noteId: string, content: string) => void
   onRename: (noteId: string, title: string) => Promise<void>
-  onOpenVaultFolder: () => Promise<void>
+  onCreateNote: () => Promise<void>
   onEditorModeChange: (mode: NotesEditorMode) => void
 }) {
   const { t } = useTranslation()
@@ -791,22 +823,16 @@ function EditorArea({
     return (
       <div className="notes-paper-editor flex h-full flex-1 items-center justify-center px-8 text-muted-foreground">
         <div className="notes-paper-empty max-w-md text-center">
-          <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl border border-border bg-background/70 text-foreground shadow-sm">
-            <FolderOpen className="size-5" />
-          </div>
           <h2 className="text-lg font-semibold text-foreground">
-            {t('notes.welcome.title')}
+            {t('notes.editor.selectPrompt')}
           </h2>
-          <p className="mt-2 text-sm leading-6">
-            {t('notes.welcome.description')}
-          </p>
           <button
             type="button"
-            onClick={() => void onOpenVaultFolder()}
+            onClick={() => void onCreateNote()}
             className="mt-5 inline-flex items-center gap-2 rounded-xl border border-border bg-background/70 px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-accent/80 hover:text-accent-foreground"
           >
-            <FolderOpen className="size-4" />
-            {t('notes.welcome.openFolder')}
+            <Plus className="size-4" />
+            {t('notes.sidebar.newNote')}
           </button>
         </div>
       </div>
@@ -852,7 +878,7 @@ function EditorArea({
       </div>
 
       <div className="flex-1 overflow-hidden text-start">
-        <div className="mx-auto h-full w-full max-w-3xl text-start">
+        <div className="h-full w-full text-start">
           <div className="h-full px-8 pt-8 pb-10 font-sans antialiased text-foreground text-start flex flex-col">
             {isReadOnly ? (
               <h1 className="mb-8 text-2xl font-semibold text-foreground">
@@ -917,10 +943,6 @@ function EditorArea({
       </div>
     </div>
   )
-}
-
-async function openNotesVaultFolderFromStore() {
-  await useNotesStore.getState().openVaultFolder()
 }
 
 export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
@@ -1119,16 +1141,6 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     }
   }
 
-  async function handleOpenVaultFolder() {
-    try {
-      await openNotesVaultFolderFromStore()
-    } catch (error) {
-      toast.error(t('notes.welcome.openFolderFailed'), {
-        description: String(error),
-      })
-    }
-  }
-
   if (isLoading && !tree && notes.length === 0) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
@@ -1171,7 +1183,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           onRestore={handleRestoreNote}
           onContentChange={handleContentChange}
           onRename={handleRenameNote}
-          onOpenVaultFolder={handleOpenVaultFolder}
+          onCreateNote={handleCreateNote}
           onEditorModeChange={setEditorMode}
         />
       </div>

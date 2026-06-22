@@ -1,4 +1,5 @@
 export type NotesTreeContextAction =
+  | 'create-note'
   | 'create-folder'
   | 'rename-folder'
   | 'move'
