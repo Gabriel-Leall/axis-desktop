@@ -983,9 +983,11 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }, [initialSelectedNoteId, selectNote])
 
   const displayedNotes = filteredNotes()
-  const activeNote = selectedNoteId
-    ? (notes.find(note => note.id === selectedNoteId) ?? null)
-    : null
+  const selectedNote = selectedNoteId
+    ? notes.find(note => note.id === selectedNoteId)
+    : undefined
+  const activeNote = selectedNote ?? notes.at(0) ?? null
+  const effectiveSelectedNoteId = selectedNoteId ?? activeNote?.id ?? null
 
   useEffect(() => {
     if (
@@ -1159,7 +1161,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           allNotes={notes}
           notes={displayedNotes}
           tree={tree}
-          selectedNoteId={selectedNoteId}
+          selectedNoteId={effectiveSelectedNoteId}
           workspaceView={workspaceView}
           searchQuery={searchQuery}
           selectedTag={selectedTag}
