@@ -298,18 +298,3 @@ pub(super) fn restore_notes_tree_item_to_inbox(
     Ok(())
 }
 
-pub(super) fn merge_title_body(title: &str, body: &str) -> String {
-    let t = title.trim();
-    let b = body.trim_start_matches('\n');
-
-    if t.is_empty() && b.is_empty() {
-        return String::new();
-    }
-    if t.is_empty() {
-        return b.to_string();
-    }
-    if b.is_empty() {
-        return format!("# {t}");
-    }
-    format!("# {t}\n\n{b}")
-}

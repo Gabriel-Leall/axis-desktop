@@ -79,15 +79,22 @@ All filesystem operations go through typed Tauri commands implemented in
 
 Create:
 
-- `create_note` writes a Markdown file into `inbox/`.
+- `create_note` writes an empty Markdown file into `inbox/` when the caller
+  has not supplied body content. Its default file name is `Untitled.md` and
+  collisions receive a unique file name.
 - The current implementation treats `folder` as non-routing input; new notes
   still land in `inbox/`.
-- File names are generated from title/content and made unique before writing.
+- The file stem is the note title shown by Axis. Markdown content, including a
+  leading `# Heading`, is only the note body and never changes the file name.
+- File names are generated from the requested title and made unique before
+  writing.
 
 Update and rename:
 
 - `update_note` changes Markdown file content.
 - `rename_note` changes the note file path while preserving the note data.
+- Renaming never rewrites the Markdown body. It changes the file-backed title
+  while headings remain ordinary document structure.
 - Note IDs remain stable UUIDs when a file is renamed or moved between lifecycle
   directories. The Markdown path is a property of the note, not its identity.
 

@@ -76,6 +76,20 @@ fn builds_excerpt_from_markdown_body() {
 }
 
 #[test]
+fn note_title_comes_from_filename_not_markdown_body() {
+    assert_eq!(
+        resolve_note_title("inbox/TCC/erros artigo IHC.md"),
+        "erros artigo IHC"
+    );
+}
+
+#[test]
+fn new_note_body_is_empty_when_the_user_has_not_written_content() {
+    assert_eq!(new_note_content(None), "");
+    assert_eq!(new_note_content(Some("- body only".to_string())), "- body only");
+}
+
+#[test]
 fn default_vault_path_uses_visible_axis_notes_folder() {
     let documents = Path::new("Documents");
     let path = default_vault_path_from_documents(documents);
