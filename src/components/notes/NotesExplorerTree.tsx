@@ -9,6 +9,7 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
+import * as ContextMenu from '@radix-ui/react-context-menu'
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NoteTreeItem, NoteWorkspaceTree } from '@/lib/notes-domain'
@@ -246,8 +247,14 @@ export function NotesExplorerTree({
       )
   }
 
+  function createAtInboxRoot(action: 'create-note' | 'create-folder') {
+    onContextAction?.(action, { kind: 'folder', path: 'inbox' })
+  }
+
   return (
-    <div className="notes-explorer-tree" data-workspace={tree.workspace}>
+    <ContextMenu.Root>
+      <ContextMenu.Trigger asChild>
+    <div className="notes-explorer-tree min-h-full" data-workspace={tree.workspace}>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -286,5 +293,25 @@ export function NotesExplorerTree({
         </DragOverlay>
       </DndContext>
     </div>
+      </ContextMenu.Trigger>
+      {tree.workspace === 'inbox' && onContextAction && (
+        <ContextMenu.Portal>
+          <ContextMenu.Content className="z-50 min-w-44 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md">
+            <ContextMenu.Item
+              onSelect={() => createAtInboxRoot('create-note')}
+              className="flex cursor-default select-none rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent data-[highlighted]:bg-accent"
+            >
+              {t('notes.sidebar.newNote')}
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              onSelect={() => createAtInboxRoot('create-folder')}
+              className="flex cursor-default select-none rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent data-[highlighted]:bg-accent"
+            >
+              {t('notes.contextMenu.newFolder')}
+            </ContextMenu.Item>
+          </ContextMenu.Content>
+        </ContextMenu.Portal>
+      )}
+    </ContextMenu.Root>
   )
 }

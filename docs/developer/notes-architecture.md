@@ -79,15 +79,22 @@ All filesystem operations go through typed Tauri commands implemented in
 
 Create:
 
-- `create_note` writes a Markdown file into `inbox/`.
+- `create_note` writes an empty Markdown file into `inbox/` when the caller
+  has not supplied body content. Its default file name is `Untitled.md` and
+  collisions receive a unique file name.
 - The current implementation treats `folder` as non-routing input; new notes
   still land in `inbox/`.
-- File names are generated from title/content and made unique before writing.
+- The file stem is the note title shown by Axis. Markdown content, including a
+  leading `# Heading`, is only the note body and never changes the file name.
+- File names are generated from the requested title and made unique before
+  writing.
 
 Update and rename:
 
 - `update_note` changes Markdown file content.
 - `rename_note` changes the note file path while preserving the note data.
+- Renaming never rewrites the Markdown body. It changes the file-backed title
+  while headings remain ordinary document structure.
 - Note IDs remain stable UUIDs when a file is renamed or moved between lifecycle
   directories. The Markdown path is a property of the note, not its identity.
 
@@ -242,6 +249,14 @@ Notes Page:
 - Owns empty states, filter-aware feedback, and snackbar actions for note
   lifecycle operations.
 - Offers the user-facing action to open the vault folder.
+- Uses one imperative CodeMirror `EditorView` for the active writing surface.
+  React does not control the document on every keystroke: document changes are
+  sent to the store through the editor update listener, and note navigation
+  replaces the document inside the existing view.
+- Edit mode applies Markdown syntax-tree decorations only to visible ranges.
+  Closed markers are hidden away from the active selection while semantic
+  formatting remains visible. Preview is a strict read-only rendering path and
+  has no editor save callback.
 
 Dashboard notes widget:
 

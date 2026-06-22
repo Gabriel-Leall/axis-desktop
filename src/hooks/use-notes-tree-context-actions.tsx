@@ -28,6 +28,7 @@ export function useNotesTreeContextActions() {
   const workspaceView = useNotesStore(state => state.workspaceView)
   const setWorkspaceView = useNotesStore(state => state.setWorkspaceView)
   const selectNote = useNotesStore(state => state.selectNote)
+  const createNote = useNotesStore(state => state.createNote)
   const createFolder = useNotesStore(state => state.createFolder)
   const renameFolder = useNotesStore(state => state.renameFolder)
   const moveTreeItem = useNotesStore(state => state.moveTreeItem)
@@ -131,6 +132,10 @@ export function useNotesTreeContextActions() {
     item: NotesTreeItemRef
   ) {
     try {
+      if (action === 'create-note') {
+        await createNote('', item.kind === 'folder' ? item.path : 'inbox')
+        return
+      }
       if (action === 'create-folder' && item.kind === 'folder') {
         setRequest({ action, item, initialValue: '' })
         return

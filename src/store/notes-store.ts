@@ -42,9 +42,10 @@ interface NotesState {
   ) => Promise<NoteVaultMigrationResult>
   dismissPendingVaultMigration: () => void
   openVaultFolder: () => Promise<void>
-  createNote: (content?: string) => Promise<string>
+  createNote: (content?: string, folder?: string) => Promise<string>
   createFolder: (parentPath: string, name: string) => Promise<void>
   renameFolder: (path: string, name: string) => Promise<void>
+  renameNote: (id: string, title: string) => Promise<void>
   updateNote: (id: string, content: string) => void
   moveTreeItem: (
     item: NotesTreeItemRef,
@@ -128,12 +129,46 @@ function updateNoteInTree(
 
 function prependNoteToTree(
   tree: NoteWorkspaceTree | null,
-  note: Note
+  note: Note,
+  folder?: string
 ): NoteWorkspaceTree | null {
   if (!tree) return null
 
-  const withoutExisting = removeNoteFromTree(tree, note.id)
+  const withoutExisting = flattenNoteTree(tree.items).some(
+    existingNote => existingNote.id === note.id
+  )
+    ? removeNoteFromTree(tree, note.id)
+    : tree
   if (!withoutExisting) return null
+
+  if (!folder || folder === 'inbox') {
+    return {
+      ...withoutExisting,
+      items: [{ kind: 'note', note }, ...withoutExisting.items],
+    }
+  }
+
+  function prependToFolder(items: NoteTreeItem[]): [NoteTreeItem[], boolean] {
+    let inserted = false
+    const nextItems = items.map(item => {
+      if (item.kind !== 'folder') return item
+      if (item.path === folder) {
+        inserted = true
+        return {
+          ...item,
+          children: [{ kind: 'note' as const, note }, ...item.children],
+        }
+      }
+
+      const [children, nestedInserted] = prependToFolder(item.children)
+      if (nestedInserted) inserted = true
+      return nestedInserted ? { ...item, children } : item
+    })
+    return [nextItems, inserted]
+  }
+
+  const [items, inserted] = prependToFolder(withoutExisting.items)
+  if (inserted) return { ...withoutExisting, items }
 
   return {
     ...withoutExisting,
@@ -780,7 +815,7 @@ export const useNotesStore = create<NotesState>()(
           }
         },
 
-        createNote: async (content = '') => {
+        createNote: async (content = '', folder) => {
           set({ isSaving: true }, undefined, 'createNote/start')
 
           try {
@@ -790,7 +825,7 @@ export const useNotesStore = create<NotesState>()(
                 await commands.createNote({
                   title: null,
                   content,
-                  folder: null,
+                  folder: folder ?? null,
                 })
               )
             )
@@ -803,7 +838,7 @@ export const useNotesStore = create<NotesState>()(
                     )
                     return null
                   })
-            const inboxTree = prependNoteToTree(currentTree, createdNote) ?? {
+            const inboxTree = prependNoteToTree(currentTree, createdNote, folder) ?? {
               workspace: 'inbox' as const,
               items: [{ kind: 'note' as const, note: createdNote }],
             }
@@ -846,6 +881,37 @@ export const useNotesStore = create<NotesState>()(
           runWorkspaceMutation('renameFolder', async () => {
             unwrapResult(await commands.renameNotesFolder({ path, name }))
           }),
+
+        renameNote: async (id, title) => {
+          try {
+            const flushedPendingSave = await flushPendingSave(get().notes)
+            if (flushedPendingSave) {
+              set({ isSaving: false }, undefined, 'renameNote/flushPendingSave')
+            }
+
+            const renamedNote = mapBindingNote(
+              unwrapResult(await commands.renameNote({ id, title }))
+            )
+
+            set(
+              state => ({
+                notes: state.notes.map(note =>
+                  note.id === id ? renamedNote : note
+                ),
+                tree: updateNoteInTree(state.tree, renamedNote),
+                searchResults: state.searchResults?.map(note =>
+                  note.id === id ? renamedNote : note
+                ) ?? null,
+              }),
+              undefined,
+              'renameNote/done'
+            )
+          } catch (error) {
+            logger.error(`Failed to rename note: ${String(error)}`)
+            await get().loadNotes()
+            throw error
+          }
+        },
 
         updateNote: (id, content) => {
           const wordCount = countWords(content)

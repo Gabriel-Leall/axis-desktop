@@ -76,6 +76,47 @@ fn builds_excerpt_from_markdown_body() {
 }
 
 #[test]
+fn note_title_comes_from_filename_not_markdown_body() {
+    assert_eq!(
+        resolve_note_title("inbox/TCC/erros artigo IHC.md"),
+        "erros artigo IHC"
+    );
+}
+
+#[test]
+fn new_note_body_is_empty_when_the_user_has_not_written_content() {
+    assert_eq!(new_note_content(None), "");
+    assert_eq!(
+        new_note_content(Some("- body only".to_string())),
+        "- body only"
+    );
+}
+
+#[test]
+fn creates_a_note_in_an_existing_inbox_subfolder() {
+    let root = test_vault_root("axis-notes-create-nested-note");
+    ensure_vault_structure(&root).expect("vault structure should be created");
+    std::fs::create_dir_all(root.join("inbox/projects"))
+        .expect("projects folder should be created");
+
+    let note = create_note_at_path(
+        &root,
+        "inbox/projects",
+        Some("Roadmap".to_string()),
+        Some("- first item".to_string()),
+    )
+    .expect("note should be created in the requested folder");
+
+    assert_eq!(note.path, "inbox/projects/Roadmap.md");
+    assert_eq!(
+        std::fs::read_to_string(root.join(&note.path)).unwrap(),
+        "- first item"
+    );
+
+    std::fs::remove_dir_all(root).expect("test vault should be removable");
+}
+
+#[test]
 fn default_vault_path_uses_visible_axis_notes_folder() {
     let documents = Path::new("Documents");
     let path = default_vault_path_from_documents(documents);

@@ -1,8 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import {
-  Editor as ToastEditor,
-  Viewer as ToastViewer,
-} from '@toast-ui/react-editor'
+import { Viewer as ToastViewer } from '@toast-ui/react-editor'
 import { useTranslation } from 'react-i18next'
 import {
   Plus,
@@ -20,10 +17,8 @@ import {
   Download,
   Upload,
   Copy,
-  FolderOpen,
   X,
   Eye,
-  Columns2,
   PencilLine,
 } from 'lucide-react'
 import { save, open } from '@tauri-apps/plugin-dialog'
@@ -36,14 +31,9 @@ import {
   type NotesTreeItemRef,
 } from '@/components/notes/NotesExplorerTree'
 import { useNotesTreeContextActions } from '@/hooks/use-notes-tree-context-actions'
+import { MarkdownLiveEditor } from '@/components/notes/editor/MarkdownLiveEditor'
 import type { NotesWorkspaceView } from '@/store/notes-store'
-import {
-  getNoteTitle,
-  relativeDate,
-  groupNotesByDate,
-  countTags,
-  countWords,
-} from '@/lib/notes-domain'
+import { relativeDate, groupNotesByDate, countTags, countWords } from '@/lib/notes-domain'
 import { cn } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 import type { Note, NoteWorkspaceTree } from '@/lib/notes-domain'
@@ -54,55 +44,7 @@ interface NotesPageProps {
   initialSelectedNoteId?: string
 }
 
-type NotesEditorMode = 'edit' | 'preview' | 'split'
-
-function parseNoteContent(content: string): { title: string; body: string } {
-  if (!content) {
-    return { title: '', body: '' }
-  }
-
-  const normalized = content.replace(/\r\n/g, '\n')
-  const lines = normalized.split('\n')
-  const firstNonEmptyIndex = lines.findIndex(line => line.trim().length > 0)
-
-  if (firstNonEmptyIndex === -1) {
-    return { title: '', body: '' }
-  }
-
-  const firstLine = lines[firstNonEmptyIndex] ?? ''
-
-  if (firstLine.startsWith('# ')) {
-    return {
-      title: firstLine.slice(2),
-      body: lines
-        .filter((_, index) => index !== firstNonEmptyIndex)
-        .join('\n')
-        .replace(/^\n+/, ''),
-    }
-  }
-
-  return {
-    title: firstLine.trim(),
-    body: lines
-      .filter((_, index) => index !== firstNonEmptyIndex)
-      .join('\n')
-      .replace(/^\n+/, ''),
-  }
-}
-
-function buildNoteContent(title: string, body: string): string {
-  const normalizedBody = body.replace(/^\n+/, '')
-
-  if (!title && !normalizedBody.trim()) {
-    return ''
-  }
-
-  if (!normalizedBody.trim()) {
-    return `# ${title}`
-  }
-
-  return `# ${title}\n\n${normalizedBody}`
-}
+type NotesEditorMode = 'edit' | 'preview'
 
 const GROUP_LABEL_KEYS: Record<string, string> = {
   today: 'notes.groups.today',
@@ -143,12 +85,6 @@ const EDITOR_MODE_OPTIONS: {
     labelKey: 'notes.editor.mode.preview',
     ariaKey: 'notes.editor.mode.previewAria',
     icon: Eye,
-  },
-  {
-    mode: 'split',
-    labelKey: 'notes.editor.mode.split',
-    ariaKey: 'notes.editor.mode.splitAria',
-    icon: Columns2,
   },
 ]
 
@@ -436,7 +372,7 @@ function NotesList({
             </span>
           </div>
           {group.notes.map(note => {
-            const title = getNoteTitle(note.content)
+            const title = note.title
             const isSelected = note.id === selectedNoteId
 
             return (
@@ -486,6 +422,7 @@ function Sidebar({
 }: SidebarProps) {
   const { t } = useTranslation()
   const hasActiveFilters = searchQuery.trim().length > 0 || selectedTag !== null
+  const [createMenuOpen, setCreateMenuOpen] = useState(false)
 
   return (
     <aside className="notes-paper-sidebar notes-explorer flex h-full w-56 shrink-0 flex-col text-card-foreground">
@@ -503,16 +440,6 @@ function Sidebar({
             {t('notes.sidebar.vaultWorkspace')}
           </p>
         </div>
-        {workspaceView === 'inbox' && (
-          <button
-            type="button"
-            onClick={() => void onCreateNote()}
-            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
-            aria-label={t('notes.sidebar.newNote')}
-          >
-            <Plus className="size-3.5" />
-          </button>
-        )}
       </div>
 
       <SidebarSearch
@@ -526,12 +453,54 @@ function Sidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1">
         <div className="flex items-center justify-between px-2 pb-1 pt-2">
-          <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground/75">
-            {t('notes.sidebar.title')}
-          </span>
-          <span className="text-[10px] text-muted-foreground/65">
-            {allNotes.length}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground/75">
+              {t('notes.sidebar.title')}
+            </span>
+            <span className="text-[10px] text-muted-foreground/65">
+              {allNotes.length}
+            </span>
+          </div>
+          {workspaceView === 'inbox' && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setCreateMenuOpen(open => !open)}
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
+                aria-label={t('notes.sidebar.newNote')}
+                aria-expanded={createMenuOpen}
+              >
+                <Plus className="size-3.5" />
+              </button>
+              {createMenuOpen && (
+                <div className="absolute end-0 top-full z-20 mt-1 min-w-36 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateMenuOpen(false)
+                      void onCreateNote()
+                    }}
+                    className="flex w-full rounded-sm px-2 py-1.5 text-start text-xs hover:bg-accent"
+                  >
+                    {t('notes.sidebar.newNote')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateMenuOpen(false)
+                      onContextAction('create-folder', {
+                        kind: 'folder',
+                        path: 'inbox',
+                      })
+                    }}
+                    className="flex w-full rounded-sm px-2 py-1.5 text-start text-xs hover:bg-accent"
+                  >
+                    {t('notes.contextMenu.newFolder')}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         {notes.length === 0 ? (
           <SidebarEmptyState
@@ -598,7 +567,7 @@ function NoteActionsMenu({
   }, [showMenu])
 
   async function handleExport() {
-    const title = getNoteTitle(note.content)
+    const title = note.title
     const path = await save({
       defaultPath: `${title}.md`,
       filters: [{ name: 'Markdown', extensions: ['md'] }],
@@ -810,7 +779,8 @@ function EditorArea({
   onMoveToTrash,
   onRestore,
   onContentChange,
-  onOpenVaultFolder,
+  onRename,
+  onCreateNote,
   onEditorModeChange,
 }: {
   note: Note | null
@@ -821,61 +791,57 @@ function EditorArea({
   onMoveToTrash: () => Promise<void>
   onRestore: () => Promise<void>
   onContentChange: (noteId: string, content: string) => void
-  onOpenVaultFolder: () => Promise<void>
+  onRename: (noteId: string, title: string) => Promise<void>
+  onCreateNote: () => Promise<void>
   onEditorModeChange: (mode: NotesEditorMode) => void
 }) {
   const { t } = useTranslation()
-  const editorRef = useRef<ToastEditor>(null)
-  const editorShellRef = useRef<HTMLDivElement>(null)
+  const [titleDraft, setTitleDraft] = useState({
+    noteId: null as string | null,
+    value: '',
+  })
+  const displayedTitle =
+    note && titleDraft.noteId === note.id ? titleDraft.value : (note?.title ?? '')
 
-  function handleEditorChange() {
-    if (!note) return
-    const bodyMarkdown =
-      editorRef.current?.getInstance().getMarkdown() ?? parsed.body
-    onContentChange(note.id, buildNoteContent(parsed.title, bodyMarkdown))
-  }
-
-  function handleTitleChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function commitTitle() {
     if (!note || workspaceView !== 'inbox') return
-    const nextTitle = event.target.value
+    const nextTitle = displayedTitle.trim()
+    if (!nextTitle || nextTitle === note.title) {
+      setTitleDraft({ noteId: note.id, value: note.title ?? '' })
+      return
+    }
 
-    const bodyMarkdown =
-      editorRef.current?.getInstance().getMarkdown() ?? parsed.body
-    onContentChange(note.id, buildNoteContent(nextTitle, bodyMarkdown))
+    try {
+      await onRename(note.id, nextTitle)
+    } catch (error) {
+      setTitleDraft({ noteId: note.id, value: note.title ?? '' })
+      toast.error(t('notes.editor.renameFailed'), { description: String(error) })
+    }
   }
 
   if (!note) {
     return (
       <div className="notes-paper-editor flex h-full flex-1 items-center justify-center px-8 text-muted-foreground">
         <div className="notes-paper-empty max-w-md text-center">
-          <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl border border-border bg-background/70 text-foreground shadow-sm">
-            <FolderOpen className="size-5" />
-          </div>
           <h2 className="text-lg font-semibold text-foreground">
-            {t('notes.welcome.title')}
+            {t('notes.editor.selectPrompt')}
           </h2>
-          <p className="mt-2 text-sm leading-6">
-            {t('notes.welcome.description')}
-          </p>
           <button
             type="button"
-            onClick={() => void onOpenVaultFolder()}
+            onClick={() => void onCreateNote()}
             className="mt-5 inline-flex items-center gap-2 rounded-xl border border-border bg-background/70 px-3 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-accent/80 hover:text-accent-foreground"
           >
-            <FolderOpen className="size-4" />
-            {t('notes.welcome.openFolder')}
+            <Plus className="size-4" />
+            {t('notes.sidebar.newNote')}
           </button>
         </div>
       </div>
     )
   }
 
-  const parsed = parseNoteContent(note.content)
-  const wordCount = countWords(parsed.body)
+  const wordCount = countWords(note.content)
   const isReadOnly = workspaceView !== 'inbox'
   const activeMode: NotesEditorMode = isReadOnly ? 'preview' : editorMode
-  const showEditor = activeMode === 'edit' || activeMode === 'split'
-  const showPreview = activeMode === 'preview' || activeMode === 'split'
 
   return (
     <div
@@ -912,22 +878,25 @@ function EditorArea({
       </div>
 
       <div className="flex-1 overflow-hidden text-start">
-        <div
-          className={cn(
-            'mx-auto h-full w-full text-start',
-            activeMode === 'split' ? 'max-w-6xl' : 'max-w-3xl'
-          )}
-        >
+        <div className="h-full w-full text-start">
           <div className="h-full px-8 pt-8 pb-10 font-sans antialiased text-foreground text-start flex flex-col">
             {isReadOnly ? (
               <h1 className="mb-8 text-2xl font-semibold text-foreground">
-                {parsed.title || getNoteTitle(note.content)}
+                {note.title}
               </h1>
             ) : (
               <input
                 type="text"
-                value={parsed.title}
-                onChange={handleTitleChange}
+                value={displayedTitle}
+                onChange={event =>
+                  setTitleDraft({ noteId: note.id, value: event.target.value })
+                }
+                onBlur={() => void commitTitle()}
+                onKeyDown={event => {
+                  if (event.key !== 'Enter') return
+                  event.preventDefault()
+                  void commitTitle()
+                }}
                 placeholder={t('notes.editor.titlePlaceholder')}
                 aria-label={t('notes.editor.titlePlaceholder')}
                 spellCheck={false}
@@ -935,39 +904,17 @@ function EditorArea({
               />
             )}
 
-            <div
-              className={cn(
-                'notes-paper-writing-grid min-h-0 flex-1',
-                activeMode === 'split' && 'is-split'
-              )}
-            >
-              {showEditor && !isReadOnly && (
-                <div
-                  ref={editorShellRef}
-                  className="notes-inline-editor min-h-0 text-start"
-                >
-                  <ToastEditor
-                    key={note.id}
-                    ref={editorRef}
-                    initialValue={parsed.body}
-                    initialEditType="wysiwyg"
-                    hideModeSwitch
-                    height="100%"
-                    placeholder={t('notes.editor.placeholder')}
-                    usageStatistics={false}
-                    toolbarItems={[
-                      ['heading', 'bold', 'italic', 'strike'],
-                      ['ul', 'ol', 'task', 'quote'],
-                      ['link', 'code', 'codeblock'],
-                    ]}
-                    onChange={handleEditorChange}
-                  />
-                </div>
-              )}
-
-              {showPreview && (
+            <div className="notes-paper-writing-grid min-h-0 flex-1">
+              {activeMode === 'edit' && !isReadOnly ? (
+                <MarkdownLiveEditor
+                  noteId={note.id}
+                  value={note.content}
+                  placeholder={t('notes.editor.placeholder')}
+                  onChange={content => onContentChange(note.id, content)}
+                />
+              ) : (
                 <div className="notes-paper-preview notes-inline-editor prose prose-sm max-w-none min-h-0 overflow-y-auto text-start text-foreground">
-                  <ToastViewer initialValue={parsed.body} />
+                  <ToastViewer initialValue={note.content} />
                 </div>
               )}
             </div>
@@ -998,10 +945,6 @@ function EditorArea({
   )
 }
 
-async function openNotesVaultFolderFromStore() {
-  await useNotesStore.getState().openVaultFolder()
-}
-
 export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const { t } = useTranslation()
   const [editorMode, setEditorMode] = useState<NotesEditorMode>('edit')
@@ -1018,6 +961,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const loadNotes = useNotesStore(state => state.loadNotes)
   const setWorkspaceView = useNotesStore(state => state.setWorkspaceView)
   const createNote = useNotesStore(state => state.createNote)
+  const renameNote = useNotesStore(state => state.renameNote)
   const updateNote = useNotesStore(state => state.updateNote)
   const deleteNote = useNotesStore(state => state.deleteNote)
   const archiveNote = useNotesStore(state => state.archiveNote)
@@ -1039,9 +983,11 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }, [initialSelectedNoteId, selectNote])
 
   const displayedNotes = filteredNotes()
-  const activeNote = selectedNoteId
-    ? (notes.find(note => note.id === selectedNoteId) ?? null)
+  const selectedNote = selectedNoteId
+    ? displayedNotes.find(note => note.id === selectedNoteId) ?? null
     : null
+  const activeNote = selectedNote ?? displayedNotes.at(0) ?? null
+  const effectiveSelectedNoteId = activeNote?.id ?? null
 
   useEffect(() => {
     if (
@@ -1055,7 +1001,8 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   async function handleCreateNote() {
     try {
       setSelectedTag(null)
-      await createNote('')
+      const createdNoteId = await createNote('')
+      selectNote(createdNoteId)
     } catch (error) {
       logger.error(`Failed to create note from UI: ${String(error)}`)
     }
@@ -1064,6 +1011,11 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   function handleContentChange(noteId: string, content: string) {
     if (workspaceView !== 'inbox') return
     updateNote(noteId, content)
+  }
+
+  async function handleRenameNote(noteId: string, title: string) {
+    if (workspaceView !== 'inbox') return
+    await renameNote(noteId, title)
   }
 
   function handleClearFilters() {
@@ -1192,16 +1144,6 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     }
   }
 
-  async function handleOpenVaultFolder() {
-    try {
-      await openNotesVaultFolderFromStore()
-    } catch (error) {
-      toast.error(t('notes.welcome.openFolderFailed'), {
-        description: String(error),
-      })
-    }
-  }
-
   if (isLoading && !tree && notes.length === 0) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
@@ -1219,7 +1161,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           allNotes={notes}
           notes={displayedNotes}
           tree={tree}
-          selectedNoteId={selectedNoteId}
+          selectedNoteId={effectiveSelectedNoteId}
           workspaceView={workspaceView}
           searchQuery={searchQuery}
           selectedTag={selectedTag}
@@ -1243,7 +1185,8 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           onMoveToTrash={handleMoveNoteToTrash}
           onRestore={handleRestoreNote}
           onContentChange={handleContentChange}
-          onOpenVaultFolder={handleOpenVaultFolder}
+          onRename={handleRenameNote}
+          onCreateNote={handleCreateNote}
           onEditorModeChange={setEditorMode}
         />
       </div>

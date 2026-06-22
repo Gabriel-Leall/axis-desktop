@@ -687,27 +687,17 @@ fn count_words(content: &str) -> i32 {
     content.split_whitespace().count() as i32
 }
 
-fn resolve_note_title(content: &str, path: &str) -> String {
-    let first_non_empty = content
-        .lines()
-        .find(|line| !line.trim().is_empty())
-        .unwrap_or_default()
-        .trim()
-        .to_string();
-
-    if first_non_empty.starts_with("# ") {
-        return first_non_empty.trim_start_matches("# ").trim().to_string();
-    }
-
-    if !first_non_empty.is_empty() {
-        return first_non_empty;
-    }
-
+fn resolve_note_title(path: &str) -> String {
     Path::new(path)
         .file_stem()
         .and_then(|stem| stem.to_str())
+        .filter(|title| !title.trim().is_empty())
         .unwrap_or("Untitled")
         .to_string()
+}
+
+fn new_note_content(content: Option<String>) -> String {
+    content.unwrap_or_default()
 }
 
 fn parse_iso_or_epoch(value: &str) -> i64 {
@@ -751,7 +741,7 @@ fn note_from_file_with_metadata(
         })
         .unwrap_or_else(|_| created_at.clone());
 
-    let title = resolve_note_title(&content, &rel);
+    let title = resolve_note_title(&rel);
 
     Ok(Note {
         id: metadata.id_for_path(&rel),
@@ -868,6 +858,23 @@ fn next_unique_path(root: &Path, folder: &str, base_file_name: &str) -> Result<P
         }
         idx += 1;
     }
+}
+
+fn create_note_at_path(
+    root: &Path,
+    folder: &str,
+    title: Option<String>,
+    content: Option<String>,
+) -> Result<NoteSummary, String> {
+    let folder_path = resolve_inbox_folder(root, folder)?;
+    let folder = relative_note_path(root, &folder_path)?;
+    let content = new_note_content(content);
+    let file_title = title.unwrap_or_else(|| "Untitled".to_string());
+    let base_name = ensure_md_filename(&file_title);
+    let abs = next_unique_path(root, &folder, &base_name)?;
+
+    write_atomic(&abs, &content)?;
+    Ok(summary_from_note(&note_from_file(root, &abs)?))
 }
 
 #[path = "notes/lifecycle.rs"]
@@ -1233,33 +1240,8 @@ pub async fn get_note(app: AppHandle, id: String) -> Result<Note, String> {
 #[specta::specta]
 pub async fn create_note(app: AppHandle, input: CreateNoteInput) -> Result<NoteSummary, String> {
     let root = notes_root(&app)?;
-    let _folder = input.folder.unwrap_or_else(|| INBOX_DIR.to_string());
-
-    let content = match input.content {
-        Some(existing) if !existing.trim().is_empty() => existing,
-        _ => {
-            let title = input
-                .title
-                .clone()
-                .unwrap_or_else(|| "Untitled".to_string());
-            merge_title_body(&title, "")
-        }
-    };
-
-    let file_title = input
-        .title
-        .unwrap_or_else(|| resolve_note_title(&content, "Untitled.md"));
-    let base_name = ensure_md_filename(&file_title);
-    let abs = next_unique_path(&root, INBOX_DIR, &base_name)?;
-
-    if let Some(parent) = abs.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create note parent folder: {e}"))?;
-    }
-
-    write_atomic(&abs, &content)?;
-    let note = note_from_file(&root, &abs)?;
-    Ok(summary_from_note(&note))
+    let folder = input.folder.as_deref().unwrap_or(INBOX_DIR);
+    create_note_at_path(&root, folder, input.title, input.content)
 }
 
 #[tauri::command]
