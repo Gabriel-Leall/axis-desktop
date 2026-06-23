@@ -46,6 +46,8 @@ describe('markdown live preview', () => {
   it.each([
     ['heading', '# Heading body', [{ from: 0, to: 2 }]],
     ['checklist', '- [ ] Task body', [{ from: 0, to: 6 }]],
+    ['bullet list', '- Bullet body', [{ from: 0, to: 2 }]],
+    ['ordered list', '1. Ordered body', [{ from: 0, to: 3 }]],
     [
       'link',
       '[Axis](url) next',

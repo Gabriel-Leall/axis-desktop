@@ -900,6 +900,7 @@ describe('useNotesStore lifecycle actions', () => {
       expect(commands.updateNote).not.toHaveBeenCalled()
 
       await vi.advanceTimersByTimeAsync(1)
+      expect(commands.updateNote).toHaveBeenCalledTimes(1)
       expect(commands.updateNote).toHaveBeenCalledWith({
         id: 'inbox/alpha.md',
         content,
