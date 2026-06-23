@@ -22,6 +22,8 @@ describe('markdown editor commands', () => {
     expect(getSlashCommandInsertion('quote')).toBe('> ')
     expect(getSlashCommandInsertion('checklist')).toBe('- [ ] ')
     expect(getSlashCommandInsertion('divider')).toBe('---\n')
+    expect(getSlashCommandInsertion('link')).toBe('[link](url)')
+    expect(getSlashCommandInsertion('codeBlock')).toBe('```\n\n```')
   })
 
   it('uses the local calendar day for slash-date insertion', () => {
@@ -51,6 +53,27 @@ describe('markdown editor commands', () => {
       '1. agenda',
       { from: 3, to: 3 },
     ],
+    [
+      'checklist',
+      'task',
+      { from: 0, to: 0 },
+      '- [ ] task',
+      { from: 6, to: 6 },
+    ],
+    [
+      'quote',
+      'quote',
+      { from: 0, to: 0 },
+      '> quote',
+      { from: 2, to: 2 },
+    ],
+    [
+      'divider',
+      'next',
+      { from: 0, to: 0 },
+      '---\nnext',
+      { from: 4, to: 4 },
+    ],
   ] as const)(
     'applies %s with the expected cursor position',
     (command, content, selection, expectedContent, expectedSelection) => {
@@ -60,4 +83,22 @@ describe('markdown editor commands', () => {
       })
     }
   )
+
+  it('wraps the selected text as a Markdown link and selects its URL', () => {
+    expect(
+      applyMarkdownCommand('link', 'Axis notes', { from: 0, to: 4 })
+    ).toEqual({
+      content: '[Axis](url) notes',
+      selection: { from: 7, to: 10 },
+    })
+  })
+
+  it('inserts a code block and places the cursor in its editable line', () => {
+    expect(
+      applyMarkdownCommand('codeBlock', 'before\ntext', { from: 7, to: 7 })
+    ).toEqual({
+      content: 'before\n```\n\n```\ntext',
+      selection: { from: 11, to: 11 },
+    })
+  })
 })

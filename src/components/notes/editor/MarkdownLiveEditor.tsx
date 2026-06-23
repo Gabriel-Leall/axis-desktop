@@ -9,6 +9,20 @@ interface MarkdownLiveEditorProps {
   readOnly?: boolean
   onChange: (content: string) => void
 }
+
+function replaceEditorDocument(view: EditorView, value: string) {
+  const selection = view.state.selection.main
+  const limit = value.length
+
+  view.dispatch({
+    changes: { from: 0, to: view.state.doc.length, insert: value },
+    selection: {
+      anchor: Math.min(selection.anchor, limit),
+      head: Math.min(selection.head, limit),
+    },
+  })
+}
+
 export function MarkdownLiveEditor({
   noteId,
   value,
@@ -58,10 +72,7 @@ export function MarkdownLiveEditor({
       const latestValue = latestValueRef.current
       if (view.state.doc.toString() !== latestValue) {
         applyingExternalValueRef.current = true
-        view.dispatch({
-          changes: { from: 0, to: view.state.doc.length, insert: latestValue },
-          selection: { anchor: 0 },
-        })
+        replaceEditorDocument(view, latestValue)
         applyingExternalValueRef.current = false
       }
     })
@@ -77,10 +88,7 @@ export function MarkdownLiveEditor({
     if (!view || view.state.doc.toString() === value) return
 
     applyingExternalValueRef.current = true
-    view.dispatch({
-      changes: { from: 0, to: view.state.doc.length, insert: value },
-      selection: { anchor: 0 },
-    })
+    replaceEditorDocument(view, value)
     applyingExternalValueRef.current = false
   }, [noteId, value])
 

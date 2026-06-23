@@ -69,21 +69,66 @@ export function getMarkdownMarkerRanges(
   selection: readonly MarkdownSelectionRange[]
 ): MarkdownMarkerRange[] {
   const markers: MarkdownMarkerRange[] = []
-  const expressions = [/\*\*[^\n*][\s\S]*?\*\*/g, /`[^`\n]+`/g]
-
-  for (const expression of expressions) {
-    for (const match of content.matchAll(expression)) {
-      const start = match.index
-      if (start === undefined) continue
-      const end = start + match[0].length
-      if (selectionTouchesRange(selection, start, end)) continue
-
-      const markerLength = match[0].startsWith('**') ? 2 : 1
-      markers.push(
-        { from: start, to: start + markerLength },
-        { from: end - markerLength, to: end }
-      )
+  const addMarkers = (
+    from: number,
+    to: number,
+    markerRanges: readonly MarkdownMarkerRange[]
+  ) => {
+    if (!selectionTouchesRange(selection, from, to)) {
+      markers.push(...markerRanges)
     }
+  }
+
+  for (const match of content.matchAll(/\*\*[^\n*][\s\S]*?\*\*/g)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    addMarkers(start, end, [
+      { from: start, to: start + 2 },
+      { from: end - 2, to: end },
+    ])
+  }
+
+  for (const match of content.matchAll(/_([^_\n]+)_/g)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    addMarkers(start, end, [
+      { from: start, to: start + 1 },
+      { from: end - 1, to: end },
+    ])
+  }
+
+  for (const match of content.matchAll(/`[^`\n]+`/g)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    addMarkers(start, end, [
+      { from: start, to: start + 1 },
+      { from: end - 1, to: end },
+    ])
+  }
+
+  for (const match of content.matchAll(/^(#{1,6})[ \t]+/gm)) {
+    const start = match.index ?? 0
+    addMarkers(start, start + match[0].length, [
+      { from: start, to: start + match[0].length },
+    ])
+  }
+
+  for (const match of content.matchAll(/^[-+*][ \t]+\[[ xX]\][ \t]+/gm)) {
+    const start = match.index ?? 0
+    addMarkers(start, start + match[0].length, [
+      { from: start, to: start + match[0].length },
+    ])
+  }
+
+  for (const match of content.matchAll(/\[[^\]\n]+\]\([^)\n]+\)/g)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    const labelEnd = start + match[0].indexOf('](')
+    addMarkers(start, end, [
+      { from: start, to: start + 1 },
+      { from: labelEnd, to: labelEnd + 2 },
+      { from: end - 1, to: end },
+    ])
   }
 
   return markers.sort((left, right) => left.from - right.from)
