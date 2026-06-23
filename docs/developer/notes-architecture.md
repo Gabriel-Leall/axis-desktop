@@ -82,8 +82,8 @@ Create:
 - `create_note` writes an empty Markdown file into `inbox/` when the caller
   has not supplied body content. Its default file name is `Untitled.md` and
   collisions receive a unique file name.
-- The current implementation treats `folder` as non-routing input; new notes
-  still land in `inbox/`.
+- `create_note` may target an existing Inbox subfolder. Folder creation remains
+  Inbox-only and the backend rejects archive, trash, missing, or unsafe paths.
 - The file stem is the note title shown by Axis. Markdown content, including a
   leading `# Heading`, is only the note body and never changes the file name.
 - File names are generated from the requested title and made unique before
@@ -233,6 +233,9 @@ Important store entrypoints:
   notes, and clears the pending migration prompt only after success.
 - `createNote()`, `updateNote()`, `archiveNote()`, `deleteNote()`, and
   `restoreNote()` wrap the backend lifecycle commands.
+- `createNote(content, folder?)` passes an optional existing Inbox folder to
+  the typed backend command and inserts the returned note into that physical
+  tree location.
 
 Components should use store actions rather than calling notes vault commands
 directly, except for isolated quick-entry flows that intentionally only create a
@@ -257,6 +260,13 @@ Notes Page:
   Closed markers are hidden away from the active selection while semantic
   formatting remains visible. Preview is a strict read-only rendering path and
   has no editor save callback.
+- Markdown command transformations emit ordinary persisted Markdown. The
+  CodeMirror command extension provides matching keyboard shortcuts and slash
+  commands for inline formatting, blocks, links, and local dates. Toast UI is
+  used only to render the read-only Preview surface.
+- External document replacement keeps the existing cursor or selection when
+  its positions remain valid, otherwise clamps them to the replacement content.
+  Such replacements never invoke the user-edit callback or create a save.
 
 Dashboard notes widget:
 

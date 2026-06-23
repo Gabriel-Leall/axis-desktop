@@ -42,4 +42,37 @@ describe('markdown live preview', () => {
       ])
     ).toEqual([])
   })
+
+  it.each([
+    ['heading', '# Heading body', [{ from: 0, to: 2 }]],
+    ['checklist', '- [ ] Task body', [{ from: 0, to: 6 }]],
+    ['bullet list', '- Bullet body', [{ from: 0, to: 2 }]],
+    ['ordered list', '1. Ordered body', [{ from: 0, to: 3 }]],
+    [
+      'link',
+      '[Axis](url) next',
+      [
+        { from: 0, to: 1 },
+        { from: 5, to: 7 },
+        { from: 10, to: 11 },
+      ],
+    ],
+    [
+      'emphasis',
+      '_italic_ next',
+      [
+        { from: 0, to: 1 },
+        { from: 7, to: 8 },
+      ],
+    ],
+  ] as const)(
+    'finds closed %s markers away from the cursor',
+    (_, content, expected) => {
+      expect(
+        getMarkdownMarkerRanges(content, [
+          { from: content.length, to: content.length },
+        ])
+      ).toEqual(expected)
+    }
+  )
 })

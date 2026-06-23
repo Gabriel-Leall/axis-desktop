@@ -190,6 +190,7 @@ describe('NotesPage', () => {
   })
 
   it('switches between live edit and read-only preview modes', async () => {
+    const user = userEvent.setup()
     render(<NotesPage />)
 
     await waitFor(() => {
@@ -217,6 +218,9 @@ describe('NotesPage', () => {
     expect(
       screen.queryByRole('button', { name: 'Split mode' })
     ).not.toBeInTheDocument()
+
+    await user.keyboard('This must not edit the note')
+    expect(commands.updateNote).not.toHaveBeenCalled()
   })
 
   it('renders the physical vault tree in the Notes sidebar', async () => {

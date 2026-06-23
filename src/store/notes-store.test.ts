@@ -883,6 +883,33 @@ describe('useNotesStore lifecycle actions', () => {
     }
   })
 
+  it('debounces a long Markdown update before writing it to the vault', async () => {
+    vi.useFakeTimers()
+    try {
+      const content = Array.from(
+        { length: 2_000 },
+        (_, index) => `- Item ${index}`
+      ).join('\n')
+
+      useNotesStore.getState().updateNote('inbox/alpha.md', content)
+
+      expect(useNotesStore.getState().selectedNote()?.content).toBe(content)
+      expect(commands.updateNote).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(799)
+      expect(commands.updateNote).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(commands.updateNote).toHaveBeenCalledTimes(1)
+      expect(commands.updateNote).toHaveBeenCalledWith({
+        id: 'inbox/alpha.md',
+        content,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('keeps the new vault info when tree reload fails after switching vaults', async () => {
     vi.mocked(commands.getNotesWorkspaceTree).mockResolvedValue({
       status: 'error',

@@ -40,7 +40,7 @@ describe('MarkdownLiveEditor', () => {
 
     expect(
       await screen.findByRole('textbox', { name: 'Start writing' })
-    ).toHaveTextContent('- second')
+    ).toHaveTextContent('second')
     expect(container.querySelectorAll('.cm-editor')).toHaveLength(1)
     expect(onChange).toHaveBeenCalledTimes(callsBeforeExternalSync)
   })
@@ -89,5 +89,55 @@ describe('MarkdownLiveEditor', () => {
     expect(
       await screen.findByRole('textbox', { name: 'Start writing' })
     ).toHaveTextContent('second draft')
+  })
+
+  it('keeps a clamped cursor position when an external value becomes shorter', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const { rerender } = render(
+      <MarkdownLiveEditor
+        noteId="one"
+        value="abcdef"
+        placeholder="Start writing"
+        onChange={onChange}
+      />
+    )
+
+    const editor = await screen.findByRole('textbox', { name: 'Start writing' })
+    await user.click(editor)
+    await user.keyboard('{End}')
+
+    rerender(
+      <MarkdownLiveEditor
+        noteId="one"
+        value="abc"
+        placeholder="Start writing"
+        onChange={onChange}
+      />
+    )
+
+    await user.keyboard('X')
+
+    expect(onChange).toHaveBeenLastCalledWith('abcX')
+  })
+
+  it('applies the bold keyboard shortcut without recreating the editor', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const { container } = render(
+      <MarkdownLiveEditor
+        noteId="shortcut"
+        value="word"
+        placeholder="Start writing"
+        onChange={onChange}
+      />
+    )
+
+    const editor = await screen.findByRole('textbox', { name: 'Start writing' })
+    await user.click(editor)
+    await user.keyboard('{Control>}a{/Control}{Control>}b{/Control}')
+
+    expect(onChange).toHaveBeenLastCalledWith('**word**')
+    expect(container.querySelectorAll('.cm-editor')).toHaveLength(1)
   })
 })
