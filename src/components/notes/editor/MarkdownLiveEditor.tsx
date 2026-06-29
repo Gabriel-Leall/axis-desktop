@@ -1,13 +1,20 @@
 import { useEffect, useRef } from 'react'
 import type { EditorView } from '@codemirror/view'
 import { createMarkdownEditor } from './markdown-editor-runtime'
+import type { MarkdownAnnotationMarker } from './markdown-annotation-extension'
 
 interface MarkdownLiveEditorProps {
   noteId: string
   value: string
   placeholder: string
   readOnly?: boolean
+  annotations?: MarkdownAnnotationMarker[]
   onChange: (content: string) => void
+  onSelectionChange?: (
+    selection: { from: number; to: number; text: string } | null
+  ) => void
+  onSelectAnnotation?: (annotationId: string) => void
+  onAnnotationsChange?: (annotations: MarkdownAnnotationMarker[]) => void
 }
 
 function replaceEditorDocument(view: EditorView, value: string) {
@@ -28,13 +35,26 @@ export function MarkdownLiveEditor({
   value,
   placeholder: placeholderText,
   readOnly = false,
+  annotations = [],
   onChange,
+  onSelectionChange,
+  onSelectAnnotation,
+  onAnnotationsChange,
 }: MarkdownLiveEditorProps) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  const onSelectAnnotationRef = useRef(onSelectAnnotation)
+  const onAnnotationsChangeRef = useRef(onAnnotationsChange)
+  const annotationsRef = useRef(annotations)
   const applyingExternalValueRef = useRef(false)
-  const initialConfigRef = useRef({ value, placeholderText, readOnly })
+  const initialConfigRef = useRef({
+    value,
+    placeholderText,
+    readOnly,
+    annotations,
+  })
   const latestValueRef = useRef(value)
 
   useEffect(() => {
@@ -42,8 +62,24 @@ export function MarkdownLiveEditor({
   }, [onChange])
 
   useEffect(() => {
+    onSelectionChangeRef.current = onSelectionChange
+  }, [onSelectionChange])
+
+  useEffect(() => {
+    onSelectAnnotationRef.current = onSelectAnnotation
+  }, [onSelectAnnotation])
+
+  useEffect(() => {
+    onAnnotationsChangeRef.current = onAnnotationsChange
+  }, [onAnnotationsChange])
+
+  useEffect(() => {
     latestValueRef.current = value
   }, [value])
+
+  useEffect(() => {
+    annotationsRef.current = annotations
+  }, [annotations])
 
   useEffect(() => {
     const host = hostRef.current
@@ -58,8 +94,15 @@ export function MarkdownLiveEditor({
       value: latestValueRef.current,
       placeholder: initialConfig.placeholderText,
       readOnly: initialConfig.readOnly,
+      annotations: initialConfig.annotations,
       isApplyingExternalValue: () => applyingExternalValueRef.current,
+      getAnnotations: () => annotationsRef.current,
       onChange: content => onChangeRef.current(content),
+      onSelectionChange: selection => onSelectionChangeRef.current?.(selection),
+      onSelectAnnotation: annotationId =>
+        onSelectAnnotationRef.current?.(annotationId),
+      onAnnotationsChange: nextAnnotations =>
+        onAnnotationsChangeRef.current?.(nextAnnotations),
     }).then(view => {
       if (disposed) {
         view.destroy()
@@ -82,6 +125,19 @@ export function MarkdownLiveEditor({
       createdView?.destroy()
     }
   }, [])
+
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+
+    void import('./markdown-annotation-extension').then(
+      ({ setMarkdownAnnotationsEffect }) => {
+        view.dispatch({
+          effects: setMarkdownAnnotationsEffect.of(annotations),
+        })
+      }
+    )
+  }, [annotations])
 
   useEffect(() => {
     const view = viewRef.current

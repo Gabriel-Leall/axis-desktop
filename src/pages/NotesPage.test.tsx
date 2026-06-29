@@ -28,6 +28,13 @@ vi.mock('@/lib/tauri-bindings', () => ({
     renameNotesFolder: vi.fn(),
     trashNotesTreeItem: vi.fn(),
     openNotesVaultFolder: vi.fn(),
+    listNoteAnnotations: vi.fn(),
+    createNoteAnnotation: vi.fn(),
+    updateNoteAnnotationText: vi.fn(),
+    resolveNoteAnnotation: vi.fn(),
+    reopenNoteAnnotation: vi.fn(),
+    deleteNoteAnnotation: vi.fn(),
+    repositionNoteAnnotation: vi.fn(),
   },
   unwrapResult: vi.fn(
     (result: { status: 'ok' | 'error'; data?: unknown; error?: string }) => {
@@ -58,17 +65,34 @@ vi.mock('@/components/notes/editor/MarkdownLiveEditor', async () => {
       value,
       placeholder,
       onChange,
+      onSelectionChange,
     }: {
       value: string
       placeholder: string
       onChange: (content: string) => void
+      onSelectionChange?: (
+        selection: { from: number; to: number; text: string } | null
+      ) => void
     }) =>
-      React.createElement('textarea', {
-        'aria-label': placeholder,
-        value,
-        onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) =>
-          onChange(event.target.value),
-      }),
+      React.createElement(
+        'div',
+        null,
+        React.createElement('textarea', {
+          'aria-label': placeholder,
+          value,
+          onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) =>
+            onChange(event.target.value),
+        }),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            onClick: () =>
+              onSelectionChange?.({ from: 2, to: 7, text: 'note' }),
+          },
+          'Mock selection'
+        )
+      ),
   }
 })
 
@@ -171,6 +195,104 @@ describe('NotesPage', () => {
         path: 'inbox/renamed-workspace.md',
       },
     })
+    vi.mocked(commands.listNoteAnnotations).mockResolvedValue({
+      status: 'ok',
+      data: [],
+    })
+    vi.mocked(commands.createNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: note.id,
+        state: 'active',
+        anchor_status: 'anchored',
+        text: 'New annotation',
+        from: 2,
+        to: 7,
+        quote: 'note',
+        prefix: 'A ',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:00:00.000Z',
+        resolved_at: null,
+      },
+    })
+    vi.mocked(commands.updateNoteAnnotationText).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: note.id,
+        state: 'active',
+        anchor_status: 'anchored',
+        text: 'Updated',
+        from: 2,
+        to: 7,
+        quote: 'note',
+        prefix: 'A ',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:01:00.000Z',
+        resolved_at: null,
+      },
+    })
+    vi.mocked(commands.resolveNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: note.id,
+        state: 'resolved',
+        anchor_status: 'anchored',
+        text: 'New annotation',
+        from: 2,
+        to: 7,
+        quote: 'note',
+        prefix: 'A ',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:01:00.000Z',
+        resolved_at: '2026-06-28T10:01:00.000Z',
+      },
+    })
+    vi.mocked(commands.reopenNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: note.id,
+        state: 'active',
+        anchor_status: 'anchored',
+        text: 'New annotation',
+        from: 2,
+        to: 7,
+        quote: 'note',
+        prefix: 'A ',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:02:00.000Z',
+        resolved_at: null,
+      },
+    })
+    vi.mocked(commands.deleteNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
+    vi.mocked(commands.repositionNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: note.id,
+        state: 'active',
+        anchor_status: 'anchored',
+        text: 'New annotation',
+        from: 8,
+        to: 12,
+        quote: 'with',
+        prefix: '',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:03:00.000Z',
+        resolved_at: null,
+      },
+    })
 
     useNotesStore.setState({
       vaultInfo: null,
@@ -186,6 +308,10 @@ describe('NotesPage', () => {
       isSaving: false,
       isLoading: false,
       isSearching: false,
+      annotations: [],
+      selectedAnnotationId: null,
+      annotationsPanelOpen: false,
+      isLoadingAnnotations: false,
     })
   })
 
@@ -232,6 +358,28 @@ describe('NotesPage', () => {
     expect(
       screen.getByRole('button', { name: 'Paper workspace' })
     ).toBeInTheDocument()
+  })
+
+  it('keeps annotations panel closed until a selection is annotated', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    expect(screen.queryByText('Annotations')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Mock selection' }))
+    await user.click(screen.getByRole('button', { name: 'Annotate selection' }))
+
+    await waitFor(() => {
+      expect(commands.createNoteAnnotation).toHaveBeenCalledWith({
+        note_id: note.id,
+        text: 'New annotation',
+        from: 2,
+        to: 7,
+      })
+    })
+    expect(screen.getByText('Annotations')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('New annotation')).toBeInTheDocument()
   })
 
   it('opens a rename dialog from a folder context menu', async () => {

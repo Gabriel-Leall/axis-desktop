@@ -20,6 +20,8 @@ import {
   X,
   Eye,
   PencilLine,
+  MessageSquarePlus,
+  PanelRightOpen,
 } from 'lucide-react'
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
@@ -32,8 +34,15 @@ import {
 } from '@/components/notes/NotesExplorerTree'
 import { useNotesTreeContextActions } from '@/hooks/use-notes-tree-context-actions'
 import { MarkdownLiveEditor } from '@/components/notes/editor/MarkdownLiveEditor'
+import { NotesAnnotationsPanel } from '@/components/notes/NotesAnnotationsPanel'
+import type { MarkdownAnnotationMarker } from '@/components/notes/editor/markdown-annotation-extension'
 import type { NotesWorkspaceView } from '@/store/notes-store'
-import { relativeDate, groupNotesByDate, countTags, countWords } from '@/lib/notes-domain'
+import {
+  relativeDate,
+  groupNotesByDate,
+  countTags,
+  countWords,
+} from '@/lib/notes-domain'
 import { cn } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 import type { Note, NoteWorkspaceTree } from '@/lib/notes-domain'
@@ -45,6 +54,7 @@ interface NotesPageProps {
 }
 
 type NotesEditorMode = 'edit' | 'preview'
+type NotesEditorSelection = { from: number; to: number; text: string } | null
 
 const GROUP_LABEL_KEYS: Record<string, string> = {
   today: 'notes.groups.today',
@@ -782,6 +792,14 @@ function EditorArea({
   onRename,
   onCreateNote,
   onEditorModeChange,
+  annotations,
+  activeSelection,
+  annotationsPanelOpen,
+  onCreateAnnotation,
+  onSelectionChange,
+  onSelectAnnotation,
+  onAnnotationsChange,
+  onOpenAnnotationsPanel,
 }: {
   note: Note | null
   workspaceView: NotesWorkspaceView
@@ -794,6 +812,14 @@ function EditorArea({
   onRename: (noteId: string, title: string) => Promise<void>
   onCreateNote: () => Promise<void>
   onEditorModeChange: (mode: NotesEditorMode) => void
+  annotations: ReturnType<typeof useNotesStore.getState>['annotations']
+  activeSelection: NotesEditorSelection
+  annotationsPanelOpen: boolean
+  onCreateAnnotation: () => Promise<void>
+  onSelectionChange: (selection: NotesEditorSelection) => void
+  onSelectAnnotation: (annotationId: string) => void
+  onAnnotationsChange: (annotations: MarkdownAnnotationMarker[]) => void
+  onOpenAnnotationsPanel: () => void
 }) {
   const { t } = useTranslation()
   const [titleDraft, setTitleDraft] = useState({
@@ -801,7 +827,9 @@ function EditorArea({
     value: '',
   })
   const displayedTitle =
-    note && titleDraft.noteId === note.id ? titleDraft.value : (note?.title ?? '')
+    note && titleDraft.noteId === note.id
+      ? titleDraft.value
+      : (note?.title ?? '')
 
   async function commitTitle() {
     if (!note || workspaceView !== 'inbox') return
@@ -815,7 +843,9 @@ function EditorArea({
       await onRename(note.id, nextTitle)
     } catch (error) {
       setTitleDraft({ noteId: note.id, value: note.title ?? '' })
-      toast.error(t('notes.editor.renameFailed'), { description: String(error) })
+      toast.error(t('notes.editor.renameFailed'), {
+        description: String(error),
+      })
     }
   }
 
@@ -867,6 +897,27 @@ function EditorArea({
               onEditorModeChange={onEditorModeChange}
             />
           )}
+          {!isReadOnly && activeSelection && (
+            <button
+              type="button"
+              onClick={() => void onCreateAnnotation()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/70 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              <MessageSquarePlus className="size-3.5" />
+              {t('notes.annotations.createFromSelection')}
+            </button>
+          )}
+          {!annotationsPanelOpen && (
+            <button
+              type="button"
+              onClick={onOpenAnnotationsPanel}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/70 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-accent"
+              aria-label={t('notes.annotations.open')}
+            >
+              <PanelRightOpen className="size-3.5" />
+              {annotations.length}
+            </button>
+          )}
           <NoteActionsMenu
             note={note}
             workspaceView={workspaceView}
@@ -910,7 +961,11 @@ function EditorArea({
                   noteId={note.id}
                   value={note.content}
                   placeholder={t('notes.editor.placeholder')}
+                  annotations={annotations}
                   onChange={content => onContentChange(note.id, content)}
+                  onSelectionChange={onSelectionChange}
+                  onSelectAnnotation={onSelectAnnotation}
+                  onAnnotationsChange={onAnnotationsChange}
                 />
               ) : (
                 <div className="notes-paper-preview notes-inline-editor prose prose-sm max-w-none min-h-0 overflow-y-auto text-start text-foreground">
@@ -948,6 +1003,10 @@ function EditorArea({
 export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const { t } = useTranslation()
   const [editorMode, setEditorMode] = useState<NotesEditorMode>('edit')
+  const [selectionDraft, setSelectionDraft] = useState<{
+    noteId: string
+    selection: NotesEditorSelection
+  } | null>(null)
   const { contextDialog, onContextAction, onMoveTreeItem } =
     useNotesTreeContextActions()
   const notes = useNotesStore(state => state.notes)
@@ -958,7 +1017,15 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const tree = useNotesStore(state => state.tree)
   const isSaving = useNotesStore(state => state.isSaving)
   const isLoading = useNotesStore(state => state.isLoading)
+  const annotations = useNotesStore(state => state.annotations)
+  const selectedAnnotationId = useNotesStore(
+    state => state.selectedAnnotationId
+  )
+  const annotationsPanelOpen = useNotesStore(
+    state => state.annotationsPanelOpen
+  )
   const loadNotes = useNotesStore(state => state.loadNotes)
+  const loadAnnotations = useNotesStore(state => state.loadAnnotations)
   const setWorkspaceView = useNotesStore(state => state.setWorkspaceView)
   const createNote = useNotesStore(state => state.createNote)
   const renameNote = useNotesStore(state => state.renameNote)
@@ -969,6 +1036,23 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const selectNote = useNotesStore(state => state.selectNote)
   const setSearchQuery = useNotesStore(state => state.setSearchQuery)
   const setSelectedTag = useNotesStore(state => state.setSelectedTag)
+  const createAnnotation = useNotesStore(state => state.createAnnotation)
+  const updateAnnotationText = useNotesStore(
+    state => state.updateAnnotationText
+  )
+  const resolveAnnotation = useNotesStore(state => state.resolveAnnotation)
+  const reopenAnnotation = useNotesStore(state => state.reopenAnnotation)
+  const deleteAnnotation = useNotesStore(state => state.deleteAnnotation)
+  const repositionAnnotation = useNotesStore(
+    state => state.repositionAnnotation
+  )
+  const replaceLocalAnnotations = useNotesStore(
+    state => state.replaceLocalAnnotations
+  )
+  const selectAnnotation = useNotesStore(state => state.selectAnnotation)
+  const setAnnotationsPanelOpen = useNotesStore(
+    state => state.setAnnotationsPanelOpen
+  )
   const filteredNotes = useNotesStore(state => state.filteredNotes)
 
   useEffect(() => {
@@ -984,10 +1068,22 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
 
   const displayedNotes = filteredNotes()
   const selectedNote = selectedNoteId
-    ? displayedNotes.find(note => note.id === selectedNoteId) ?? null
+    ? (displayedNotes.find(note => note.id === selectedNoteId) ?? null)
     : null
   const activeNote = selectedNote ?? displayedNotes.at(0) ?? null
   const effectiveSelectedNoteId = activeNote?.id ?? null
+  const activeSelection =
+    selectionDraft && selectionDraft.noteId === activeNote?.id
+      ? selectionDraft.selection
+      : null
+
+  useEffect(() => {
+    if (!activeNote?.id) return
+
+    void loadAnnotations(activeNote.id).catch(error => {
+      logger.error(`Failed to load annotations for note: ${String(error)}`)
+    })
+  }, [activeNote?.id, loadAnnotations])
 
   useEffect(() => {
     if (
@@ -1011,6 +1107,53 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   function handleContentChange(noteId: string, content: string) {
     if (workspaceView !== 'inbox') return
     updateNote(noteId, content)
+  }
+
+  async function handleCreateAnnotation() {
+    if (!activeNote || !activeSelection) return
+
+    try {
+      await createAnnotation({
+        noteId: activeNote.id,
+        from: activeSelection.from,
+        to: activeSelection.to,
+        text: t('notes.annotations.defaultComment'),
+      })
+    } catch (error) {
+      toast.error(t('notes.annotations.createFailed'), {
+        description: String(error),
+      })
+    }
+  }
+
+  function handleSelectAnnotation(annotationId: string) {
+    selectAnnotation(annotationId)
+  }
+
+  function handleSelectionChange(selection: NotesEditorSelection) {
+    if (!activeNote?.id) {
+      setSelectionDraft(null)
+      return
+    }
+
+    setSelectionDraft({ noteId: activeNote.id, selection })
+  }
+
+  function handleAnnotationsChange(nextMarkers: MarkdownAnnotationMarker[]) {
+    const markersById = new Map(nextMarkers.map(marker => [marker.id, marker]))
+    replaceLocalAnnotations(
+      annotations.map(annotation => {
+        const marker = markersById.get(annotation.id)
+        return marker
+          ? {
+              ...annotation,
+              from: marker.from,
+              to: marker.to,
+              anchor_status: marker.anchor_status,
+            }
+          : annotation
+      })
+    )
   }
 
   async function handleRenameNote(noteId: string, title: string) {
@@ -1188,7 +1331,30 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           onRename={handleRenameNote}
           onCreateNote={handleCreateNote}
           onEditorModeChange={setEditorMode}
+          annotations={annotations}
+          activeSelection={activeSelection}
+          annotationsPanelOpen={annotationsPanelOpen}
+          onCreateAnnotation={handleCreateAnnotation}
+          onSelectionChange={handleSelectionChange}
+          onSelectAnnotation={handleSelectAnnotation}
+          onAnnotationsChange={handleAnnotationsChange}
+          onOpenAnnotationsPanel={() => setAnnotationsPanelOpen(true)}
         />
+        {activeNote && annotationsPanelOpen && (
+          <NotesAnnotationsPanel
+            noteId={activeNote.id}
+            annotations={annotations}
+            selectedAnnotationId={selectedAnnotationId}
+            activeSelection={activeSelection}
+            onClose={() => setAnnotationsPanelOpen(false)}
+            onSelect={handleSelectAnnotation}
+            onUpdateText={updateAnnotationText}
+            onResolve={resolveAnnotation}
+            onReopen={reopenAnnotation}
+            onDelete={deleteAnnotation}
+            onReposition={repositionAnnotation}
+          />
+        )}
       </div>
     </div>
   )

@@ -26,6 +26,13 @@ vi.mock('@/lib/tauri-bindings', () => ({
     archiveNote: vi.fn(),
     restoreNote: vi.fn(),
     searchNotes: vi.fn(),
+    listNoteAnnotations: vi.fn(),
+    createNoteAnnotation: vi.fn(),
+    updateNoteAnnotationText: vi.fn(),
+    resolveNoteAnnotation: vi.fn(),
+    reopenNoteAnnotation: vi.fn(),
+    deleteNoteAnnotation: vi.fn(),
+    repositionNoteAnnotation: vi.fn(),
   },
   unwrapResult: vi.fn(
     (result: { status: 'ok' | 'error'; data?: unknown; error?: string }) => {
@@ -111,6 +118,106 @@ describe('useNotesStore lifecycle actions', () => {
     vi.mocked(commands.searchNotes).mockResolvedValue({
       status: 'ok',
       data: [],
+    })
+    vi.mocked(commands.listNoteAnnotations).mockResolvedValue({
+      status: 'ok',
+      data: [],
+    })
+    vi.mocked(commands.createNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: 'inbox/alpha.md',
+        state: 'active',
+        anchor_status: 'anchored',
+        text: 'Check this',
+        from: 2,
+        to: 7,
+        quote: 'Alpha',
+        prefix: '# ',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:00:00.000Z',
+        resolved_at: null,
+      },
+    })
+    vi.mocked(commands.updateNoteAnnotationText).mockImplementation(
+      async input => ({
+        status: 'ok',
+        data: {
+          id: input.annotation_id,
+          note_id: input.note_id,
+          state: 'active',
+          anchor_status: 'anchored',
+          text: input.text,
+          from: 2,
+          to: 7,
+          quote: 'Alpha',
+          prefix: '# ',
+          suffix: '',
+          created_at: '2026-06-28T10:00:00.000Z',
+          updated_at: '2026-06-28T10:01:00.000Z',
+          resolved_at: null,
+        },
+      })
+    )
+    vi.mocked(commands.resolveNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: 'inbox/alpha.md',
+        state: 'resolved',
+        anchor_status: 'anchored',
+        text: 'Check this',
+        from: 2,
+        to: 7,
+        quote: 'Alpha',
+        prefix: '# ',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:02:00.000Z',
+        resolved_at: '2026-06-28T10:02:00.000Z',
+      },
+    })
+    vi.mocked(commands.reopenNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: 'inbox/alpha.md',
+        state: 'active',
+        anchor_status: 'anchored',
+        text: 'Check this',
+        from: 2,
+        to: 7,
+        quote: 'Alpha',
+        prefix: '# ',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:03:00.000Z',
+        resolved_at: null,
+      },
+    })
+    vi.mocked(commands.deleteNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
+    vi.mocked(commands.repositionNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: 'inbox/alpha.md',
+        state: 'active',
+        anchor_status: 'anchored',
+        text: 'Check this',
+        from: 8,
+        to: 12,
+        quote: 'Beta',
+        prefix: '',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:04:00.000Z',
+        resolved_at: null,
+      },
     })
     vi.mocked(commands.createNote).mockResolvedValue({
       status: 'ok',
@@ -322,6 +429,10 @@ describe('useNotesStore lifecycle actions', () => {
       isSaving: false,
       isLoading: false,
       isSearching: false,
+      annotations: [],
+      selectedAnnotationId: null,
+      annotationsPanelOpen: false,
+      isLoadingAnnotations: false,
     })
   })
 
@@ -339,6 +450,114 @@ describe('useNotesStore lifecycle actions', () => {
     ])
     expect(useNotesStore.getState().selectedNoteId).toBe('plan-id')
     expect(useNotesStore.getState().vaultError).toBeNull()
+  })
+
+  it('loads annotations for the selected note into a closed panel by default', async () => {
+    vi.mocked(commands.listNoteAnnotations).mockResolvedValue({
+      status: 'ok',
+      data: [
+        {
+          id: 'annotation-1',
+          note_id: 'inbox/alpha.md',
+          state: 'active',
+          anchor_status: 'anchored',
+          text: 'Check this',
+          from: 2,
+          to: 7,
+          quote: 'Alpha',
+          prefix: '# ',
+          suffix: '',
+          created_at: '2026-06-28T10:00:00.000Z',
+          updated_at: '2026-06-28T10:00:00.000Z',
+          resolved_at: null,
+        },
+      ],
+    })
+
+    await useNotesStore.getState().loadAnnotations('inbox/alpha.md')
+
+    expect(commands.listNoteAnnotations).toHaveBeenCalledWith('inbox/alpha.md')
+    expect(useNotesStore.getState().annotations).toHaveLength(1)
+    expect(useNotesStore.getState().selectedAnnotationId).toBeNull()
+    expect(useNotesStore.getState().annotationsPanelOpen).toBe(false)
+  })
+
+  it('creates an annotation from a non-empty selection and opens the panel', async () => {
+    const annotation = await useNotesStore.getState().createAnnotation({
+      noteId: 'inbox/alpha.md',
+      from: 2,
+      to: 7,
+      text: 'Check this',
+    })
+
+    expect(commands.createNoteAnnotation).toHaveBeenCalledWith({
+      note_id: 'inbox/alpha.md',
+      from: 2,
+      to: 7,
+      text: 'Check this',
+    })
+    expect(annotation.id).toBe('annotation-1')
+    expect(useNotesStore.getState().annotations.map(item => item.id)).toEqual([
+      'annotation-1',
+    ])
+    expect(useNotesStore.getState().selectedAnnotationId).toBe('annotation-1')
+    expect(useNotesStore.getState().annotationsPanelOpen).toBe(true)
+  })
+
+  it('rejects annotation creation from an empty selection before calling Tauri', async () => {
+    await expect(
+      useNotesStore.getState().createAnnotation({
+        noteId: 'inbox/alpha.md',
+        from: 4,
+        to: 4,
+        text: 'No selection',
+      })
+    ).rejects.toThrow('non-empty selection')
+
+    expect(commands.createNoteAnnotation).not.toHaveBeenCalled()
+  })
+
+  it('preserves annotations when annotation creation fails', async () => {
+    vi.mocked(commands.createNoteAnnotation).mockResolvedValue({
+      status: 'error',
+      error: 'sidecar write failed',
+    })
+    useNotesStore.setState({
+      annotations: [
+        {
+          id: 'existing',
+          note_id: 'inbox/alpha.md',
+          state: 'active',
+          anchor_status: 'anchored',
+          text: 'Existing',
+          from: 2,
+          to: 7,
+          quote: 'Alpha',
+          prefix: '# ',
+          suffix: '',
+          created_at: '2026-06-28T10:00:00.000Z',
+          updated_at: '2026-06-28T10:00:00.000Z',
+          resolved_at: null,
+        },
+      ],
+      selectedAnnotationId: 'existing',
+      annotationsPanelOpen: true,
+    })
+
+    await expect(
+      useNotesStore.getState().createAnnotation({
+        noteId: 'inbox/alpha.md',
+        from: 2,
+        to: 7,
+        text: 'Check this',
+      })
+    ).rejects.toThrow('sidecar write failed')
+
+    expect(useNotesStore.getState().annotations.map(item => item.id)).toEqual([
+      'existing',
+    ])
+    expect(useNotesStore.getState().selectedAnnotationId).toBe('existing')
+    expect(useNotesStore.getState().annotationsPanelOpen).toBe(true)
   })
 
   it('loads a physical workspace tree while preserving a stable selection', async () => {

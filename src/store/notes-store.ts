@@ -9,12 +9,20 @@ import type {
   NoteVaultInfo,
   NoteVaultMigrationMode,
   NoteVaultMigrationResult,
+  NoteAnnotation,
   NotesTreeItemRef,
   NoteWorkspaceTree as BindingNoteWorkspaceTree,
 } from '@/lib/tauri-bindings'
 import type { Note, NoteTreeItem, NoteWorkspaceTree } from '@/lib/notes-domain'
 
 export type NotesWorkspaceView = 'inbox' | 'archive' | 'trash'
+
+interface CreateAnnotationRequest {
+  noteId: string
+  from: number
+  to: number
+  text: string
+}
 
 interface NotesState {
   vaultInfo: NoteVaultInfo | null
@@ -30,6 +38,10 @@ interface NotesState {
   isSaving: boolean
   isLoading: boolean
   isSearching: boolean
+  annotations: NoteAnnotation[]
+  selectedAnnotationId: string | null
+  annotationsPanelOpen: boolean
+  isLoadingAnnotations: boolean
 
   loadNotes: () => Promise<void>
   loadWidgetNotes: () => Promise<void>
@@ -60,6 +72,25 @@ interface NotesState {
   selectNote: (id: string | null) => void
   setSearchQuery: (query: string) => void
   setSelectedTag: (tag: string | null) => void
+  loadAnnotations: (noteId: string) => Promise<void>
+  createAnnotation: (input: CreateAnnotationRequest) => Promise<NoteAnnotation>
+  updateAnnotationText: (
+    noteId: string,
+    annotationId: string,
+    text: string
+  ) => Promise<void>
+  resolveAnnotation: (noteId: string, annotationId: string) => Promise<void>
+  reopenAnnotation: (noteId: string, annotationId: string) => Promise<void>
+  deleteAnnotation: (noteId: string, annotationId: string) => Promise<void>
+  repositionAnnotation: (
+    noteId: string,
+    annotationId: string,
+    from: number,
+    to: number
+  ) => Promise<void>
+  replaceLocalAnnotations: (annotations: NoteAnnotation[]) => void
+  selectAnnotation: (annotationId: string | null) => void
+  setAnnotationsPanelOpen: (open: boolean) => void
 
   filteredNotes: () => Note[]
   selectedNote: () => Note | null
@@ -394,6 +425,22 @@ function reconcileSearchResults(
   })
 }
 
+function upsertAnnotation(
+  annotations: NoteAnnotation[],
+  nextAnnotation: NoteAnnotation
+): NoteAnnotation[] {
+  const exists = annotations.some(
+    annotation => annotation.id === nextAnnotation.id
+  )
+  if (!exists) {
+    return [nextAnnotation, ...annotations]
+  }
+
+  return annotations.map(annotation =>
+    annotation.id === nextAnnotation.id ? nextAnnotation : annotation
+  )
+}
+
 export const useNotesStore = create<NotesState>()(
   devtools(
     (set, get) => {
@@ -470,6 +517,10 @@ export const useNotesStore = create<NotesState>()(
         isSaving: false,
         isLoading: false,
         isSearching: false,
+        annotations: [],
+        selectedAnnotationId: null,
+        annotationsPanelOpen: false,
+        isLoadingAnnotations: false,
 
         loadNotes: async () => {
           if (loadNotesInFlight) {
@@ -838,7 +889,11 @@ export const useNotesStore = create<NotesState>()(
                     )
                     return null
                   })
-            const inboxTree = prependNoteToTree(currentTree, createdNote, folder) ?? {
+            const inboxTree = prependNoteToTree(
+              currentTree,
+              createdNote,
+              folder
+            ) ?? {
               workspace: 'inbox' as const,
               items: [{ kind: 'note' as const, note: createdNote }],
             }
@@ -899,9 +954,10 @@ export const useNotesStore = create<NotesState>()(
                   note.id === id ? renamedNote : note
                 ),
                 tree: updateNoteInTree(state.tree, renamedNote),
-                searchResults: state.searchResults?.map(note =>
-                  note.id === id ? renamedNote : note
-                ) ?? null,
+                searchResults:
+                  state.searchResults?.map(note =>
+                    note.id === id ? renamedNote : note
+                  ) ?? null,
               }),
               undefined,
               'renameNote/done'
@@ -966,6 +1022,33 @@ export const useNotesStore = create<NotesState>()(
                   })
                 )
               )
+              const syncedAnnotations: NoteAnnotation[] = []
+              for (const annotation of get().annotations) {
+                if (
+                  annotation.note_id !== id ||
+                  annotation.anchor_status !== 'anchored' ||
+                  annotation.from >= annotation.to
+                ) {
+                  continue
+                }
+
+                try {
+                  syncedAnnotations.push(
+                    unwrapResult(
+                      await commands.repositionNoteAnnotation({
+                        note_id: id,
+                        annotation_id: annotation.id,
+                        from: annotation.from,
+                        to: annotation.to,
+                      })
+                    )
+                  )
+                } catch (error) {
+                  logger.error(
+                    `Failed to sync note annotation anchor: ${String(error)}`
+                  )
+                }
+              }
 
               set(
                 state => ({
@@ -973,6 +1056,11 @@ export const useNotesStore = create<NotesState>()(
                     note.id === savedNote.id ? savedNote : note
                   ),
                   tree: updateNoteInTree(state.tree, savedNote),
+                  annotations: syncedAnnotations.reduce(
+                    (annotations, annotation) =>
+                      upsertAnnotation(annotations, annotation),
+                    state.annotations
+                  ),
                   isSaving: false,
                 }),
                 undefined,
@@ -1179,7 +1267,18 @@ export const useNotesStore = create<NotesState>()(
           }
         },
 
-        selectNote: id => set({ selectedNoteId: id }, undefined, 'selectNote'),
+        selectNote: id =>
+          set(
+            {
+              selectedNoteId: id,
+              annotations: [],
+              selectedAnnotationId: null,
+              annotationsPanelOpen: false,
+              isLoadingAnnotations: false,
+            },
+            undefined,
+            'selectNote'
+          ),
 
         setSearchQuery: query => {
           const trimmedQuery = query.trim()
@@ -1240,6 +1339,195 @@ export const useNotesStore = create<NotesState>()(
 
         setSelectedTag: tag =>
           set({ selectedTag: tag }, undefined, 'setSelectedTag'),
+
+        loadAnnotations: async noteId => {
+          set(
+            { isLoadingAnnotations: true },
+            undefined,
+            'loadAnnotations/start'
+          )
+
+          try {
+            const annotations = unwrapResult(
+              await commands.listNoteAnnotations(noteId)
+            )
+            set(
+              {
+                annotations,
+                selectedAnnotationId: null,
+                isLoadingAnnotations: false,
+              },
+              undefined,
+              'loadAnnotations/done'
+            )
+          } catch (error) {
+            logger.error(`Failed to load note annotations: ${String(error)}`)
+            set(
+              { annotations: [], isLoadingAnnotations: false },
+              undefined,
+              'loadAnnotations/error'
+            )
+            throw error
+          }
+        },
+
+        createAnnotation: async ({ noteId, from, to, text }) => {
+          if (from === to) {
+            throw new Error('Annotations require a non-empty selection')
+          }
+
+          const snapshot = {
+            annotations: get().annotations,
+            selectedAnnotationId: get().selectedAnnotationId,
+            annotationsPanelOpen: get().annotationsPanelOpen,
+          }
+
+          try {
+            const annotation = unwrapResult(
+              await commands.createNoteAnnotation({
+                note_id: noteId,
+                text,
+                from: Math.min(from, to),
+                to: Math.max(from, to),
+              })
+            )
+            set(
+              state => ({
+                annotations: upsertAnnotation(state.annotations, annotation),
+                selectedAnnotationId: annotation.id,
+                annotationsPanelOpen: true,
+              }),
+              undefined,
+              'createAnnotation/done'
+            )
+            return annotation
+          } catch (error) {
+            logger.error(`Failed to create note annotation: ${String(error)}`)
+            set(snapshot, undefined, 'createAnnotation/rollback')
+            throw error
+          }
+        },
+
+        updateAnnotationText: async (noteId, annotationId, text) => {
+          const annotation = unwrapResult(
+            await commands.updateNoteAnnotationText({
+              note_id: noteId,
+              annotation_id: annotationId,
+              text,
+            })
+          )
+          set(
+            state => ({
+              annotations: upsertAnnotation(state.annotations, annotation),
+            }),
+            undefined,
+            'updateAnnotationText/done'
+          )
+        },
+
+        resolveAnnotation: async (noteId, annotationId) => {
+          const annotation = unwrapResult(
+            await commands.resolveNoteAnnotation({
+              note_id: noteId,
+              annotation_id: annotationId,
+            })
+          )
+          set(
+            state => ({
+              annotations: upsertAnnotation(state.annotations, annotation),
+              selectedAnnotationId: annotation.id,
+              annotationsPanelOpen: true,
+            }),
+            undefined,
+            'resolveAnnotation/done'
+          )
+        },
+
+        reopenAnnotation: async (noteId, annotationId) => {
+          const annotation = unwrapResult(
+            await commands.reopenNoteAnnotation({
+              note_id: noteId,
+              annotation_id: annotationId,
+            })
+          )
+          set(
+            state => ({
+              annotations: upsertAnnotation(state.annotations, annotation),
+              selectedAnnotationId: annotation.id,
+              annotationsPanelOpen: true,
+            }),
+            undefined,
+            'reopenAnnotation/done'
+          )
+        },
+
+        deleteAnnotation: async (noteId, annotationId) => {
+          unwrapResult(
+            await commands.deleteNoteAnnotation({
+              note_id: noteId,
+              annotation_id: annotationId,
+            })
+          )
+          set(
+            state => ({
+              annotations: state.annotations.filter(
+                annotation => annotation.id !== annotationId
+              ),
+              selectedAnnotationId:
+                state.selectedAnnotationId === annotationId
+                  ? null
+                  : state.selectedAnnotationId,
+            }),
+            undefined,
+            'deleteAnnotation/done'
+          )
+        },
+
+        repositionAnnotation: async (noteId, annotationId, from, to) => {
+          if (from === to) {
+            throw new Error('Annotations require a non-empty selection')
+          }
+
+          const annotation = unwrapResult(
+            await commands.repositionNoteAnnotation({
+              note_id: noteId,
+              annotation_id: annotationId,
+              from: Math.min(from, to),
+              to: Math.max(from, to),
+            })
+          )
+          set(
+            state => ({
+              annotations: upsertAnnotation(state.annotations, annotation),
+              selectedAnnotationId: annotation.id,
+              annotationsPanelOpen: true,
+            }),
+            undefined,
+            'repositionAnnotation/done'
+          )
+        },
+
+        replaceLocalAnnotations: annotations =>
+          set({ annotations }, undefined, 'replaceLocalAnnotations'),
+
+        selectAnnotation: annotationId =>
+          set(
+            {
+              selectedAnnotationId: annotationId,
+              annotationsPanelOpen: annotationId
+                ? true
+                : get().annotationsPanelOpen,
+            },
+            undefined,
+            'selectAnnotation'
+          ),
+
+        setAnnotationsPanelOpen: open =>
+          set(
+            { annotationsPanelOpen: open },
+            undefined,
+            'setAnnotationsPanelOpen'
+          ),
 
         filteredNotes: () => {
           const {

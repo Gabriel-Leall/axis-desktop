@@ -216,6 +216,196 @@ fn ensure_empty_vault_seeds_welcome_note_with_stable_id() {
 }
 
 #[test]
+fn ensure_empty_vault_seeds_a_single_welcome_annotation_sidecar() {
+    let root = test_vault_root("axis-notes-welcome-annotation-seed-test");
+
+    ensure_vault_structure(&root).expect("vault structure should be created");
+    ensure_vault_structure(&root).expect("second ensure should be idempotent");
+
+    let manifest_path = root.join(VAULT_METADATA_DIR).join(VAULT_MANIFEST_FILE);
+    let manifest: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(manifest_path).expect("manifest should be readable"),
+    )
+    .expect("manifest should be valid JSON");
+    let welcome_id = manifest["welcome_note_id"]
+        .as_str()
+        .expect("welcome note should have a stable ID");
+    let sidecar_path = root
+        .join(VAULT_METADATA_DIR)
+        .join(VAULT_SIDECARS_DIR)
+        .join(format!("{welcome_id}.json"));
+    let sidecar: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(sidecar_path).expect("sidecar should be readable"),
+    )
+    .expect("sidecar should be valid JSON");
+
+    assert_eq!(
+        sidecar["schema_version"],
+        NOTE_ANNOTATION_SIDECAR_SCHEMA_VERSION
+    );
+    assert_eq!(sidecar["note_id"].as_str(), Some(welcome_id));
+    assert_eq!(
+        sidecar["annotations"]
+            .as_array()
+            .expect("annotations should be an array")
+            .len(),
+        1
+    );
+
+    std::fs::remove_dir_all(root).expect("test vault should be removable");
+}
+
+#[test]
+fn creates_annotation_sidecar_for_a_non_empty_range() {
+    let root = test_vault_root("axis-notes-create-annotation-test");
+    ensure_vault_structure(&root).expect("vault structure should be created");
+    std::fs::write(root.join(INBOX_DIR).join("plan.md"), "Alpha target Omega")
+        .expect("fixture note should be writable");
+    let note = read_all_notes(&root)
+        .expect("notes should be readable")
+        .into_iter()
+        .find(|note| note.path == "inbox/plan.md")
+        .expect("plan should be listed");
+
+    let annotation = create_note_annotation_at_range(
+        &root,
+        &note.id,
+        CreateNoteAnnotationInput {
+            note_id: note.id.clone(),
+            text: "Check this".to_string(),
+            from: 6,
+            to: 12,
+        },
+    )
+    .expect("annotation should be created");
+
+    assert_eq!(annotation.note_id, note.id);
+    assert_eq!(annotation.text, "Check this");
+    assert_eq!(annotation.quote, "target");
+    assert_eq!(
+        annotation.anchor_status,
+        NoteAnnotationAnchorStatus::Anchored
+    );
+    assert!(root
+        .join(VAULT_METADATA_DIR)
+        .join(VAULT_SIDECARS_DIR)
+        .join(format!("{}.json", annotation.note_id))
+        .is_file());
+
+    std::fs::remove_dir_all(root).expect("test vault should be removable");
+}
+
+#[test]
+fn rejects_annotation_creation_without_a_selection() {
+    let root = test_vault_root("axis-notes-empty-annotation-test");
+    ensure_vault_structure(&root).expect("vault structure should be created");
+    std::fs::write(root.join(INBOX_DIR).join("plan.md"), "Alpha target Omega")
+        .expect("fixture note should be writable");
+    let note = read_all_notes(&root)
+        .expect("notes should be readable")
+        .into_iter()
+        .find(|note| note.path == "inbox/plan.md")
+        .expect("plan should be listed");
+
+    let error = create_note_annotation_at_range(
+        &root,
+        &note.id,
+        CreateNoteAnnotationInput {
+            note_id: note.id.clone(),
+            text: "No selection".to_string(),
+            from: 6,
+            to: 6,
+        },
+    )
+    .expect_err("empty selection should fail");
+
+    assert!(error.contains("non-empty selection"));
+
+    std::fs::remove_dir_all(root).expect("test vault should be removable");
+}
+
+#[test]
+fn marks_annotation_anchor_lost_when_external_reconciliation_is_ambiguous() {
+    let root = test_vault_root("axis-notes-annotation-ambiguous-test");
+    ensure_vault_structure(&root).expect("vault structure should be created");
+    let path = root.join(INBOX_DIR).join("plan.md");
+    std::fs::write(&path, "Alpha target Omega").expect("fixture note should be writable");
+    let note = read_all_notes(&root)
+        .expect("notes should be readable")
+        .into_iter()
+        .find(|note| note.path == "inbox/plan.md")
+        .expect("plan should be listed");
+    let created = create_note_annotation_at_range(
+        &root,
+        &note.id,
+        CreateNoteAnnotationInput {
+            note_id: note.id.clone(),
+            text: "Check this".to_string(),
+            from: 6,
+            to: 12,
+        },
+    )
+    .expect("annotation should be created");
+
+    std::fs::write(&path, "target appears twice: target")
+        .expect("fixture note should be rewritten");
+    let annotations =
+        list_note_annotations_for_note(&root, &note.id).expect("annotations should list");
+
+    assert_eq!(annotations.len(), 1);
+    assert_eq!(annotations[0].id, created.id);
+    assert_eq!(
+        annotations[0].anchor_status,
+        NoteAnnotationAnchorStatus::Lost
+    );
+
+    std::fs::remove_dir_all(root).expect("test vault should be removable");
+}
+
+#[test]
+fn reposition_annotation_preserves_id_and_comment_text() {
+    let root = test_vault_root("axis-notes-annotation-reposition-test");
+    ensure_vault_structure(&root).expect("vault structure should be created");
+    let path = root.join(INBOX_DIR).join("plan.md");
+    std::fs::write(&path, "Alpha target Omega").expect("fixture note should be writable");
+    let note = read_all_notes(&root)
+        .expect("notes should be readable")
+        .into_iter()
+        .find(|note| note.path == "inbox/plan.md")
+        .expect("plan should be listed");
+    let created = create_note_annotation_at_range(
+        &root,
+        &note.id,
+        CreateNoteAnnotationInput {
+            note_id: note.id.clone(),
+            text: "Keep text".to_string(),
+            from: 6,
+            to: 12,
+        },
+    )
+    .expect("annotation should be created");
+
+    let repositioned = reposition_note_annotation_at_range(
+        &root,
+        RepositionNoteAnnotationInput {
+            note_id: note.id.clone(),
+            annotation_id: created.id.clone(),
+            from: 13,
+            to: 18,
+        },
+    )
+    .expect("annotation should reposition");
+
+    assert_eq!(repositioned.id, created.id);
+    assert_eq!(repositioned.text, "Keep text");
+    assert_eq!(repositioned.quote, "Omega");
+    assert_eq!(repositioned.from, 13);
+    assert_eq!(repositioned.to, 18);
+
+    std::fs::remove_dir_all(root).expect("test vault should be removable");
+}
+
+#[test]
 fn ensure_existing_vault_never_receives_welcome_content() {
     let root = test_vault_root("axis-notes-existing-vault-test");
     let inbox = root.join(INBOX_DIR);
