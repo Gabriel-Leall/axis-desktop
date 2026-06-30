@@ -33,9 +33,12 @@ import {
   type NotesTreeItemRef,
 } from '@/components/notes/NotesExplorerTree'
 import { useNotesTreeContextActions } from '@/hooks/use-notes-tree-context-actions'
+import {
+  useNotesAnnotationsController,
+  type NotesEditorSelection,
+} from '@/hooks/use-notes-annotations-controller'
 import { MarkdownLiveEditor } from '@/components/notes/editor/MarkdownLiveEditor'
 import { NotesAnnotationsPanel } from '@/components/notes/NotesAnnotationsPanel'
-import type { MarkdownAnnotationMarker } from '@/components/notes/editor/markdown-annotation-extension'
 import type { NotesWorkspaceView } from '@/store/notes-store'
 import {
   relativeDate,
@@ -54,8 +57,6 @@ interface NotesPageProps {
 }
 
 type NotesEditorMode = 'edit' | 'preview'
-type NotesEditorSelection = { from: number; to: number; text: string } | null
-
 const GROUP_LABEL_KEYS: Record<string, string> = {
   today: 'notes.groups.today',
   yesterday: 'notes.groups.yesterday',
@@ -818,7 +819,9 @@ function EditorArea({
   onCreateAnnotation: () => Promise<void>
   onSelectionChange: (selection: NotesEditorSelection) => void
   onSelectAnnotation: (annotationId: string) => void
-  onAnnotationsChange: (annotations: MarkdownAnnotationMarker[]) => void
+  onAnnotationsChange: Parameters<
+    typeof MarkdownLiveEditor
+  >[0]['onAnnotationsChange']
   onOpenAnnotationsPanel: () => void
 }) {
   const { t } = useTranslation()
@@ -1003,10 +1006,6 @@ function EditorArea({
 export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const { t } = useTranslation()
   const [editorMode, setEditorMode] = useState<NotesEditorMode>('edit')
-  const [selectionDraft, setSelectionDraft] = useState<{
-    noteId: string
-    selection: NotesEditorSelection
-  } | null>(null)
   const { contextDialog, onContextAction, onMoveTreeItem } =
     useNotesTreeContextActions()
   const notes = useNotesStore(state => state.notes)
@@ -1017,15 +1016,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const tree = useNotesStore(state => state.tree)
   const isSaving = useNotesStore(state => state.isSaving)
   const isLoading = useNotesStore(state => state.isLoading)
-  const annotations = useNotesStore(state => state.annotations)
-  const selectedAnnotationId = useNotesStore(
-    state => state.selectedAnnotationId
-  )
-  const annotationsPanelOpen = useNotesStore(
-    state => state.annotationsPanelOpen
-  )
   const loadNotes = useNotesStore(state => state.loadNotes)
-  const loadAnnotations = useNotesStore(state => state.loadAnnotations)
   const setWorkspaceView = useNotesStore(state => state.setWorkspaceView)
   const createNote = useNotesStore(state => state.createNote)
   const renameNote = useNotesStore(state => state.renameNote)
@@ -1036,23 +1027,6 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   const selectNote = useNotesStore(state => state.selectNote)
   const setSearchQuery = useNotesStore(state => state.setSearchQuery)
   const setSelectedTag = useNotesStore(state => state.setSelectedTag)
-  const createAnnotation = useNotesStore(state => state.createAnnotation)
-  const updateAnnotationText = useNotesStore(
-    state => state.updateAnnotationText
-  )
-  const resolveAnnotation = useNotesStore(state => state.resolveAnnotation)
-  const reopenAnnotation = useNotesStore(state => state.reopenAnnotation)
-  const deleteAnnotation = useNotesStore(state => state.deleteAnnotation)
-  const repositionAnnotation = useNotesStore(
-    state => state.repositionAnnotation
-  )
-  const replaceLocalAnnotations = useNotesStore(
-    state => state.replaceLocalAnnotations
-  )
-  const selectAnnotation = useNotesStore(state => state.selectAnnotation)
-  const setAnnotationsPanelOpen = useNotesStore(
-    state => state.setAnnotationsPanelOpen
-  )
   const filteredNotes = useNotesStore(state => state.filteredNotes)
 
   useEffect(() => {
@@ -1072,18 +1046,22 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     : null
   const activeNote = selectedNote ?? displayedNotes.at(0) ?? null
   const effectiveSelectedNoteId = activeNote?.id ?? null
-  const activeSelection =
-    selectionDraft && selectionDraft.noteId === activeNote?.id
-      ? selectionDraft.selection
-      : null
-
-  useEffect(() => {
-    if (!activeNote?.id) return
-
-    void loadAnnotations(activeNote.id).catch(error => {
-      logger.error(`Failed to load annotations for note: ${String(error)}`)
-    })
-  }, [activeNote?.id, loadAnnotations])
+  const {
+    annotations,
+    selectedAnnotationId,
+    annotationsPanelOpen,
+    activeSelection,
+    handleCreateAnnotation,
+    handleSelectionChange,
+    handleSelectAnnotation,
+    handleAnnotationsChange,
+    updateAnnotationText,
+    resolveAnnotation,
+    reopenAnnotation,
+    deleteAnnotation,
+    repositionAnnotation,
+    setAnnotationsPanelOpen,
+  } = useNotesAnnotationsController(activeNote)
 
   useEffect(() => {
     if (
@@ -1107,53 +1085,6 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   function handleContentChange(noteId: string, content: string) {
     if (workspaceView !== 'inbox') return
     updateNote(noteId, content)
-  }
-
-  async function handleCreateAnnotation() {
-    if (!activeNote || !activeSelection) return
-
-    try {
-      await createAnnotation({
-        noteId: activeNote.id,
-        from: activeSelection.from,
-        to: activeSelection.to,
-        text: t('notes.annotations.defaultComment'),
-      })
-    } catch (error) {
-      toast.error(t('notes.annotations.createFailed'), {
-        description: String(error),
-      })
-    }
-  }
-
-  function handleSelectAnnotation(annotationId: string) {
-    selectAnnotation(annotationId)
-  }
-
-  function handleSelectionChange(selection: NotesEditorSelection) {
-    if (!activeNote?.id) {
-      setSelectionDraft(null)
-      return
-    }
-
-    setSelectionDraft({ noteId: activeNote.id, selection })
-  }
-
-  function handleAnnotationsChange(nextMarkers: MarkdownAnnotationMarker[]) {
-    const markersById = new Map(nextMarkers.map(marker => [marker.id, marker]))
-    replaceLocalAnnotations(
-      annotations.map(annotation => {
-        const marker = markersById.get(annotation.id)
-        return marker
-          ? {
-              ...annotation,
-              from: marker.from,
-              to: marker.to,
-              anchor_status: marker.anchor_status,
-            }
-          : annotation
-      })
-    )
   }
 
   async function handleRenameNote(noteId: string, title: string) {

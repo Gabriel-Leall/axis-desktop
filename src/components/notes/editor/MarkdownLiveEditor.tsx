@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react'
 import type { EditorView } from '@codemirror/view'
 import { createMarkdownEditor } from './markdown-editor-runtime'
-import type { MarkdownAnnotationMarker } from './markdown-annotation-extension'
+import {
+  setMarkdownAnnotationsEffect,
+  type MarkdownAnnotationMarker,
+} from './markdown-annotation-extension'
 
 interface MarkdownLiveEditorProps {
   noteId: string
@@ -16,6 +19,8 @@ interface MarkdownLiveEditorProps {
   onSelectAnnotation?: (annotationId: string) => void
   onAnnotationsChange?: (annotations: MarkdownAnnotationMarker[]) => void
 }
+
+const EMPTY_ANNOTATIONS: MarkdownAnnotationMarker[] = []
 
 function replaceEditorDocument(view: EditorView, value: string) {
   const selection = view.state.selection.main
@@ -35,7 +40,7 @@ export function MarkdownLiveEditor({
   value,
   placeholder: placeholderText,
   readOnly = false,
-  annotations = [],
+  annotations = EMPTY_ANNOTATIONS,
   onChange,
   onSelectionChange,
   onSelectAnnotation,
@@ -130,13 +135,9 @@ export function MarkdownLiveEditor({
     const view = viewRef.current
     if (!view) return
 
-    void import('./markdown-annotation-extension').then(
-      ({ setMarkdownAnnotationsEffect }) => {
-        view.dispatch({
-          effects: setMarkdownAnnotationsEffect.of(annotations),
-        })
-      }
-    )
+    view.dispatch({
+      effects: setMarkdownAnnotationsEffect.of(annotations),
+    })
   }, [annotations])
 
   useEffect(() => {

@@ -50,7 +50,7 @@ export function NotesAnnotationsPanel({
 
   return (
     <aside className="notes-paper-sidebar flex h-full w-72 shrink-0 flex-col border-s border-border/70 text-card-foreground">
-      <div className="flex items-start justify-between gap-3 border-b border-border/60 px-3 py-3">
+      <div className="flex items-start justify-between gap-3 border-b border-border/60 p-3">
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <MessageSquare className="size-4" />
@@ -128,7 +128,7 @@ export function NotesAnnotationsPanel({
                       void onUpdateText(noteId, annotation.id, nextText)
                     }
                   }}
-                  className="min-h-20 w-full resize-none rounded-lg border border-border/70 bg-card/50 px-2 py-2 text-xs text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="min-h-20 w-full resize-none rounded-lg border border-border/70 bg-card/50 p-2 text-xs text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   aria-label={t('notes.annotations.commentLabel')}
                 />
 
