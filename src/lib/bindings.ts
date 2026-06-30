@@ -742,6 +742,62 @@ async restoreNote(id: string) : Promise<Result<NoteSummary, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async listNoteAnnotations(noteId: string) : Promise<Result<NoteAnnotation[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_note_annotations", { noteId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createNoteAnnotation(input: CreateNoteAnnotationInput) : Promise<Result<NoteAnnotation, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_note_annotation", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateNoteAnnotationText(input: UpdateNoteAnnotationTextInput) : Promise<Result<NoteAnnotation, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_note_annotation_text", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async resolveNoteAnnotation(input: NoteAnnotationRefInput) : Promise<Result<NoteAnnotation, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("resolve_note_annotation", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async reopenNoteAnnotation(input: NoteAnnotationRefInput) : Promise<Result<NoteAnnotation, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("reopen_note_annotation", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async deleteNoteAnnotation(input: NoteAnnotationRefInput) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_note_annotation", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async repositionNoteAnnotation(input: RepositionNoteAnnotationInput) : Promise<Result<NoteAnnotation, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("reposition_note_annotation", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async searchNotes(query: string) : Promise<Result<Note[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("search_notes", { query }) };
@@ -879,6 +935,7 @@ export type ColumnOrderUpdate = { id: string; sort_order: number; updated_at: st
 export type CreateDailyPlanInput = { id: string; plan_date: string; focus_task_id: string | null; status: string; focus_source: string; created_at: string; updated_at: string }
 export type CreateEventInput = { id: string; title: string; description: string | null; start_date: string; end_date: string; all_day: boolean; color: string | null; created_at: string; updated_at: string }
 export type CreateHabitInput = { id: string; name: string; color: string; icon: string | null; frequency: string; frequency_days: string | null; sort_order: number; created_at: string; updated_at: string }
+export type CreateNoteAnnotationInput = { note_id: string; text: string; from: number; to: number }
 export type CreateNoteInput = { title: string | null; content: string | null; folder: string | null }
 export type CreateNotesFolderInput = { parent_path: string; name: string }
 export type CreateSubtaskInput = { id: string; task_id: string; title: string; sort_order: number; created_at: string }
@@ -897,6 +954,10 @@ export type KanbanSubtask = { id: string; card_id: string; title: string; comple
 export type MigrateNotesVaultInput = { source_path: string; mode: NoteVaultMigrationMode }
 export type MoveNotesTreeItemInput = { item: NotesTreeItemRef; destination_folder: string }
 export type Note = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
+export type NoteAnnotation = { id: string; note_id: string; state: NoteAnnotationState; anchor_status: NoteAnnotationAnchorStatus; text: string; from: number; to: number; quote: string; prefix: string; suffix: string; created_at: string; updated_at: string; resolved_at: string | null }
+export type NoteAnnotationAnchorStatus = "anchored" | "lost"
+export type NoteAnnotationRefInput = { note_id: string; annotation_id: string }
+export type NoteAnnotationState = "active" | "resolved"
 export type NoteSummary = { id: string; path: string; title: string; content: string; created_at: string; updated_at: string; word_count: number; tags: string[]; wiki_links: string[]; has_attachments: boolean; excerpt: string }
 export type NoteTreeItem = { kind: "folder"; path: string; name: string; children: NoteTreeItem[] } | { kind: "note"; note: NoteSummary }
 export type NoteVaultInfo = { path: string; is_default: boolean }
@@ -935,11 +996,13 @@ export type RecoveryError =
 { type: "ParseError"; message: string }
 export type RenameNoteInput = { id: string; title: string }
 export type RenameNotesFolderInput = { path: string; name: string }
+export type RepositionNoteAnnotationInput = { note_id: string; annotation_id: string; from: number; to: number }
 export type Subtask = { id: string; task_id: string; title: string; completed: boolean; sort_order: number; created_at: string }
 export type Task = { id: string; title: string; description: string | null; priority: string; status: string; due_date: string | null; completed_at: string | null; created_at: string; updated_at: string; sort_order: number }
 export type TaskCountByDay = { day: string; created: number; completed: number }
 export type UpdateEventInput = { id: string; title: string | null; description: string | null; start_date: string | null; end_date: string | null; all_day: boolean | null; color: string | null; updated_at: string }
 export type UpdateHabitInput = { id: string; name: string | null; color: string | null; icon: string | null; frequency: string | null; frequency_days: string | null; sort_order: number | null; updated_at: string }
+export type UpdateNoteAnnotationTextInput = { note_id: string; annotation_id: string; text: string }
 export type UpdateNoteInput = { id: string; content: string }
 export type UpdateTaskInput = { id: string; title: string | null; description: string | null; priority: string | null; status: string | null; due_date: string | null; completed_at: string | null; updated_at: string; sort_order: number | null }
 

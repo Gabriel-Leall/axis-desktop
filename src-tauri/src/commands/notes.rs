@@ -458,7 +458,13 @@ fn seed_welcome_note(root: &Path) -> Result<(), String> {
     let path = relative_note_path(root, &welcome_path)?;
     let id = metadata.id_for_path(&path);
     metadata.set_welcome_note_id(id);
-    metadata.persist_if_dirty()
+    metadata.persist_if_dirty()?;
+    let welcome_id = metadata
+        .manifest
+        .welcome_note_id
+        .clone()
+        .ok_or_else(|| "Welcome note ID was not persisted".to_string())?;
+    seed_welcome_annotation(root, &welcome_id)
 }
 
 fn ensure_not_symlink(path: &Path, context: &str) -> Result<(), String> {
@@ -881,6 +887,10 @@ fn create_note_at_path(
 mod lifecycle;
 use lifecycle::*;
 
+#[path = "notes/annotations.rs"]
+mod annotations;
+use annotations::*;
+
 fn move_note_to_vault_dir(root: &Path, id: &str, destination_dir: &str) -> Result<Note, String> {
     let mut metadata = load_vault_metadata(root)?;
     let src_abs = resolve_note_path_by_id(root, &mut metadata, id)?;
@@ -1039,6 +1049,51 @@ fn is_default_welcome_note(file: &VaultMigrationFile) -> bool {
         .unwrap_or(false)
 }
 
+fn is_default_welcome_annotation_sidecar(source_root: &Path, file: &VaultMigrationFile) -> bool {
+    if file.kind != VaultMigrationFileKind::Metadata {
+        return false;
+    }
+
+    let Ok(metadata) = load_vault_metadata(source_root) else {
+        return false;
+    };
+    let Some(welcome_note_id) = metadata.manifest.welcome_note_id else {
+        return false;
+    };
+    let expected_sidecar_path =
+        format!("{VAULT_METADATA_DIR}/{VAULT_SIDECARS_DIR}/{welcome_note_id}.json");
+    if file.relative_path != expected_sidecar_path {
+        return false;
+    }
+
+    let welcome_is_default = std::fs::read_to_string(source_root.join(WELCOME_NOTE_RELATIVE_PATH))
+        .map(|content| content == WELCOME_NOTE_CONTENT)
+        .unwrap_or(false);
+    if !welcome_is_default {
+        return false;
+    }
+
+    let Some(sidecar) = std::fs::read_to_string(&file.source_abs)
+        .ok()
+        .and_then(|content| serde_json::from_str::<serde_json::Value>(&content).ok())
+    else {
+        return false;
+    };
+    let Some(annotations) = sidecar["annotations"].as_array() else {
+        return false;
+    };
+    let Some(annotation) = annotations.first() else {
+        return false;
+    };
+
+    sidecar["note_id"].as_str() == Some(welcome_note_id.as_str())
+        && annotations.len() == 1
+        && annotation["quote"].as_str() == Some(WELCOME_ANNOTATION_QUOTE)
+        && annotation["text"].as_str() == Some(WELCOME_ANNOTATION_TEXT)
+        && annotation["state"].as_str() == Some("active")
+        && annotation["anchor_status"].as_str() == Some("anchored")
+}
+
 fn migrate_notes_vault_contents(
     source_root: &Path,
     destination_root: &Path,
@@ -1074,7 +1129,10 @@ fn migrate_notes_vault_contents(
         .into_iter()
         // A fresh destination already owns this app-provided note. A user edit
         // changes its content, so it remains a normal migration candidate.
-        .filter(|file| !is_default_welcome_note(file))
+        .filter(|file| {
+            !is_default_welcome_note(file)
+                && !is_default_welcome_annotation_sidecar(source_root, file)
+        })
         .collect();
     let conflicts: Vec<String> = files
         .iter()
@@ -1359,6 +1417,76 @@ pub async fn restore_note(app: AppHandle, id: String) -> Result<NoteSummary, Str
     let root = notes_root(&app)?;
     let note = restore_note_to_inbox(&root, &id)?;
     Ok(summary_from_note(&note))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn list_note_annotations(
+    app: AppHandle,
+    note_id: String,
+) -> Result<Vec<NoteAnnotation>, String> {
+    let root = notes_root(&app)?;
+    list_note_annotations_for_note(&root, &note_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn create_note_annotation(
+    app: AppHandle,
+    input: CreateNoteAnnotationInput,
+) -> Result<NoteAnnotation, String> {
+    let root = notes_root(&app)?;
+    create_note_annotation_at_range(&root, &input.note_id.clone(), input)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn update_note_annotation_text(
+    app: AppHandle,
+    input: UpdateNoteAnnotationTextInput,
+) -> Result<NoteAnnotation, String> {
+    let root = notes_root(&app)?;
+    update_note_annotation_text_at_path(&root, input)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn resolve_note_annotation(
+    app: AppHandle,
+    input: NoteAnnotationRefInput,
+) -> Result<NoteAnnotation, String> {
+    let root = notes_root(&app)?;
+    set_note_annotation_state_at_path(&root, input, NoteAnnotationState::Resolved)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn reopen_note_annotation(
+    app: AppHandle,
+    input: NoteAnnotationRefInput,
+) -> Result<NoteAnnotation, String> {
+    let root = notes_root(&app)?;
+    set_note_annotation_state_at_path(&root, input, NoteAnnotationState::Active)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_note_annotation(
+    app: AppHandle,
+    input: NoteAnnotationRefInput,
+) -> Result<(), String> {
+    let root = notes_root(&app)?;
+    delete_note_annotation_at_path(&root, input)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn reposition_note_annotation(
+    app: AppHandle,
+    input: RepositionNoteAnnotationInput,
+) -> Result<NoteAnnotation, String> {
+    let root = notes_root(&app)?;
+    reposition_note_annotation_at_range(&root, input)
 }
 
 #[tauri::command]

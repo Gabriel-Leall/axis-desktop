@@ -68,6 +68,13 @@ export type {
   NoteTreeItem,
   NoteWorkspaceTree,
   NotesWorkspace,
+  NoteAnnotation,
+  NoteAnnotationAnchorStatus,
+  NoteAnnotationRefInput,
+  NoteAnnotationState,
+  CreateNoteAnnotationInput,
+  RepositionNoteAnnotationInput,
+  UpdateNoteAnnotationTextInput,
 } from './bindings'
 
 // OAuth domain

@@ -26,6 +26,13 @@ vi.mock('@/lib/tauri-bindings', () => ({
     archiveNote: vi.fn(),
     restoreNote: vi.fn(),
     searchNotes: vi.fn(),
+    listNoteAnnotations: vi.fn(),
+    createNoteAnnotation: vi.fn(),
+    updateNoteAnnotationText: vi.fn(),
+    resolveNoteAnnotation: vi.fn(),
+    reopenNoteAnnotation: vi.fn(),
+    deleteNoteAnnotation: vi.fn(),
+    repositionNoteAnnotation: vi.fn(),
   },
   unwrapResult: vi.fn(
     (result: { status: 'ok' | 'error'; data?: unknown; error?: string }) => {
@@ -111,6 +118,106 @@ describe('useNotesStore lifecycle actions', () => {
     vi.mocked(commands.searchNotes).mockResolvedValue({
       status: 'ok',
       data: [],
+    })
+    vi.mocked(commands.listNoteAnnotations).mockResolvedValue({
+      status: 'ok',
+      data: [],
+    })
+    vi.mocked(commands.createNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: 'inbox/alpha.md',
+        state: 'active',
+        anchor_status: 'anchored',
+        text: 'Check this',
+        from: 2,
+        to: 7,
+        quote: 'Alpha',
+        prefix: '# ',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:00:00.000Z',
+        resolved_at: null,
+      },
+    })
+    vi.mocked(commands.updateNoteAnnotationText).mockImplementation(
+      async input => ({
+        status: 'ok',
+        data: {
+          id: input.annotation_id,
+          note_id: input.note_id,
+          state: 'active',
+          anchor_status: 'anchored',
+          text: input.text,
+          from: 2,
+          to: 7,
+          quote: 'Alpha',
+          prefix: '# ',
+          suffix: '',
+          created_at: '2026-06-28T10:00:00.000Z',
+          updated_at: '2026-06-28T10:01:00.000Z',
+          resolved_at: null,
+        },
+      })
+    )
+    vi.mocked(commands.resolveNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: 'inbox/alpha.md',
+        state: 'resolved',
+        anchor_status: 'anchored',
+        text: 'Check this',
+        from: 2,
+        to: 7,
+        quote: 'Alpha',
+        prefix: '# ',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:02:00.000Z',
+        resolved_at: '2026-06-28T10:02:00.000Z',
+      },
+    })
+    vi.mocked(commands.reopenNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: 'inbox/alpha.md',
+        state: 'active',
+        anchor_status: 'anchored',
+        text: 'Check this',
+        from: 2,
+        to: 7,
+        quote: 'Alpha',
+        prefix: '# ',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:03:00.000Z',
+        resolved_at: null,
+      },
+    })
+    vi.mocked(commands.deleteNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: null,
+    })
+    vi.mocked(commands.repositionNoteAnnotation).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'annotation-1',
+        note_id: 'inbox/alpha.md',
+        state: 'active',
+        anchor_status: 'anchored',
+        text: 'Check this',
+        from: 8,
+        to: 12,
+        quote: 'Beta',
+        prefix: '',
+        suffix: '',
+        created_at: '2026-06-28T10:00:00.000Z',
+        updated_at: '2026-06-28T10:04:00.000Z',
+        resolved_at: null,
+      },
     })
     vi.mocked(commands.createNote).mockResolvedValue({
       status: 'ok',
@@ -322,6 +429,10 @@ describe('useNotesStore lifecycle actions', () => {
       isSaving: false,
       isLoading: false,
       isSearching: false,
+      annotations: [],
+      selectedAnnotationId: null,
+      annotationsPanelOpen: false,
+      isLoadingAnnotations: false,
     })
   })
 
@@ -339,6 +450,197 @@ describe('useNotesStore lifecycle actions', () => {
     ])
     expect(useNotesStore.getState().selectedNoteId).toBe('plan-id')
     expect(useNotesStore.getState().vaultError).toBeNull()
+  })
+
+  it('loads annotations for the selected note into a closed panel by default', async () => {
+    vi.mocked(commands.listNoteAnnotations).mockResolvedValue({
+      status: 'ok',
+      data: [
+        {
+          id: 'annotation-1',
+          note_id: 'inbox/alpha.md',
+          state: 'active',
+          anchor_status: 'anchored',
+          text: 'Check this',
+          from: 2,
+          to: 7,
+          quote: 'Alpha',
+          prefix: '# ',
+          suffix: '',
+          created_at: '2026-06-28T10:00:00.000Z',
+          updated_at: '2026-06-28T10:00:00.000Z',
+          resolved_at: null,
+        },
+      ],
+    })
+
+    await useNotesStore.getState().loadAnnotations('inbox/alpha.md')
+
+    expect(commands.listNoteAnnotations).toHaveBeenCalledWith('inbox/alpha.md')
+    expect(useNotesStore.getState().annotations).toHaveLength(1)
+    expect(useNotesStore.getState().selectedAnnotationId).toBeNull()
+    expect(useNotesStore.getState().annotationsPanelOpen).toBe(false)
+  })
+
+  it('ignores stale annotation loads when a newer note request wins the race', async () => {
+    const unresolvedResolver = () => {
+      throw new Error('Test resolver was used before assignment')
+    }
+    let resolveFirstLoad: (
+      value: Awaited<ReturnType<typeof commands.listNoteAnnotations>>
+    ) => void = unresolvedResolver
+    let resolveSecondLoad: (
+      value: Awaited<ReturnType<typeof commands.listNoteAnnotations>>
+    ) => void = unresolvedResolver
+
+    const firstLoadPromise = new Promise<
+      Awaited<ReturnType<typeof commands.listNoteAnnotations>>
+    >(resolve => {
+      resolveFirstLoad = resolve
+    })
+    const secondLoadPromise = new Promise<
+      Awaited<ReturnType<typeof commands.listNoteAnnotations>>
+    >(resolve => {
+      resolveSecondLoad = resolve
+    })
+
+    vi.mocked(commands.listNoteAnnotations)
+      .mockImplementationOnce(() => firstLoadPromise)
+      .mockImplementationOnce(() => secondLoadPromise)
+
+    const firstLoad = useNotesStore.getState().loadAnnotations('inbox/alpha.md')
+    const secondLoad = useNotesStore.getState().loadAnnotations('inbox/beta.md')
+
+    resolveSecondLoad({
+      status: 'ok',
+      data: [
+        {
+          id: 'beta-annotation',
+          note_id: 'inbox/beta.md',
+          state: 'active',
+          anchor_status: 'anchored',
+          text: 'Beta annotation',
+          from: 1,
+          to: 5,
+          quote: 'Beta',
+          prefix: '# ',
+          suffix: '',
+          created_at: '2026-06-28T10:05:00.000Z',
+          updated_at: '2026-06-28T10:05:00.000Z',
+          resolved_at: null,
+        },
+      ],
+    })
+    await secondLoad
+
+    expect(useNotesStore.getState().annotations.map(item => item.id)).toEqual([
+      'beta-annotation',
+    ])
+    expect(useNotesStore.getState().isLoadingAnnotations).toBe(false)
+
+    resolveFirstLoad({
+      status: 'ok',
+      data: [
+        {
+          id: 'alpha-annotation',
+          note_id: 'inbox/alpha.md',
+          state: 'active',
+          anchor_status: 'anchored',
+          text: 'Alpha annotation',
+          from: 1,
+          to: 6,
+          quote: 'Alpha',
+          prefix: '# ',
+          suffix: '',
+          created_at: '2026-06-28T10:00:00.000Z',
+          updated_at: '2026-06-28T10:00:00.000Z',
+          resolved_at: null,
+        },
+      ],
+    })
+    await firstLoad
+
+    expect(useNotesStore.getState().annotations.map(item => item.id)).toEqual([
+      'beta-annotation',
+    ])
+  })
+
+  it('creates an annotation from a non-empty selection and opens the panel', async () => {
+    const annotation = await useNotesStore.getState().createAnnotation({
+      noteId: 'inbox/alpha.md',
+      from: 2,
+      to: 7,
+      text: 'Check this',
+    })
+
+    expect(commands.createNoteAnnotation).toHaveBeenCalledWith({
+      note_id: 'inbox/alpha.md',
+      from: 2,
+      to: 7,
+      text: 'Check this',
+    })
+    expect(annotation.id).toBe('annotation-1')
+    expect(useNotesStore.getState().annotations.map(item => item.id)).toEqual([
+      'annotation-1',
+    ])
+    expect(useNotesStore.getState().selectedAnnotationId).toBe('annotation-1')
+    expect(useNotesStore.getState().annotationsPanelOpen).toBe(true)
+  })
+
+  it('rejects annotation creation from an empty selection before calling Tauri', async () => {
+    await expect(
+      useNotesStore.getState().createAnnotation({
+        noteId: 'inbox/alpha.md',
+        from: 4,
+        to: 4,
+        text: 'No selection',
+      })
+    ).rejects.toThrow('non-empty selection')
+
+    expect(commands.createNoteAnnotation).not.toHaveBeenCalled()
+  })
+
+  it('preserves annotations when annotation creation fails', async () => {
+    vi.mocked(commands.createNoteAnnotation).mockResolvedValue({
+      status: 'error',
+      error: 'sidecar write failed',
+    })
+    useNotesStore.setState({
+      annotations: [
+        {
+          id: 'existing',
+          note_id: 'inbox/alpha.md',
+          state: 'active',
+          anchor_status: 'anchored',
+          text: 'Existing',
+          from: 2,
+          to: 7,
+          quote: 'Alpha',
+          prefix: '# ',
+          suffix: '',
+          created_at: '2026-06-28T10:00:00.000Z',
+          updated_at: '2026-06-28T10:00:00.000Z',
+          resolved_at: null,
+        },
+      ],
+      selectedAnnotationId: 'existing',
+      annotationsPanelOpen: true,
+    })
+
+    await expect(
+      useNotesStore.getState().createAnnotation({
+        noteId: 'inbox/alpha.md',
+        from: 2,
+        to: 7,
+        text: 'Check this',
+      })
+    ).rejects.toThrow('sidecar write failed')
+
+    expect(useNotesStore.getState().annotations.map(item => item.id)).toEqual([
+      'existing',
+    ])
+    expect(useNotesStore.getState().selectedAnnotationId).toBe('existing')
+    expect(useNotesStore.getState().annotationsPanelOpen).toBe(true)
   })
 
   it('loads a physical workspace tree while preserving a stable selection', async () => {
@@ -904,6 +1206,45 @@ describe('useNotesStore lifecycle actions', () => {
       expect(commands.updateNote).toHaveBeenCalledWith({
         id: 'inbox/alpha.md',
         content,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('syncs the edited note annotation snapshot even after switching notes', async () => {
+    vi.useFakeTimers()
+    try {
+      useNotesStore.setState({
+        annotations: [
+          {
+            id: 'annotation-1',
+            note_id: 'inbox/alpha.md',
+            state: 'active',
+            anchor_status: 'anchored',
+            text: 'Check this',
+            from: 2,
+            to: 7,
+            quote: 'Alpha',
+            prefix: '# ',
+            suffix: '',
+            created_at: '2026-06-28T10:00:00.000Z',
+            updated_at: '2026-06-28T10:00:00.000Z',
+            resolved_at: null,
+          },
+        ],
+      })
+
+      useNotesStore.getState().updateNote('inbox/alpha.md', '# Alpha changed')
+      useNotesStore.getState().selectNote('inbox/beta.md')
+
+      await vi.advanceTimersByTimeAsync(800)
+
+      expect(commands.repositionNoteAnnotation).toHaveBeenCalledWith({
+        note_id: 'inbox/alpha.md',
+        annotation_id: 'annotation-1',
+        from: 2,
+        to: 7,
       })
     } finally {
       vi.useRealTimers()

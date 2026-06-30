@@ -68,7 +68,10 @@ Current metadata directories:
 - `.axis-notes/manifest.json` records internal vault metadata schema, the
   stable UUID for each Markdown path, and the welcome-note ID. It is preserved
   after creation and is the authority for note IDs when files move or rename.
-- `.axis-notes/sidecars/` is reserved for per-note structured metadata.
+- `.axis-notes/sidecars/` stores per-note structured metadata owned by Axis.
+  Note annotations use `.axis-notes/sidecars/<stable-note-id>.json`, so they
+  survive note rename, note move, and folder lifecycle moves without coupling
+  the comment metadata to the Markdown file path.
 - `.axis-notes/cache/` is reserved for derived, rebuildable data.
 - `.axis-notes/config/` is reserved for vault-scoped settings.
 
@@ -267,6 +270,16 @@ Notes Page:
 - External document replacement keeps the existing cursor or selection when
   its positions remain valid, otherwise clamps them to the replacement content.
   Such replacements never invoke the user-edit callback or create a save.
+- Private annotations are stored outside Markdown in the note sidecar. Edit
+  mode decorates anchored ranges in CodeMirror and maps them through local
+  document transactions. When the debounced note save is flushed, Axis syncs
+  the mapped anchored ranges back to the sidecar using the same durable command
+  path as manual repositioning. Preview remains read-only and does not create
+  or edit annotations.
+- The annotations panel is closed by default. Creating an annotation from a
+  non-empty editor selection or selecting an annotation highlight opens the
+  panel. Lost anchors remain recoverable: the user selects a new range and
+  repositions the existing annotation, preserving its ID and comment text.
 
 Dashboard notes widget:
 
