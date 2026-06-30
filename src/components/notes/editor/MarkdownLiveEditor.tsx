@@ -117,6 +117,10 @@ export function MarkdownLiveEditor({
       createdView = view
       viewRef.current = view
 
+      view.dispatch({
+        effects: setMarkdownAnnotationsEffect.of(annotationsRef.current),
+      })
+
       const latestValue = latestValueRef.current
       if (view.state.doc.toString() !== latestValue) {
         applyingExternalValueRef.current = true

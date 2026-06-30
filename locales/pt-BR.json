@@ -287,6 +287,7 @@
   "notes.annotations.createFromSelection": "Anotar seleção",
   "notes.annotations.defaultComment": "Nova anotação",
   "notes.annotations.createFailed": "Não foi possível criar a anotação",
+  "notes.annotations.actionFailed": "Não foi possível atualizar a anotação",
   "notes.annotations.commentLabel": "Comentário da anotação",
   "notes.annotations.active": "Ativa",
   "notes.annotations.resolved": "Resolvida",

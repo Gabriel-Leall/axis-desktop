@@ -904,7 +904,7 @@ function EditorArea({
             <button
               type="button"
               onClick={() => void onCreateAnnotation()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/70 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-accent"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/70 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <MessageSquarePlus className="size-3.5" />
               {t('notes.annotations.createFromSelection')}
@@ -914,7 +914,7 @@ function EditorArea({
             <button
               type="button"
               onClick={onOpenAnnotationsPanel}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/70 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-accent"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/70 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               aria-label={t('notes.annotations.open')}
             >
               <PanelRightOpen className="size-3.5" />
@@ -1120,10 +1120,10 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }
 
   async function handleArchiveNote() {
-    if (!selectedNoteId) return
+    if (!effectiveSelectedNoteId) return
 
     try {
-      const archivedId = await archiveNote(selectedNoteId)
+      const archivedId = await archiveNote(effectiveSelectedNoteId)
       toast.success(t('notes.snackbar.archived'), {
         action: {
           label: t('common.undo'),
@@ -1149,12 +1149,12 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }
 
   async function handleMoveNoteToTrash() {
-    if (!selectedNoteId) return
+    if (!effectiveSelectedNoteId) return
 
     const sourceView = workspaceView
 
     try {
-      const trashedId = await deleteNote(selectedNoteId)
+      const trashedId = await deleteNote(effectiveSelectedNoteId)
       toast.success(t('notes.snackbar.movedToTrash'), {
         action: {
           label: t('common.undo'),
@@ -1182,12 +1182,12 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
   }
 
   async function handleRestoreNote() {
-    if (!selectedNoteId || workspaceView === 'inbox') return
+    if (!effectiveSelectedNoteId || workspaceView === 'inbox') return
 
     const sourceView = workspaceView
 
     try {
-      const restoredId = await restoreNote(selectedNoteId)
+      const restoredId = await restoreNote(effectiveSelectedNoteId)
       toast.success(t('notes.snackbar.restored'), {
         action: {
           label: t('common.undo'),

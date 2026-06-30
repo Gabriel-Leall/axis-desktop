@@ -64,17 +64,23 @@ vi.mock('@/components/notes/editor/MarkdownLiveEditor', async () => {
     MarkdownLiveEditor: ({
       value,
       placeholder,
+      annotations,
       onChange,
       onSelectionChange,
+      onSelectAnnotation,
     }: {
       value: string
       placeholder: string
+      annotations?: { id: string }[]
       onChange: (content: string) => void
       onSelectionChange?: (
         selection: { from: number; to: number; text: string } | null
       ) => void
-    }) =>
-      React.createElement(
+      onSelectAnnotation?: (annotationId: string) => void
+    }) => {
+      const firstAnnotation = annotations?.[0]
+
+      return React.createElement(
         'div',
         null,
         React.createElement('textarea', {
@@ -91,8 +97,19 @@ vi.mock('@/components/notes/editor/MarkdownLiveEditor', async () => {
               onSelectionChange?.({ from: 2, to: 7, text: 'note' }),
           },
           'Mock selection'
-        )
-      ),
+        ),
+        firstAnnotation
+          ? React.createElement(
+              'button',
+              {
+                type: 'button',
+                onClick: () => onSelectAnnotation?.(firstAnnotation.id),
+              },
+              'Mock marker'
+            )
+          : null
+      )
+    },
   }
 })
 
@@ -380,6 +397,40 @@ describe('NotesPage', () => {
     })
     expect(screen.getByText('Annotations')).toBeInTheDocument()
     expect(screen.getByDisplayValue('New annotation')).toBeInTheDocument()
+  })
+
+  it('opens the annotations panel when an existing marker is selected', async () => {
+    const user = userEvent.setup()
+    vi.mocked(commands.listNoteAnnotations).mockResolvedValue({
+      status: 'ok',
+      data: [
+        {
+          id: 'annotation-1',
+          note_id: note.id,
+          state: 'active',
+          anchor_status: 'anchored',
+          text: 'Existing annotation',
+          from: 2,
+          to: 7,
+          quote: 'note',
+          prefix: 'A ',
+          suffix: '',
+          created_at: '2026-06-28T10:00:00.000Z',
+          updated_at: '2026-06-28T10:00:00.000Z',
+          resolved_at: null,
+        },
+      ],
+    })
+
+    render(<NotesPage />)
+
+    await screen.findByRole('button', { name: 'Mock marker' })
+    expect(screen.queryByText('Annotations')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Mock marker' }))
+
+    expect(screen.getByText('Annotations')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Existing annotation')).toBeInTheDocument()
   })
 
   it('opens a rename dialog from a folder context menu', async () => {

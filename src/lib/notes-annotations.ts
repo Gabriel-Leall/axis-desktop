@@ -83,7 +83,7 @@ function findQuoteMatches(quote: string, content: string): number[] {
 
   while (index !== -1) {
     matches.push(index)
-    index = content.indexOf(quote, index + Math.max(quote.length, 1))
+    index = content.indexOf(quote, index + 1)
   }
 
   return matches

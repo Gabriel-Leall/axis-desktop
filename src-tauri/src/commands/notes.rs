@@ -1066,9 +1066,32 @@ fn is_default_welcome_annotation_sidecar(source_root: &Path, file: &VaultMigrati
         return false;
     }
 
-    std::fs::read_to_string(source_root.join(WELCOME_NOTE_RELATIVE_PATH))
+    let welcome_is_default = std::fs::read_to_string(source_root.join(WELCOME_NOTE_RELATIVE_PATH))
         .map(|content| content == WELCOME_NOTE_CONTENT)
-        .unwrap_or(false)
+        .unwrap_or(false);
+    if !welcome_is_default {
+        return false;
+    }
+
+    let Some(sidecar) = std::fs::read_to_string(&file.source_abs)
+        .ok()
+        .and_then(|content| serde_json::from_str::<serde_json::Value>(&content).ok())
+    else {
+        return false;
+    };
+    let Some(annotations) = sidecar["annotations"].as_array() else {
+        return false;
+    };
+    let Some(annotation) = annotations.first() else {
+        return false;
+    };
+
+    sidecar["note_id"].as_str() == Some(welcome_note_id.as_str())
+        && annotations.len() == 1
+        && annotation["quote"].as_str() == Some(WELCOME_ANNOTATION_QUOTE)
+        && annotation["text"].as_str() == Some(WELCOME_ANNOTATION_TEXT)
+        && annotation["state"].as_str() == Some("active")
+        && annotation["anchor_status"].as_str() == Some("anchored")
 }
 
 fn migrate_notes_vault_contents(

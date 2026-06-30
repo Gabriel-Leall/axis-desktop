@@ -62,7 +62,7 @@ export async function createMarkdownEditor(
       }),
       createMarkdownCommandExtensions(),
       EditorView.updateListener.of(update => {
-        if (update.docChanged) {
+        if (update.docChanged && !options.isApplyingExternalValue()) {
           const mappedAnnotations = options.getAnnotations().map(annotation => {
             if (annotation.anchor_status === 'lost') return annotation
             const from = update.changes.mapPos(annotation.from, 1)

@@ -1,6 +1,9 @@
 use super::*;
 
 pub(super) const NOTE_ANNOTATION_SIDECAR_SCHEMA_VERSION: u32 = 1;
+pub(super) const WELCOME_ANNOTATION_QUOTE: &str = "Markdown";
+pub(super) const WELCOME_ANNOTATION_TEXT: &str =
+    "Markdown e o formato local das suas notas no Axis.";
 const ANNOTATION_CONTEXT_CHARS: usize = 32;
 
 #[derive(Debug, Serialize, Deserialize, Type, Clone, Copy, PartialEq, Eq)]
@@ -173,8 +176,12 @@ fn snapshot_annotation_anchor(
 ) -> Result<(String, String, String), String> {
     let start = from.min(to);
     let end = from.max(to);
+    let content_len = content.encode_utf16().count();
     if start == end {
         return Err("Annotations require a non-empty selection".to_string());
+    }
+    if end > content_len {
+        return Err("Annotation range is outside the note content".to_string());
     }
 
     let quote = slice_utf16(content, start, end);
@@ -383,19 +390,18 @@ pub(super) fn seed_welcome_annotation(root: &Path, note_id: &str) -> Result<(), 
         return Ok(());
     }
 
-    let quote = "Markdown";
     let from = WELCOME_NOTE_CONTENT
-        .find(quote)
+        .find(WELCOME_ANNOTATION_QUOTE)
         .ok_or_else(|| "Welcome annotation quote not found".to_string())?;
     let from = byte_to_utf16_index(WELCOME_NOTE_CONTENT, from);
-    let to = from + quote.encode_utf16().count();
+    let to = from + WELCOME_ANNOTATION_QUOTE.encode_utf16().count();
 
     create_note_annotation_at_range(
         root,
         note_id,
         CreateNoteAnnotationInput {
             note_id: note_id.to_string(),
-            text: "Markdown e o formato local das suas notas no Axis.".to_string(),
+            text: WELCOME_ANNOTATION_TEXT.to_string(),
             from: usize_to_u32(from),
             to: usize_to_u32(to),
         },

@@ -99,6 +99,11 @@ export function useNotesAnnotationsController(activeNote: Note | null) {
     )
   }
 
+  function handleSelectAnnotation(annotationId: string) {
+    selectAnnotation(annotationId)
+    setAnnotationsPanelOpen(true)
+  }
+
   return {
     annotations,
     selectedAnnotationId,
@@ -106,7 +111,7 @@ export function useNotesAnnotationsController(activeNote: Note | null) {
     activeSelection,
     handleCreateAnnotation,
     handleSelectionChange,
-    handleSelectAnnotation: selectAnnotation,
+    handleSelectAnnotation,
     handleAnnotationsChange,
     updateAnnotationText,
     resolveAnnotation,

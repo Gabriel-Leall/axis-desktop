@@ -88,4 +88,12 @@ describe('notes annotation anchors', () => {
       status: 'lost',
     })
   })
+
+  it('treats overlapping quote matches as ambiguous', () => {
+    const anchor = snapshotAnnotationAnchor('xx aba yy', 3, 6)
+
+    expect(reconcileAnnotationAnchor(anchor, 'ababa')).toMatchObject({
+      status: 'lost',
+    })
+  })
 })

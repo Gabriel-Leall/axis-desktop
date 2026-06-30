@@ -482,6 +482,89 @@ describe('useNotesStore lifecycle actions', () => {
     expect(useNotesStore.getState().annotationsPanelOpen).toBe(false)
   })
 
+  it('ignores stale annotation loads when a newer note request wins the race', async () => {
+    const unresolvedResolver = () => {
+      throw new Error('Test resolver was used before assignment')
+    }
+    let resolveFirstLoad: (
+      value: Awaited<ReturnType<typeof commands.listNoteAnnotations>>
+    ) => void = unresolvedResolver
+    let resolveSecondLoad: (
+      value: Awaited<ReturnType<typeof commands.listNoteAnnotations>>
+    ) => void = unresolvedResolver
+
+    const firstLoadPromise = new Promise<
+      Awaited<ReturnType<typeof commands.listNoteAnnotations>>
+    >(resolve => {
+      resolveFirstLoad = resolve
+    })
+    const secondLoadPromise = new Promise<
+      Awaited<ReturnType<typeof commands.listNoteAnnotations>>
+    >(resolve => {
+      resolveSecondLoad = resolve
+    })
+
+    vi.mocked(commands.listNoteAnnotations)
+      .mockImplementationOnce(() => firstLoadPromise)
+      .mockImplementationOnce(() => secondLoadPromise)
+
+    const firstLoad = useNotesStore.getState().loadAnnotations('inbox/alpha.md')
+    const secondLoad = useNotesStore.getState().loadAnnotations('inbox/beta.md')
+
+    resolveSecondLoad({
+      status: 'ok',
+      data: [
+        {
+          id: 'beta-annotation',
+          note_id: 'inbox/beta.md',
+          state: 'active',
+          anchor_status: 'anchored',
+          text: 'Beta annotation',
+          from: 1,
+          to: 5,
+          quote: 'Beta',
+          prefix: '# ',
+          suffix: '',
+          created_at: '2026-06-28T10:05:00.000Z',
+          updated_at: '2026-06-28T10:05:00.000Z',
+          resolved_at: null,
+        },
+      ],
+    })
+    await secondLoad
+
+    expect(useNotesStore.getState().annotations.map(item => item.id)).toEqual([
+      'beta-annotation',
+    ])
+    expect(useNotesStore.getState().isLoadingAnnotations).toBe(false)
+
+    resolveFirstLoad({
+      status: 'ok',
+      data: [
+        {
+          id: 'alpha-annotation',
+          note_id: 'inbox/alpha.md',
+          state: 'active',
+          anchor_status: 'anchored',
+          text: 'Alpha annotation',
+          from: 1,
+          to: 6,
+          quote: 'Alpha',
+          prefix: '# ',
+          suffix: '',
+          created_at: '2026-06-28T10:00:00.000Z',
+          updated_at: '2026-06-28T10:00:00.000Z',
+          resolved_at: null,
+        },
+      ],
+    })
+    await firstLoad
+
+    expect(useNotesStore.getState().annotations.map(item => item.id)).toEqual([
+      'beta-annotation',
+    ])
+  })
+
   it('creates an annotation from a non-empty selection and opens the panel', async () => {
     const annotation = await useNotesStore.getState().createAnnotation({
       noteId: 'inbox/alpha.md',
@@ -1123,6 +1206,45 @@ describe('useNotesStore lifecycle actions', () => {
       expect(commands.updateNote).toHaveBeenCalledWith({
         id: 'inbox/alpha.md',
         content,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('syncs the edited note annotation snapshot even after switching notes', async () => {
+    vi.useFakeTimers()
+    try {
+      useNotesStore.setState({
+        annotations: [
+          {
+            id: 'annotation-1',
+            note_id: 'inbox/alpha.md',
+            state: 'active',
+            anchor_status: 'anchored',
+            text: 'Check this',
+            from: 2,
+            to: 7,
+            quote: 'Alpha',
+            prefix: '# ',
+            suffix: '',
+            created_at: '2026-06-28T10:00:00.000Z',
+            updated_at: '2026-06-28T10:00:00.000Z',
+            resolved_at: null,
+          },
+        ],
+      })
+
+      useNotesStore.getState().updateNote('inbox/alpha.md', '# Alpha changed')
+      useNotesStore.getState().selectNote('inbox/beta.md')
+
+      await vi.advanceTimersByTimeAsync(800)
+
+      expect(commands.repositionNoteAnnotation).toHaveBeenCalledWith({
+        note_id: 'inbox/alpha.md',
+        annotation_id: 'annotation-1',
+        from: 2,
+        to: 7,
       })
     } finally {
       vi.useRealTimers()

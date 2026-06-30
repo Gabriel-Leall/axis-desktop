@@ -100,6 +100,7 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null
 let debouncedNoteId: string | null = null
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 let searchRequestId = 0
+let annotationsLoadRequestId = 0
 let loadNotesInFlight: Promise<void> | null = null
 const DEBOUNCE_MS = 800
 const SEARCH_DEBOUNCE_MS = 220
@@ -1012,6 +1013,9 @@ export const useNotesStore = create<NotesState>()(
           }
 
           debouncedNoteId = id
+          const annotationsSnapshot = get().annotations.filter(
+            annotation => annotation.note_id === id
+          )
           debounceTimer = setTimeout(async () => {
             try {
               const savedNote = mapBindingNote(
@@ -1023,9 +1027,8 @@ export const useNotesStore = create<NotesState>()(
                 )
               )
               const syncedAnnotations: NoteAnnotation[] = []
-              for (const annotation of get().annotations) {
+              for (const annotation of annotationsSnapshot) {
                 if (
-                  annotation.note_id !== id ||
                   annotation.anchor_status !== 'anchored' ||
                   annotation.from >= annotation.to
                 ) {
@@ -1341,6 +1344,7 @@ export const useNotesStore = create<NotesState>()(
           set({ selectedTag: tag }, undefined, 'setSelectedTag'),
 
         loadAnnotations: async noteId => {
+          const requestId = ++annotationsLoadRequestId
           set(
             { isLoadingAnnotations: true },
             undefined,
@@ -1351,6 +1355,9 @@ export const useNotesStore = create<NotesState>()(
             const annotations = unwrapResult(
               await commands.listNoteAnnotations(noteId)
             )
+            if (requestId !== annotationsLoadRequestId) {
+              return
+            }
             set(
               {
                 annotations,
@@ -1362,6 +1369,9 @@ export const useNotesStore = create<NotesState>()(
             )
           } catch (error) {
             logger.error(`Failed to load note annotations: ${String(error)}`)
+            if (requestId !== annotationsLoadRequestId) {
+              return
+            }
             set(
               { annotations: [], isLoadingAnnotations: false },
               undefined,

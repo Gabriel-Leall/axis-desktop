@@ -7,8 +7,12 @@ import {
   X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import type { NoteAnnotation } from '@/lib/tauri-bindings'
 import { cn } from '@/lib/utils'
+
+const annotationButtonClass =
+  'inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
 
 interface NotesAnnotationsPanelProps {
   noteId: string
@@ -47,6 +51,15 @@ export function NotesAnnotationsPanel({
   onReposition,
 }: NotesAnnotationsPanelProps) {
   const { t } = useTranslation()
+  const showActionError = (error: unknown) => {
+    toast.error(t('notes.annotations.actionFailed'), {
+      description: String(error),
+    })
+  }
+
+  const runAnnotationAction = (action: () => Promise<void>) => {
+    void action().catch(showActionError)
+  }
 
   return (
     <aside className="notes-paper-sidebar flex h-full w-72 shrink-0 flex-col border-s border-border/70 text-card-foreground">
@@ -63,7 +76,7 @@ export function NotesAnnotationsPanel({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-md p-1 text-muted-foreground hover:bg-background/70 hover:text-foreground"
+          className="rounded-md p-1 text-muted-foreground hover:bg-background/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           aria-label={t('notes.annotations.close')}
         >
           <X className="size-4" />
@@ -94,7 +107,7 @@ export function NotesAnnotationsPanel({
                 <button
                   type="button"
                   onClick={() => onSelect(annotation.id)}
-                  className="mb-2 flex w-full items-start gap-2 text-start"
+                  className="mb-2 flex w-full items-start gap-2 rounded-md text-start focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <span
                     className={cn(
@@ -125,7 +138,9 @@ export function NotesAnnotationsPanel({
                   onBlur={event => {
                     const nextText = event.target.value
                     if (nextText !== annotation.text) {
-                      void onUpdateText(noteId, annotation.id, nextText)
+                      runAnnotationAction(() =>
+                        onUpdateText(noteId, annotation.id, nextText)
+                      )
                     }
                   }}
                   className="min-h-20 w-full resize-none rounded-lg border border-border/70 bg-card/50 p-2 text-xs text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -136,7 +151,7 @@ export function NotesAnnotationsPanel({
                   <button
                     type="button"
                     onClick={() => onSelect(annotation.id)}
-                    className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-foreground hover:bg-accent"
+                    className={annotationButtonClass}
                   >
                     <LocateFixed className="size-3" />
                     {t('notes.annotations.goToAnchor')}
@@ -144,8 +159,12 @@ export function NotesAnnotationsPanel({
                   {isResolved ? (
                     <button
                       type="button"
-                      onClick={() => void onReopen(noteId, annotation.id)}
-                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-foreground hover:bg-accent"
+                      onClick={() =>
+                        runAnnotationAction(() =>
+                          onReopen(noteId, annotation.id)
+                        )
+                      }
+                      className={annotationButtonClass}
                     >
                       <RotateCcw className="size-3" />
                       {t('notes.annotations.reopen')}
@@ -153,8 +172,12 @@ export function NotesAnnotationsPanel({
                   ) : (
                     <button
                       type="button"
-                      onClick={() => void onResolve(noteId, annotation.id)}
-                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-foreground hover:bg-accent"
+                      onClick={() =>
+                        runAnnotationAction(() =>
+                          onResolve(noteId, annotation.id)
+                        )
+                      }
+                      className={annotationButtonClass}
                     >
                       <Check className="size-3" />
                       {t('notes.annotations.resolve')}
@@ -164,22 +187,28 @@ export function NotesAnnotationsPanel({
                     <button
                       type="button"
                       onClick={() =>
-                        void onReposition(
-                          noteId,
-                          annotation.id,
-                          activeSelection.from,
-                          activeSelection.to
+                        runAnnotationAction(() =>
+                          onReposition(
+                            noteId,
+                            annotation.id,
+                            activeSelection.from,
+                            activeSelection.to
+                          )
                         )
                       }
-                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-foreground hover:bg-accent"
+                      className={annotationButtonClass}
                     >
                       {t('notes.annotations.reposition')}
                     </button>
                   )}
                   <button
                     type="button"
-                    onClick={() => void onDelete(noteId, annotation.id)}
-                    className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-destructive hover:bg-destructive/10"
+                    onClick={() =>
+                      runAnnotationAction(() =>
+                        onDelete(noteId, annotation.id)
+                      )
+                    }
+                    className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
                     <Trash2 className="size-3" />
                     {t('notes.annotations.delete')}

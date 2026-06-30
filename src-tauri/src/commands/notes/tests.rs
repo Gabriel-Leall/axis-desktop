@@ -325,6 +325,35 @@ fn rejects_annotation_creation_without_a_selection() {
 }
 
 #[test]
+fn rejects_annotation_creation_outside_note_content() {
+    let root = test_vault_root("axis-notes-out-of-range-annotation-test");
+    ensure_vault_structure(&root).expect("vault structure should be created");
+    std::fs::write(root.join(INBOX_DIR).join("plan.md"), "Short")
+        .expect("fixture note should be writable");
+    let note = read_all_notes(&root)
+        .expect("notes should be readable")
+        .into_iter()
+        .find(|note| note.path == "inbox/plan.md")
+        .expect("plan should be listed");
+
+    let error = create_note_annotation_at_range(
+        &root,
+        &note.id,
+        CreateNoteAnnotationInput {
+            note_id: note.id.clone(),
+            text: "Outside".to_string(),
+            from: 1,
+            to: 999,
+        },
+    )
+    .expect_err("out-of-range selection should fail");
+
+    assert!(error.contains("outside the note content"));
+
+    std::fs::remove_dir_all(root).expect("test vault should be removable");
+}
+
+#[test]
 fn marks_annotation_anchor_lost_when_external_reconciliation_is_ambiguous() {
     let root = test_vault_root("axis-notes-annotation-ambiguous-test");
     ensure_vault_structure(&root).expect("vault structure should be created");
@@ -880,6 +909,50 @@ fn migrate_notes_vault_contents_preserves_manifest_note_ids() {
         .id;
 
     assert_eq!(destination_id, source_id);
+
+    std::fs::remove_dir_all(source).expect("source vault should be removable");
+    std::fs::remove_dir_all(destination).expect("destination vault should be removable");
+}
+
+#[test]
+fn migrate_notes_vault_contents_preserves_modified_welcome_annotation_sidecar() {
+    let source = test_vault_root("axis-notes-migration-welcome-sidecar-source-test");
+    let destination = test_vault_root("axis-notes-migration-welcome-sidecar-destination-test");
+    ensure_vault_structure(&source).expect("source vault should be created");
+    ensure_vault_structure(&destination).expect("destination vault should be created");
+
+    let manifest_path = source.join(VAULT_METADATA_DIR).join(VAULT_MANIFEST_FILE);
+    let manifest: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(manifest_path).expect("manifest should be readable"),
+    )
+    .expect("manifest should be valid JSON");
+    let welcome_id = manifest["welcome_note_id"]
+        .as_str()
+        .expect("welcome note should have a stable ID");
+    let sidecar_path = source
+        .join(VAULT_METADATA_DIR)
+        .join(VAULT_SIDECARS_DIR)
+        .join(format!("{welcome_id}.json"));
+    let mut sidecar: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(&sidecar_path).expect("sidecar should be readable"),
+    )
+    .expect("sidecar should be valid JSON");
+    sidecar["annotations"][0]["text"] = serde_json::Value::String("User note".to_string());
+    std::fs::write(
+        &sidecar_path,
+        serde_json::to_string_pretty(&sidecar).expect("sidecar should serialize"),
+    )
+    .expect("sidecar should be writable");
+
+    let result = migrate_notes_vault_contents(&source, &destination, NoteVaultMigrationMode::Copy)
+        .expect("vault contents should copy");
+
+    assert_eq!(result.metadata_files_migrated, 1);
+    assert!(destination
+        .join(VAULT_METADATA_DIR)
+        .join(VAULT_SIDECARS_DIR)
+        .join(format!("{welcome_id}.json"))
+        .is_file());
 
     std::fs::remove_dir_all(source).expect("source vault should be removable");
     std::fs::remove_dir_all(destination).expect("destination vault should be removable");
