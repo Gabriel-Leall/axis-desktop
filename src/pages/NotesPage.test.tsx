@@ -4,6 +4,8 @@ import type * as ReactTypes from 'react'
 import { fireEvent, render, screen, waitFor, within } from '@/test/test-utils'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
+import { open } from '@tauri-apps/plugin-dialog'
+import { readTextFile } from '@tauri-apps/plugin-fs'
 import { commands } from '@/lib/tauri-bindings'
 import { useNotesStore } from '@/store/notes-store'
 import { NotesPage } from './NotesPage'
@@ -472,6 +474,122 @@ describe('NotesPage', () => {
     await waitFor(() => {
       expect(commands.archiveNote).toHaveBeenCalledWith(secondNote.id)
     })
+  })
+
+  it('activates the visible pane when using the compact split switch', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+    await user.click(screen.getByRole('button', { name: 'Show left pane' }))
+
+    expect(
+      screen.getByRole('region', { name: 'Left note pane' })
+    ).toHaveAttribute('data-active-pane', 'true')
+  })
+
+  it('keeps editor mode changes scoped to the active pane', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+
+    const rightPane = screen.getByRole('region', { name: 'Right note pane' })
+    await user.click(
+      within(rightPane).getByRole('button', { name: 'Preview mode' })
+    )
+
+    expect(
+      within(rightPane).getByTestId('notes-markdown-preview')
+    ).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: 'Left note pane' })).getByRole(
+        'textbox',
+        { name: 'Start writing...' }
+      )
+    ).toBeInTheDocument()
+  })
+
+  it('imports a markdown file into the active split pane', async () => {
+    const user = userEvent.setup()
+    vi.mocked(open).mockResolvedValue('C:/tmp/imported.md')
+    vi.mocked(readTextFile).mockResolvedValue('Imported note body')
+    vi.mocked(commands.createNote).mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...secondNote,
+        id: 'inbox/imported-note.md',
+        path: 'inbox/imported-note.md',
+        title: 'Imported note',
+        content: 'Imported note body',
+      },
+    })
+    vi.mocked(commands.getNotes).mockResolvedValueOnce({
+      status: 'ok',
+      data: [
+        note,
+        secondNote,
+        thirdNote,
+        {
+          ...secondNote,
+          id: 'inbox/imported-note.md',
+          path: 'inbox/imported-note.md',
+          title: 'Imported note',
+          content: 'Imported note body',
+        },
+      ],
+    })
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+
+    const rightPane = screen.getByRole('region', { name: 'Right note pane' })
+    await user.click(
+      within(rightPane).getByRole('button', { name: 'Note actions' })
+    )
+    await user.click(screen.getByRole('button', { name: 'Import .md' }))
+
+    await waitFor(() => {
+      expect(commands.createNote).toHaveBeenCalledWith({
+        title: null,
+        content: 'Imported note body',
+        folder: null,
+      })
+    })
+    expect(screen.getByDisplayValue('Paper workspace')).toBeInTheDocument()
+  })
+
+  it('does not keep duplicate panes when the primary note lifecycle advances to the secondary note', async () => {
+    const user = userEvent.setup()
+    vi.mocked(commands.archiveNote).mockResolvedValue({
+      status: 'ok',
+      data: note,
+    })
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+
+    const leftPane = screen.getByRole('region', { name: 'Left note pane' })
+    await user.click(
+      within(leftPane).getByRole('button', { name: 'Note actions' })
+    )
+    await user.click(screen.getByRole('button', { name: 'Archive note' }))
+
+    await waitFor(() => {
+      expect(commands.archiveNote).toHaveBeenCalledWith(note.id)
+    })
+    expect(
+      screen.queryByRole('region', { name: 'Right note pane' })
+    ).not.toBeInTheDocument()
+    expect(screen.getByDisplayValue('Research map')).toBeInTheDocument()
   })
 
   it('keeps annotations panel closed until a selection is annotated', async () => {

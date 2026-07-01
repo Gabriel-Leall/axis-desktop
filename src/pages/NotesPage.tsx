@@ -553,12 +553,14 @@ function NoteActionsMenu({
   onArchive,
   onMoveToTrash,
   onRestore,
+  onImport,
 }: {
   note: Note
   workspaceView: NotesWorkspaceView
   onArchive: () => Promise<void>
   onMoveToTrash: () => Promise<void>
   onRestore: () => Promise<void>
+  onImport: (content: string) => Promise<void>
 }) {
   const { t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
@@ -596,7 +598,7 @@ function NoteActionsMenu({
     })
     if (path) {
       const content = await readTextFile(path as string)
-      await useNotesStore.getState().createNote(content)
+      await onImport(content)
     }
     setShowMenu(false)
   }
@@ -796,6 +798,7 @@ function EditorArea({
   onRestore,
   onOpenBeside,
   onClosePane,
+  onImportNote,
   onContentChange,
   onRename,
   onCreateNote,
@@ -822,6 +825,7 @@ function EditorArea({
   onRestore: () => Promise<void>
   onOpenBeside?: () => void
   onClosePane?: () => void
+  onImportNote: (content: string) => Promise<void>
   onContentChange: (noteId: string, content: string) => void
   onRename: (noteId: string, title: string) => Promise<void>
   onCreateNote: () => Promise<void>
@@ -871,6 +875,7 @@ function EditorArea({
         aria-label={paneLabel}
         data-active-pane={isActivePane ? 'true' : 'false'}
         onPointerDown={onActivatePane}
+        onFocusCapture={onActivatePane}
         className="notes-paper-editor flex h-full flex-1 items-center justify-center px-8 text-muted-foreground"
       >
         <div className="notes-paper-empty max-w-md text-center">
@@ -899,8 +904,9 @@ function EditorArea({
       aria-label={paneLabel}
       data-active-pane={isActivePane ? 'true' : 'false'}
       onPointerDown={onActivatePane}
+      onFocusCapture={onActivatePane}
       className={cn(
-        'notes-paper-editor flex h-full flex-1 flex-col text-foreground transition-shadow',
+        'notes-paper-editor flex h-full flex-1 flex-col text-foreground transition-shadow motion-reduce:transition-none',
         splitOpen &&
           (isActivePane
             ? 'ring-1 ring-primary/35'
@@ -964,6 +970,7 @@ function EditorArea({
             onArchive={onArchive}
             onMoveToTrash={onMoveToTrash}
             onRestore={onRestore}
+            onImport={onImportNote}
           />
           {onClosePane && (
             <button
@@ -1058,12 +1065,11 @@ interface NotesSplitEditorWorkspaceProps {
   currentActivePaneId: NotesPaneId
   currentVisibleSplitPane: NotesPaneId
   workspaceView: NotesWorkspaceView
-  editorMode: NotesEditorMode
+  editorModes: Record<NotesPaneId, NotesEditorMode>
   isSaving: boolean
   annotations: ReturnType<typeof useNotesStore.getState>['annotations']
   activeSelection: NotesEditorSelection
   annotationsPanelOpen: boolean
-  onSetVisibleSplitPane: (paneId: NotesPaneId) => void
   onActivatePane: (paneId: NotesPaneId) => void
   onArchiveNote: (noteId: string) => Promise<void>
   onMoveNoteToTrash: (noteId: string) => Promise<void>
@@ -1073,8 +1079,9 @@ interface NotesSplitEditorWorkspaceProps {
   getNextNoteBeside: (noteId: string | null) => string | null
   onContentChange: (noteId: string, content: string) => void
   onRename: (noteId: string, title: string) => Promise<void>
-  onCreateNote: () => Promise<void>
-  onEditorModeChange: (mode: NotesEditorMode) => void
+  onCreateNote: (paneId: NotesPaneId) => Promise<void>
+  onImportNote: (paneId: NotesPaneId, content: string) => Promise<void>
+  onEditorModeChange: (paneId: NotesPaneId, mode: NotesEditorMode) => void
   onCreateAnnotation: () => Promise<void>
   onSelectionChange: (selection: NotesEditorSelection, noteId?: string) => void
   onSelectAnnotation: (annotationId: string) => void
@@ -1092,12 +1099,11 @@ function NotesSplitEditorWorkspace({
   currentActivePaneId,
   currentVisibleSplitPane,
   workspaceView,
-  editorMode,
+  editorModes,
   isSaving,
   annotations,
   activeSelection,
   annotationsPanelOpen,
-  onSetVisibleSplitPane,
   onActivatePane,
   onArchiveNote,
   onMoveNoteToTrash,
@@ -1108,6 +1114,7 @@ function NotesSplitEditorWorkspace({
   onContentChange,
   onRename,
   onCreateNote,
+  onImportNote,
   onEditorModeChange,
   onCreateAnnotation,
   onSelectionChange,
@@ -1124,7 +1131,7 @@ function NotesSplitEditorWorkspace({
         <div className="notes-paper-editorbar flex items-center justify-center gap-1 border-b border-border/60 px-3 py-1.5 lg:hidden">
           <button
             type="button"
-            onClick={() => onSetVisibleSplitPane('left')}
+            onClick={() => onActivatePane('left')}
             className={cn(
               'rounded-md px-2.5 py-1 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
               currentVisibleSplitPane === 'left'
@@ -1136,7 +1143,7 @@ function NotesSplitEditorWorkspace({
           </button>
           <button
             type="button"
-            onClick={() => onSetVisibleSplitPane('right')}
+            onClick={() => onActivatePane('right')}
             className={cn(
               'rounded-md px-2.5 py-1 text-[11px] font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
               currentVisibleSplitPane === 'right'
@@ -1162,7 +1169,7 @@ function NotesSplitEditorWorkspace({
             isActivePane={currentActivePaneId === 'left'}
             splitOpen={splitOpen}
             workspaceView={workspaceView}
-            editorMode={editorMode}
+            editorMode={editorModes.left}
             isSaving={isSaving}
             onActivatePane={() => onActivatePane('left')}
             onArchive={() =>
@@ -1183,8 +1190,9 @@ function NotesSplitEditorWorkspace({
             }
             onContentChange={onContentChange}
             onRename={onRename}
-            onCreateNote={onCreateNote}
-            onEditorModeChange={onEditorModeChange}
+            onCreateNote={() => onCreateNote('left')}
+            onImportNote={content => onImportNote('left', content)}
+            onEditorModeChange={mode => onEditorModeChange('left', mode)}
             annotations={primaryNote?.id === activeNoteId ? annotations : []}
             activeSelection={
               primaryNote?.id === activeNoteId ? activeSelection : null
@@ -1223,7 +1231,7 @@ function NotesSplitEditorWorkspace({
               isActivePane={currentActivePaneId === 'right'}
               splitOpen={splitOpen}
               workspaceView={workspaceView}
-              editorMode={editorMode}
+              editorMode={editorModes.right}
               isSaving={isSaving}
               onActivatePane={() => onActivatePane('right')}
               onArchive={() => onArchiveNote(secondaryNote.id)}
@@ -1232,8 +1240,9 @@ function NotesSplitEditorWorkspace({
               onClosePane={onCloseSecondaryPane}
               onContentChange={onContentChange}
               onRename={onRename}
-              onCreateNote={onCreateNote}
-              onEditorModeChange={onEditorModeChange}
+              onCreateNote={() => onCreateNote('right')}
+              onImportNote={content => onImportNote('right', content)}
+              onEditorModeChange={mode => onEditorModeChange('right', mode)}
               annotations={secondaryNote.id === activeNoteId ? annotations : []}
               activeSelection={
                 secondaryNote.id === activeNoteId ? activeSelection : null
@@ -1266,7 +1275,12 @@ function NotesSplitEditorWorkspace({
 
 function useNotesPageController({ initialSelectedNoteId }: NotesPageProps) {
   const { t } = useTranslation()
-  const [editorMode, setEditorMode] = useState<NotesEditorMode>('edit')
+  const [editorModes, setEditorModes] = useState<
+    Record<NotesPaneId, NotesEditorMode>
+  >({
+    left: 'edit',
+    right: 'edit',
+  })
   const [activePaneId, setActivePaneId] = useState<NotesPaneId>('left')
   const [visibleSplitPane, setVisibleSplitPane] = useState<NotesPaneId>('left')
   const [secondaryNoteId, setSecondaryNoteId] = useState<string | null>(null)
@@ -1312,9 +1326,11 @@ function useNotesPageController({ initialSelectedNoteId }: NotesPageProps) {
     ? (displayedNotes.find(note => note.id === selectedNoteId) ?? null)
     : null
   const primaryNote = selectedNote ?? displayedNotes.at(0) ?? null
-  const secondaryNote = secondaryNoteId
+  const resolvedSecondaryNote = secondaryNoteId
     ? (displayedNotes.find(note => note.id === secondaryNoteId) ?? null)
     : null
+  const secondaryNote =
+    resolvedSecondaryNote?.id === primaryNote?.id ? null : resolvedSecondaryNote
   const splitOpen = secondaryNote !== null
   const currentActivePaneId = splitOpen ? activePaneId : 'left'
   const currentVisibleSplitPane = splitOpen ? visibleSplitPane : 'left'
@@ -1400,17 +1416,25 @@ function useNotesPageController({ initialSelectedNoteId }: NotesPageProps) {
   function nextNoteBeside(noteId: string | null): string | null {
     return (
       displayedNotes.find(
-        note => note.id !== noteId && note.id !== secondaryNoteId
+        note => note.id !== noteId && note.id !== (secondaryNote?.id ?? null)
       )?.id ?? null
     )
   }
 
-  async function handleCreateNote() {
+  function setPaneEditorMode(paneId: NotesPaneId, mode: NotesEditorMode) {
+    setEditorModes(current => ({ ...current, [paneId]: mode }))
+  }
+
+  async function createNoteInPane(paneId: NotesPaneId, content = '') {
     try {
       setSelectedTag(null)
-      const createdNoteId = await createNote('')
-      if (currentActivePaneId === 'right' && secondaryNote) {
+      const previousPrimaryNoteId = primaryNote?.id ?? null
+      const createdNoteId = await createNote(content)
+      if (paneId === 'right' && secondaryNote) {
         setSecondaryNoteId(createdNoteId)
+        if (previousPrimaryNoteId) {
+          selectNote(previousPrimaryNoteId)
+        }
         activatePane('right')
       } else {
         selectNote(createdNoteId)
@@ -1419,6 +1443,14 @@ function useNotesPageController({ initialSelectedNoteId }: NotesPageProps) {
     } catch (error) {
       logger.error(`Failed to create note from UI: ${String(error)}`)
     }
+  }
+
+  async function handleCreateNote() {
+    await createNoteInPane(currentActivePaneId)
+  }
+
+  async function handleImportNote(paneId: NotesPaneId, content: string) {
+    await createNoteInPane(paneId, content)
   }
 
   function handleContentChange(noteId: string, content: string) {
@@ -1582,7 +1614,7 @@ function useNotesPageController({ initialSelectedNoteId }: NotesPageProps) {
     splitOpen,
     currentActivePaneId,
     currentVisibleSplitPane,
-    editorMode,
+    editorModes,
     isSaving,
     annotations,
     selectedAnnotationId,
@@ -1592,11 +1624,11 @@ function useNotesPageController({ initialSelectedNoteId }: NotesPageProps) {
     setWorkspaceView,
     setSelectedTag,
     setSearchQuery,
-    setVisibleSplitPane,
-    setEditorMode,
+    setPaneEditorMode,
     setAnnotationsPanelOpen,
     selectNoteForActivePane,
     handleCreateNote,
+    handleImportNote,
     handleClearFilters,
     handleArchiveNote,
     handleMoveNoteToTrash,
@@ -1638,7 +1670,7 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     splitOpen,
     currentActivePaneId,
     currentVisibleSplitPane,
-    editorMode,
+    editorModes,
     isSaving,
     annotations,
     selectedAnnotationId,
@@ -1648,11 +1680,11 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
     setWorkspaceView,
     setSelectedTag,
     setSearchQuery,
-    setVisibleSplitPane,
-    setEditorMode,
+    setPaneEditorMode,
     setAnnotationsPanelOpen,
     selectNoteForActivePane,
     handleCreateNote,
+    handleImportNote,
     handleClearFilters,
     handleArchiveNote,
     handleMoveNoteToTrash,
@@ -1722,12 +1754,11 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           currentActivePaneId={currentActivePaneId}
           currentVisibleSplitPane={currentVisibleSplitPane}
           workspaceView={workspaceView}
-          editorMode={editorMode}
+          editorModes={editorModes}
           isSaving={isSaving}
           annotations={annotations}
           activeSelection={activeSelection}
           annotationsPanelOpen={annotationsPanelOpen}
-          onSetVisibleSplitPane={setVisibleSplitPane}
           onActivatePane={activatePane}
           onArchiveNote={handleArchiveNote}
           onMoveNoteToTrash={handleMoveNoteToTrash}
@@ -1738,7 +1769,8 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           onContentChange={handleContentChange}
           onRename={handleRenameNote}
           onCreateNote={handleCreateNote}
-          onEditorModeChange={setEditorMode}
+          onImportNote={handleImportNote}
+          onEditorModeChange={setPaneEditorMode}
           onCreateAnnotation={handleCreateAnnotation}
           onSelectionChange={handleSelectionChange}
           onSelectAnnotation={handleSelectAnnotation}
