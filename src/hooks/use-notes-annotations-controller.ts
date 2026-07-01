@@ -73,13 +73,16 @@ export function useNotesAnnotationsController(activeNote: Note | null) {
     }
   }
 
-  function handleSelectionChange(selection: NotesEditorSelection) {
-    if (!activeNote?.id) {
+  function handleSelectionChange(
+    selection: NotesEditorSelection,
+    noteId = activeNote?.id
+  ) {
+    if (!noteId) {
       setSelectionDraft(null)
       return
     }
 
-    setSelectionDraft({ noteId: activeNote.id, selection })
+    setSelectionDraft({ noteId, selection })
   }
 
   function handleAnnotationsChange(nextMarkers: MarkdownAnnotationMarker[]) {

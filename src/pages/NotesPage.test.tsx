@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import type * as ReactTypes from 'react'
-import { fireEvent, render, screen, waitFor } from '@/test/test-utils'
+import { fireEvent, render, screen, waitFor, within } from '@/test/test-utils'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { commands } from '@/lib/tauri-bindings'
@@ -144,6 +144,34 @@ const note = {
   excerpt: 'A note with preview content.',
 }
 
+const secondNote = {
+  id: 'inbox/research-map.md',
+  path: 'inbox/research-map.md',
+  title: 'Research map',
+  content: 'Second note content.',
+  created_at: '2026-06-20T10:00:00.000Z',
+  updated_at: '2026-06-20T10:00:00.000Z',
+  word_count: 3,
+  tags: [],
+  wiki_links: [],
+  has_attachments: false,
+  excerpt: 'Second note content.',
+}
+
+const thirdNote = {
+  id: 'inbox/daily-plan.md',
+  path: 'inbox/daily-plan.md',
+  title: 'Daily plan',
+  content: 'Third note content.',
+  created_at: '2026-06-21T10:00:00.000Z',
+  updated_at: '2026-06-21T10:00:00.000Z',
+  word_count: 3,
+  tags: [],
+  wiki_links: [],
+  has_attachments: false,
+  excerpt: 'Third note content.',
+}
+
 describe('NotesPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -157,7 +185,7 @@ describe('NotesPage', () => {
     })
     vi.mocked(commands.getNotes).mockResolvedValue({
       status: 'ok',
-      data: [note],
+      data: [note, secondNote, thirdNote],
     })
     vi.mocked(commands.getNotesWorkspaceTree).mockResolvedValue({
       status: 'ok',
@@ -172,6 +200,14 @@ describe('NotesPage', () => {
               {
                 kind: 'note',
                 note,
+              },
+              {
+                kind: 'note',
+                note: secondNote,
+              },
+              {
+                kind: 'note',
+                note: thirdNote,
               },
             ],
           },
@@ -375,6 +411,67 @@ describe('NotesPage', () => {
     expect(
       screen.getByRole('button', { name: 'Paper workspace' })
     ).toBeInTheDocument()
+  })
+
+  it('opens a second note beside the current note from the tree context menu', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+
+    expect(screen.getByDisplayValue('Paper workspace')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Research map')).toBeInTheDocument()
+    expect(
+      screen.getByRole('region', { name: 'Right note pane' })
+    ).toHaveAttribute('data-active-pane', 'true')
+  })
+
+  it('uses normal tree clicks to replace only the active split pane', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+    await user.click(screen.getByRole('button', { name: 'Daily plan' }))
+
+    expect(screen.getByDisplayValue('Paper workspace')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Research map')).not.toBeInTheDocument()
+    expect(screen.getByDisplayValue('Daily plan')).toBeInTheDocument()
+  })
+
+  it('closes the secondary split pane without changing the primary note', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+    await user.click(screen.getByRole('button', { name: 'Close right pane' }))
+
+    expect(screen.getByDisplayValue('Paper workspace')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Research map')).not.toBeInTheDocument()
+  })
+
+  it('applies note lifecycle actions to the active split pane', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+
+    const rightPane = screen.getByRole('region', { name: 'Right note pane' })
+    await user.click(
+      within(rightPane).getByRole('button', { name: 'Note actions' })
+    )
+    await user.click(screen.getByRole('button', { name: 'Archive note' }))
+
+    await waitFor(() => {
+      expect(commands.archiveNote).toHaveBeenCalledWith(secondNote.id)
+    })
   })
 
   it('keeps annotations panel closed until a selection is annotated', async () => {

@@ -56,6 +56,7 @@ function TreeItemContextMenu({
   const actions: NotesTreeContextAction[] =
     workspace === 'inbox'
       ? [
+          ...(isFolder ? [] : (['open-beside'] as const)),
           ...(isFolder
             ? (['create-note', 'create-folder', 'rename-folder'] as const)
             : []),
@@ -68,6 +69,7 @@ function TreeItemContextMenu({
         : ['restore']
 
   const labels: Record<NotesTreeContextAction, string> = {
+    'open-beside': t('notes.contextMenu.openBeside'),
     'create-note': t('notes.sidebar.newNote'),
     'create-folder': t('notes.contextMenu.newFolder'),
     'rename-folder': t('notes.contextMenu.renameFolder'),

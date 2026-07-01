@@ -280,6 +280,12 @@ Notes Page:
   non-empty editor selection or selecting an annotation highlight opens the
   panel. Lost anchors remain recoverable: the user selects a new range and
   repositions the existing annotation, preserving its ID and comment text.
+- The split workspace is session-only UI state. A normal tree click targets the
+  active pane; "Open beside" explicitly opens a secondary note pane for
+  comparison or parallel editing. The annotations panel remains singular and
+  follows the active pane. On narrow layouts, the open panes collapse into a
+  left/right switch so the secondary note stays open without squeezing the
+  writing surface.
 
 Dashboard notes widget:
 
