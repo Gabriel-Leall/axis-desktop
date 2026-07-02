@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import type * as ReactTypes from 'react'
-import { fireEvent, render, screen, waitFor } from '@/test/test-utils'
+import { fireEvent, render, screen, waitFor, within } from '@/test/test-utils'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
+import { open } from '@tauri-apps/plugin-dialog'
+import { readTextFile } from '@tauri-apps/plugin-fs'
 import { commands } from '@/lib/tauri-bindings'
 import { useNotesStore } from '@/store/notes-store'
 import { NotesPage } from './NotesPage'
@@ -144,6 +146,34 @@ const note = {
   excerpt: 'A note with preview content.',
 }
 
+const secondNote = {
+  id: 'inbox/research-map.md',
+  path: 'inbox/research-map.md',
+  title: 'Research map',
+  content: 'Second note content.',
+  created_at: '2026-06-20T10:00:00.000Z',
+  updated_at: '2026-06-20T10:00:00.000Z',
+  word_count: 3,
+  tags: [],
+  wiki_links: [],
+  has_attachments: false,
+  excerpt: 'Second note content.',
+}
+
+const thirdNote = {
+  id: 'inbox/daily-plan.md',
+  path: 'inbox/daily-plan.md',
+  title: 'Daily plan',
+  content: 'Third note content.',
+  created_at: '2026-06-21T10:00:00.000Z',
+  updated_at: '2026-06-21T10:00:00.000Z',
+  word_count: 3,
+  tags: [],
+  wiki_links: [],
+  has_attachments: false,
+  excerpt: 'Third note content.',
+}
+
 describe('NotesPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -157,7 +187,7 @@ describe('NotesPage', () => {
     })
     vi.mocked(commands.getNotes).mockResolvedValue({
       status: 'ok',
-      data: [note],
+      data: [note, secondNote, thirdNote],
     })
     vi.mocked(commands.getNotesWorkspaceTree).mockResolvedValue({
       status: 'ok',
@@ -172,6 +202,14 @@ describe('NotesPage', () => {
               {
                 kind: 'note',
                 note,
+              },
+              {
+                kind: 'note',
+                note: secondNote,
+              },
+              {
+                kind: 'note',
+                note: thirdNote,
               },
             ],
           },
@@ -377,6 +415,190 @@ describe('NotesPage', () => {
     ).toBeInTheDocument()
   })
 
+  it('opens a second note beside the current note from the tree context menu', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+
+    expect(screen.getByDisplayValue('Paper workspace')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Research map')).toBeInTheDocument()
+    expect(
+      screen.getByRole('region', { name: 'Right note pane' })
+    ).toHaveAttribute('data-active-pane', 'true')
+  })
+
+  it('uses normal tree clicks to replace only the active split pane', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+    await user.click(screen.getByRole('button', { name: 'Daily plan' }))
+
+    expect(screen.getByDisplayValue('Paper workspace')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Research map')).not.toBeInTheDocument()
+    expect(screen.getByDisplayValue('Daily plan')).toBeInTheDocument()
+  })
+
+  it('closes the secondary split pane without changing the primary note', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+    await user.click(screen.getByRole('button', { name: 'Close right pane' }))
+
+    expect(screen.getByDisplayValue('Paper workspace')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Research map')).not.toBeInTheDocument()
+  })
+
+  it('applies note lifecycle actions to the active split pane', async () => {
+    const user = userEvent.setup()
+    vi.mocked(commands.archiveNote).mockResolvedValue({
+      status: 'ok',
+      data: secondNote,
+    })
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+
+    const rightPane = screen.getByRole('region', { name: 'Right note pane' })
+    await user.click(
+      within(rightPane).getByRole('button', { name: 'Note actions' })
+    )
+    await user.click(screen.getByRole('button', { name: 'Archive note' }))
+
+    await waitFor(() => {
+      expect(commands.archiveNote).toHaveBeenCalledWith(secondNote.id)
+    })
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue('Research map')).not.toBeInTheDocument()
+    })
+  })
+
+  it('activates the visible pane when using the compact split switch', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+    await user.click(screen.getByRole('button', { name: 'Show left pane' }))
+
+    expect(
+      screen.getByRole('region', { name: 'Left note pane' })
+    ).toHaveAttribute('data-active-pane', 'true')
+  })
+
+  it('keeps editor mode changes scoped to the active pane', async () => {
+    const user = userEvent.setup()
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+
+    const rightPane = screen.getByRole('region', { name: 'Right note pane' })
+    await user.click(
+      within(rightPane).getByRole('button', { name: 'Preview mode' })
+    )
+
+    expect(
+      within(rightPane).getByTestId('notes-markdown-preview')
+    ).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: 'Left note pane' })).getByRole(
+        'textbox',
+        { name: 'Start writing...' }
+      )
+    ).toBeInTheDocument()
+  })
+
+  it('imports a markdown file into the active split pane', async () => {
+    const user = userEvent.setup()
+    vi.mocked(open).mockResolvedValue('C:/tmp/imported.md')
+    vi.mocked(readTextFile).mockResolvedValue('Imported note body')
+    vi.mocked(commands.createNote).mockResolvedValue({
+      status: 'ok',
+      data: {
+        ...secondNote,
+        id: 'inbox/imported-note.md',
+        path: 'inbox/imported-note.md',
+        title: 'Imported note',
+        content: 'Imported note body',
+      },
+    })
+    vi.mocked(commands.getNotes).mockResolvedValueOnce({
+      status: 'ok',
+      data: [
+        note,
+        secondNote,
+        thirdNote,
+        {
+          ...secondNote,
+          id: 'inbox/imported-note.md',
+          path: 'inbox/imported-note.md',
+          title: 'Imported note',
+          content: 'Imported note body',
+        },
+      ],
+    })
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+
+    const rightPane = screen.getByRole('region', { name: 'Right note pane' })
+    await user.click(
+      within(rightPane).getByRole('button', { name: 'Note actions' })
+    )
+    await user.click(screen.getByRole('button', { name: 'Import .md' }))
+
+    await waitFor(() => {
+      expect(commands.createNote).toHaveBeenCalledWith({
+        title: null,
+        content: 'Imported note body',
+        folder: null,
+      })
+    })
+    expect(screen.getByDisplayValue('Paper workspace')).toBeInTheDocument()
+  })
+
+  it('does not keep duplicate panes when the primary note lifecycle advances to the secondary note', async () => {
+    const user = userEvent.setup()
+    vi.mocked(commands.archiveNote).mockResolvedValue({
+      status: 'ok',
+      data: note,
+    })
+    render(<NotesPage />)
+
+    await screen.findByDisplayValue('Paper workspace')
+    fireEvent.contextMenu(screen.getByRole('button', { name: 'Research map' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Open beside' }))
+
+    const leftPane = screen.getByRole('region', { name: 'Left note pane' })
+    await user.click(
+      within(leftPane).getByRole('button', { name: 'Note actions' })
+    )
+    await user.click(screen.getByRole('button', { name: 'Archive note' }))
+
+    await waitFor(() => {
+      expect(commands.archiveNote).toHaveBeenCalledWith(note.id)
+    })
+    expect(
+      screen.queryByRole('region', { name: 'Right note pane' })
+    ).not.toBeInTheDocument()
+    expect(screen.getByDisplayValue('Research map')).toBeInTheDocument()
+  })
+
   it('keeps annotations panel closed until a selection is annotated', async () => {
     const user = userEvent.setup()
     render(<NotesPage />)
@@ -472,6 +694,10 @@ describe('NotesPage', () => {
 
   it('shows an undoable snackbar after archiving from the context menu', async () => {
     const user = userEvent.setup()
+    vi.mocked(commands.archiveNote).mockResolvedValue({
+      status: 'ok',
+      data: note,
+    })
     render(<NotesPage />)
 
     const noteButton = await screen.findByRole('button', {
@@ -481,12 +707,9 @@ describe('NotesPage', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Archive' }))
 
     await waitFor(() => {
-      expect(commands.archiveNotesTreeItem).toHaveBeenCalledWith({
-        kind: 'note',
-        id: 'inbox/paper-workspace.md',
-      })
+      expect(commands.archiveNote).toHaveBeenCalledWith(note.id)
     })
-    expect(toast.success).toHaveBeenCalledWith('Item archived.', {
+    expect(toast.success).toHaveBeenCalledWith('Note archived.', {
       action: expect.objectContaining({ label: 'Undo' }),
       cancel: expect.objectContaining({ label: 'View archive' }),
     })
@@ -501,10 +724,7 @@ describe('NotesPage', () => {
     options.cancel.onClick(undefined as never)
 
     await waitFor(() => {
-      expect(commands.restoreNotesTreeItem).toHaveBeenCalledWith({
-        kind: 'note',
-        id: 'inbox/paper-workspace.md',
-      })
+      expect(commands.restoreNote).toHaveBeenCalledWith(note.id)
       expect(commands.getNotesWorkspaceTree).toHaveBeenLastCalledWith('archive')
     })
   })

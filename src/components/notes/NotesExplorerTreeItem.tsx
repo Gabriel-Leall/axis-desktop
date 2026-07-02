@@ -53,9 +53,13 @@ function TreeItemContextMenu({
   }
 
   const isFolder = item.kind === 'folder'
+  const noteViewActions: NotesTreeContextAction[] = isFolder
+    ? []
+    : ['open-beside']
   const actions: NotesTreeContextAction[] =
     workspace === 'inbox'
       ? [
+          ...noteViewActions,
           ...(isFolder
             ? (['create-note', 'create-folder', 'rename-folder'] as const)
             : []),
@@ -64,10 +68,11 @@ function TreeItemContextMenu({
           'trash',
         ]
       : workspace === 'archive'
-        ? ['restore', 'trash']
-        : ['restore']
+        ? [...noteViewActions, 'restore', 'trash']
+        : [...noteViewActions, 'restore']
 
   const labels: Record<NotesTreeContextAction, string> = {
+    'open-beside': t('notes.contextMenu.openBeside'),
     'create-note': t('notes.sidebar.newNote'),
     'create-folder': t('notes.contextMenu.newFolder'),
     'rename-folder': t('notes.contextMenu.renameFolder'),
