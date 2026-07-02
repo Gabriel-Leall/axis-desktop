@@ -459,6 +459,10 @@ describe('NotesPage', () => {
 
   it('applies note lifecycle actions to the active split pane', async () => {
     const user = userEvent.setup()
+    vi.mocked(commands.archiveNote).mockResolvedValue({
+      status: 'ok',
+      data: secondNote,
+    })
     render(<NotesPage />)
 
     await screen.findByDisplayValue('Paper workspace')
@@ -473,6 +477,9 @@ describe('NotesPage', () => {
 
     await waitFor(() => {
       expect(commands.archiveNote).toHaveBeenCalledWith(secondNote.id)
+    })
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue('Research map')).not.toBeInTheDocument()
     })
   })
 
@@ -687,6 +694,10 @@ describe('NotesPage', () => {
 
   it('shows an undoable snackbar after archiving from the context menu', async () => {
     const user = userEvent.setup()
+    vi.mocked(commands.archiveNote).mockResolvedValue({
+      status: 'ok',
+      data: note,
+    })
     render(<NotesPage />)
 
     const noteButton = await screen.findByRole('button', {
@@ -696,12 +707,9 @@ describe('NotesPage', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Archive' }))
 
     await waitFor(() => {
-      expect(commands.archiveNotesTreeItem).toHaveBeenCalledWith({
-        kind: 'note',
-        id: 'inbox/paper-workspace.md',
-      })
+      expect(commands.archiveNote).toHaveBeenCalledWith(note.id)
     })
-    expect(toast.success).toHaveBeenCalledWith('Item archived.', {
+    expect(toast.success).toHaveBeenCalledWith('Note archived.', {
       action: expect.objectContaining({ label: 'Undo' }),
       cancel: expect.objectContaining({ label: 'View archive' }),
     })
@@ -716,10 +724,7 @@ describe('NotesPage', () => {
     options.cancel.onClick(undefined as never)
 
     await waitFor(() => {
-      expect(commands.restoreNotesTreeItem).toHaveBeenCalledWith({
-        kind: 'note',
-        id: 'inbox/paper-workspace.md',
-      })
+      expect(commands.restoreNote).toHaveBeenCalledWith(note.id)
       expect(commands.getNotesWorkspaceTree).toHaveBeenLastCalledWith('archive')
     })
   })

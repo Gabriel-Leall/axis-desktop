@@ -1734,9 +1734,23 @@ export function NotesPage({ initialSelectedNoteId }: NotesPageProps) {
           onSelectTag={setSelectedTag}
           onCreateNote={handleCreateNote}
           onContextAction={(action, item) => {
-            if (action === 'open-beside' && item.kind === 'note') {
-              openNoteBeside(item.id)
-              return
+            if (item.kind === 'note') {
+              if (action === 'open-beside') {
+                openNoteBeside(item.id)
+                return
+              }
+              if (action === 'archive') {
+                void handleArchiveNote(item.id).catch(() => undefined)
+                return
+              }
+              if (action === 'trash') {
+                void handleMoveNoteToTrash(item.id).catch(() => undefined)
+                return
+              }
+              if (action === 'restore') {
+                void handleRestoreNote(item.id).catch(() => undefined)
+                return
+              }
             }
             onTreeContextAction(action, item)
           }}
