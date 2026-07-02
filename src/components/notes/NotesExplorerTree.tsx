@@ -254,45 +254,48 @@ export function NotesExplorerTree({
   return (
     <ContextMenu.Root>
       <ContextMenu.Trigger asChild>
-    <div className="notes-explorer-tree min-h-full" data-workspace={tree.workspace}>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragCancel={clearDragState}
-        onDragEnd={handleDragEnd}
-      >
-        {tree.items.map(item => (
-          <NotesExplorerTreeItem
-            key={item.kind === 'folder' ? item.path : item.note.id}
-            item={item}
-            depth={0}
-            selectedNoteId={selectedNoteId}
-            collapsedPaths={collapsedPaths}
-            workspace={tree.workspace}
-            activeItem={dragState.activeItem}
-            activeDropTarget={dragState.activeDropTarget}
-            invalidDropTarget={dragState.invalidDropTarget}
-            onToggleFolder={toggleFolder}
-            onSelectNote={onSelectNote}
-            onContextAction={onContextAction}
-          />
-        ))}
-        <DragOverlay dropAnimation={null}>
-          {dragState.activeItem ? (
-            <output
-              aria-label={t('notes.tree.dragging', {
-                item: dragState.activeLabel,
-              })}
-              className="notes-tree-drag-overlay"
-            >
-              {dragState.activeLabel}
-            </output>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
-    </div>
+        <div
+          className="notes-explorer-tree min-h-full"
+          data-workspace={tree.workspace}
+        >
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragCancel={clearDragState}
+            onDragEnd={handleDragEnd}
+          >
+            {tree.items.map(item => (
+              <NotesExplorerTreeItem
+                key={item.kind === 'folder' ? item.path : item.note.id}
+                item={item}
+                depth={0}
+                selectedNoteId={selectedNoteId}
+                collapsedPaths={collapsedPaths}
+                workspace={tree.workspace}
+                activeItem={dragState.activeItem}
+                activeDropTarget={dragState.activeDropTarget}
+                invalidDropTarget={dragState.invalidDropTarget}
+                onToggleFolder={toggleFolder}
+                onSelectNote={onSelectNote}
+                onContextAction={onContextAction}
+              />
+            ))}
+            <DragOverlay dropAnimation={null}>
+              {dragState.activeItem ? (
+                <output
+                  aria-label={t('notes.tree.dragging', {
+                    item: dragState.activeLabel,
+                  })}
+                  className="notes-tree-drag-overlay"
+                >
+                  {dragState.activeLabel}
+                </output>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </div>
       </ContextMenu.Trigger>
       {tree.workspace === 'inbox' && onContextAction && (
         <ContextMenu.Portal>

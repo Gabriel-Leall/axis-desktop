@@ -204,9 +204,7 @@ export function NotesAnnotationsPanel({
                   <button
                     type="button"
                     onClick={() =>
-                      runAnnotationAction(() =>
-                        onDelete(noteId, annotation.id)
-                      )
+                      runAnnotationAction(() => onDelete(noteId, annotation.id))
                     }
                     className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >

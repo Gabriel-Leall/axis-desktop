@@ -6,21 +6,22 @@ p1_count: 3
 timestamp: 2026-06-13T14-51-22Z
 slug: src-components-quick-pane-quickpaneapp-tsx
 ---
+
 ## Design Health Score
 
-| # | Heuristic | Score | Key Issue |
-|---|---:|---:|---|
-| 1 | Visibility of System Status | 2 | Saving exists, but success disappears immediately and error/help share the same cramped slot. |
-| 2 | Match System / Real World | 2 | Prefix capture is powerful, but `task:`, `note:`, `event:` reads like parser syntax rather than a polished capture tool. |
-| 3 | User Control and Freedom | 2 | Escape and blur dismiss exist, but there is no visible close, no undo, and blur dismissal can feel abrupt. |
-| 4 | Consistency and Standards | 2 | It resembles command palette patterns, but the window proportions break expected command-bar polish. |
-| 5 | Error Prevention | 2 | Parser catches empty/unknown prefixes, but the UI does little to prevent prefix mistakes before submit. |
-| 6 | Recognition Rather Than Recall | 1 | Users must remember prefixes and shortcut behavior from dense helper text. |
-| 7 | Flexibility and Efficiency | 3 | Keyboard-first capture is strong; Shift+Enter is useful for power users. |
-| 8 | Aesthetic and Minimalist Design | 1 | The 72px pane is visually overpacked, with clipped text and two competing footer messages. |
-| 9 | Error Recovery | 2 | Draft is preserved on persist failure, but the error appears in a low-visibility footer region. |
-| 10 | Help and Documentation | 1 | Help is present but compressed, jargon-heavy, and not contextual to the current prefix. |
-| **Total** |  | **18/40** | **Poor: strong interaction idea, weak presentation and discoverability.** |
+| #         |                       Heuristic |     Score | Key Issue                                                                                                                |
+| --------- | ------------------------------: | --------: | ------------------------------------------------------------------------------------------------------------------------ |
+| 1         |     Visibility of System Status |         2 | Saving exists, but success disappears immediately and error/help share the same cramped slot.                            |
+| 2         |       Match System / Real World |         2 | Prefix capture is powerful, but `task:`, `note:`, `event:` reads like parser syntax rather than a polished capture tool. |
+| 3         |        User Control and Freedom |         2 | Escape and blur dismiss exist, but there is no visible close, no undo, and blur dismissal can feel abrupt.               |
+| 4         |       Consistency and Standards |         2 | It resembles command palette patterns, but the window proportions break expected command-bar polish.                     |
+| 5         |                Error Prevention |         2 | Parser catches empty/unknown prefixes, but the UI does little to prevent prefix mistakes before submit.                  |
+| 6         |  Recognition Rather Than Recall |         1 | Users must remember prefixes and shortcut behavior from dense helper text.                                               |
+| 7         |      Flexibility and Efficiency |         3 | Keyboard-first capture is strong; Shift+Enter is useful for power users.                                                 |
+| 8         | Aesthetic and Minimalist Design |         1 | The 72px pane is visually overpacked, with clipped text and two competing footer messages.                               |
+| 9         |                  Error Recovery |         2 | Draft is preserved on persist failure, but the error appears in a low-visibility footer region.                          |
+| 10        |          Help and Documentation |         1 | Help is present but compressed, jargon-heavy, and not contextual to the current prefix.                                  |
+| **Total** |                                 | **18/40** | **Poor: strong interaction idea, weak presentation and discoverability.**                                                |
 
 ## Anti-Patterns Verdict
 

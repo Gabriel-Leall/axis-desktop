@@ -7,9 +7,10 @@ import {
 
 describe('markdown editor commands', () => {
   it('wraps selected text with Markdown strong markers', () => {
-    expect(
-      applyMarkdownCommand('bold', 'word', { from: 0, to: 4 })
-    ).toEqual({ content: '**word**', selection: { from: 2, to: 6 } })
+    expect(applyMarkdownCommand('bold', 'word', { from: 0, to: 4 })).toEqual({
+      content: '**word**',
+      selection: { from: 2, to: 6 },
+    })
   })
 
   it('inserts a heading prefix on the current line', () => {
@@ -32,13 +33,7 @@ describe('markdown editor commands', () => {
 
   it.each([
     ['italic', 'word', { from: 0, to: 4 }, '_word_', { from: 1, to: 5 }],
-    [
-      'inlineCode',
-      'word',
-      { from: 0, to: 4 },
-      '`word`',
-      { from: 1, to: 5 },
-    ],
+    ['inlineCode', 'word', { from: 0, to: 4 }, '`word`', { from: 1, to: 5 }],
     [
       'bulletList',
       'first\nsecond',
@@ -53,27 +48,9 @@ describe('markdown editor commands', () => {
       '1. agenda',
       { from: 3, to: 3 },
     ],
-    [
-      'checklist',
-      'task',
-      { from: 0, to: 0 },
-      '- [ ] task',
-      { from: 6, to: 6 },
-    ],
-    [
-      'quote',
-      'quote',
-      { from: 0, to: 0 },
-      '> quote',
-      { from: 2, to: 2 },
-    ],
-    [
-      'divider',
-      'next',
-      { from: 0, to: 0 },
-      '---\nnext',
-      { from: 4, to: 4 },
-    ],
+    ['checklist', 'task', { from: 0, to: 0 }, '- [ ] task', { from: 6, to: 6 }],
+    ['quote', 'quote', { from: 0, to: 0 }, '> quote', { from: 2, to: 2 }],
+    ['divider', 'next', { from: 0, to: 0 }, '---\nnext', { from: 4, to: 4 }],
   ] as const)(
     'applies %s with the expected cursor position',
     (command, content, selection, expectedContent, expectedSelection) => {

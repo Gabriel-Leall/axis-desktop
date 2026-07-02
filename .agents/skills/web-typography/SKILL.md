@@ -4,7 +4,7 @@ description: 'Select, pair, and implement typefaces for web projects. Use when t
 license: MIT
 metadata:
   author: wondelai
-  version: "1.2.0"
+  version: '1.2.0'
 ---
 
 # Web Typography
@@ -27,10 +27,10 @@ A practical guide to choosing, pairing, and implementing typefaces for the web. 
 
 All typography falls into two categories:
 
-| Context | Purpose | Priorities |
-|---------|---------|------------|
+| Context               | Purpose                               | Priorities                           |
+| --------------------- | ------------------------------------- | ------------------------------------ |
 | **Type for a moment** | Headlines, buttons, navigation, logos | Personality, impact, distinctiveness |
-| **Type to live with** | Body text, articles, documentation | Readability, comfort, endurance |
+| **Type to live with** | Body text, articles, documentation    | Readability, comfort, endurance      |
 
 **Workhorse typefaces** excel at "type to live with" — they're versatile across sizes, weights, and contexts without drawing attention to themselves. Examples: Georgia, Source Sans, Freight Text, FF Meta.
 
@@ -43,6 +43,7 @@ All typography falls into two categories:
 **Why it works:** When typography aligns with how the brain processes text — through word shape recognition, consistent rhythm, and clear letterform distinction — readers absorb content faster with less fatigue. Fighting these mechanics creates friction that drives readers away.
 
 **Key insights:**
+
 - **Saccades** — eyes jump in 7-9 character bursts, not smooth scanning. Line length and letter spacing directly affect saccade efficiency
 - **Fixation points** — eyes pause briefly to absorb content. Dense or poorly spaced text increases fixation duration and slows reading
 - **Word shapes (bouma)** — experienced readers recognize word silhouettes, not individual letters. Maintaining distinct boumas aids recognition speed
@@ -50,23 +51,24 @@ All typography falls into two categories:
 
 **Product applications:**
 
-| Context | Application | Example |
-|---------|------------|---------|
-| Long-form content | Optimize for sustained reading comfort | 16-18px body text, 1.5-1.7 line height, 45-75 char lines |
-| Dashboard UI | Optimize for rapid scanning | Distinct weight hierarchy, ample whitespace between data groups |
-| Mobile reading | Account for variable distance and lighting | Slightly larger body size (17-18px), higher contrast |
-| Documentation | Support both scanning and deep reading | Clear heading hierarchy with generous paragraph spacing |
-| E-commerce | Enable quick product comparison | Consistent number formatting, tabular figures |
-| Accessibility | Support readers with varying abilities | High contrast, generous spacing, distinct letterforms |
+| Context           | Application                                | Example                                                         |
+| ----------------- | ------------------------------------------ | --------------------------------------------------------------- |
+| Long-form content | Optimize for sustained reading comfort     | 16-18px body text, 1.5-1.7 line height, 45-75 char lines        |
+| Dashboard UI      | Optimize for rapid scanning                | Distinct weight hierarchy, ample whitespace between data groups |
+| Mobile reading    | Account for variable distance and lighting | Slightly larger body size (17-18px), higher contrast            |
+| Documentation     | Support both scanning and deep reading     | Clear heading hierarchy with generous paragraph spacing         |
+| E-commerce        | Enable quick product comparison            | Consistent number formatting, tabular figures                   |
+| Accessibility     | Support readers with varying abilities     | High contrast, generous spacing, distinct letterforms           |
 
 **Copy patterns:**
+
 ```css
 /* Optimal reading rhythm for body text */
 .prose {
-  font-size: 1.125rem;     /* 18px */
+  font-size: 1.125rem; /* 18px */
   line-height: 1.6;
-  max-width: 65ch;          /* ~45-75 characters */
-  letter-spacing: normal;   /* Don't force tracking on body text */
+  max-width: 65ch; /* ~45-75 characters */
+  letter-spacing: normal; /* Don't force tracking on body text */
 }
 ```
 
@@ -81,6 +83,7 @@ See: [references/typeface-anatomy.md](references/typeface-anatomy.md) for termin
 **Why it works:** Screen rendering, variable bandwidth, and diverse devices impose constraints that print never faced. A typeface that passes structural assessment (consistent strokes, open counters, distinct letterforms) and practical assessment (file size, license, rendering) will perform reliably across the full range of real-world conditions.
 
 **Key insights:**
+
 - **Technical quality** — consistent stroke weights, even color (visual density) across text blocks, good kerning pairs (AV, To, Ty), complete character set (accents, punctuation, figures), and multiple weights (at minimum: regular, bold, italic)
 - **Structural assessment** — adequate x-height (larger = better screen readability), open counters and apertures (a, e, c shapes), distinct letterforms (Il1, O0, rn vs. m), and appropriate contrast (thick/thin stroke variation)
 - **Practical needs** — works at intended sizes (test at actual use size), renders well on target screens and browsers, acceptable file size for web loading, and appropriate license for the project
@@ -88,21 +91,28 @@ See: [references/typeface-anatomy.md](references/typeface-anatomy.md) for termin
 
 **Product applications:**
 
-| Context | Application | Example |
-|---------|------------|---------|
-| Body text selection | Prioritize x-height, open counters, even color | Source Serif Pro over Didot for long reads |
-| Headline selection | Prioritize personality and distinctiveness at large sizes | Playfair Display for editorial impact |
-| UI/System text | Prioritize legibility at small sizes and weight range | Inter or SF Pro for interface elements |
-| Multilingual product | Verify complete glyph coverage for target languages | Noto Sans for broad Unicode support |
-| Performance-critical site | Evaluate file size and subsetting options | Variable font single file vs. multiple static weights |
-| Brand refresh | Assess whether typeface conveys intended personality | Compare specimen at actual use sizes against brand attributes |
+| Context                   | Application                                               | Example                                                       |
+| ------------------------- | --------------------------------------------------------- | ------------------------------------------------------------- |
+| Body text selection       | Prioritize x-height, open counters, even color            | Source Serif Pro over Didot for long reads                    |
+| Headline selection        | Prioritize personality and distinctiveness at large sizes | Playfair Display for editorial impact                         |
+| UI/System text            | Prioritize legibility at small sizes and weight range     | Inter or SF Pro for interface elements                        |
+| Multilingual product      | Verify complete glyph coverage for target languages       | Noto Sans for broad Unicode support                           |
+| Performance-critical site | Evaluate file size and subsetting options                 | Variable font single file vs. multiple static weights         |
+| Brand refresh             | Assess whether typeface conveys intended personality      | Compare specimen at actual use sizes against brand attributes |
 
 **Copy patterns:**
+
 ```css
 /* Test typeface at actual use sizes */
-body { font-size: 16px; }           /* Minimum body size */
-.caption { font-size: 0.75rem; }    /* Stress-test small sizes */
-h1 { font-size: 3rem; }            /* Check large-size character */
+body {
+  font-size: 16px;
+} /* Minimum body size */
+.caption {
+  font-size: 0.75rem;
+} /* Stress-test small sizes */
+h1 {
+  font-size: 3rem;
+} /* Check large-size character */
 
 /* Verify rendering with font-smoothing */
 body {
@@ -122,6 +132,7 @@ See: [references/evaluating-typefaces.md](references/evaluating-typefaces.md) fo
 **Why it works:** When typeface selection is grounded in content requirements, the result feels inevitable rather than arbitrary. Purpose-driven choices also survive stakeholder review better because they can be justified with clear reasoning rather than subjective taste.
 
 **Key insights:**
+
 - **Define the job first** — body text, headlines, and UI elements may each need different faces. Clarify the role before browsing specimens
 - **Match tone to content** — a financial report needs different type than a bakery menu. The typeface should feel like a natural voice for the subject matter
 - **Test at actual sizes** — a face beautiful at 72px may be illegible at 14px. Always evaluate at the sizes where the typeface will actually be used
@@ -130,27 +141,32 @@ See: [references/evaluating-typefaces.md](references/evaluating-typefaces.md) fo
 
 **Product applications:**
 
-| Context | Application | Example |
-|---------|------------|---------|
-| Content-heavy site | Select a workhorse serif or sans for sustained reading | Source Serif Pro or Charter for articles |
-| SaaS dashboard | Choose a clean sans with strong tabular figures | Inter or IBM Plex Sans for data-rich interfaces |
-| Marketing landing page | Pair a distinctive display face with a readable body face | Playfair Display headlines + Source Sans Pro body |
-| Documentation site | Prioritize clarity and weight range for code + prose | IBM Plex Mono for code, IBM Plex Sans for prose |
-| Brand-driven product | Commission or license a face that embodies brand values | Custom typeface or carefully chosen match to brand personality |
-| Accessibility-focused | Select faces designed for maximum legibility | Atkinson Hyperlegible for vision-impaired users |
+| Context                | Application                                               | Example                                                        |
+| ---------------------- | --------------------------------------------------------- | -------------------------------------------------------------- |
+| Content-heavy site     | Select a workhorse serif or sans for sustained reading    | Source Serif Pro or Charter for articles                       |
+| SaaS dashboard         | Choose a clean sans with strong tabular figures           | Inter or IBM Plex Sans for data-rich interfaces                |
+| Marketing landing page | Pair a distinctive display face with a readable body face | Playfair Display headlines + Source Sans Pro body              |
+| Documentation site     | Prioritize clarity and weight range for code + prose      | IBM Plex Mono for code, IBM Plex Sans for prose                |
+| Brand-driven product   | Commission or license a face that embodies brand values   | Custom typeface or carefully chosen match to brand personality |
+| Accessibility-focused  | Select faces designed for maximum legibility              | Atkinson Hyperlegible for vision-impaired users                |
 
 **Copy patterns:**
+
 ```css
 /* Safe system font stack */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI',
-               Roboto, Oxygen, Ubuntu, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    sans-serif;
 }
 
 /* Reliable web font body stack */
 body {
-  font-family: 'Source Sans Pro', -apple-system,
-               BlinkMacSystemFont, sans-serif;
+  font-family:
+    'Source Sans Pro',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
 }
 ```
 
@@ -165,6 +181,7 @@ See: [references/evaluating-typefaces.md](references/evaluating-typefaces.md) fo
 **Why it works:** Contrast between typefaces creates visual hierarchy and rhythm. When two faces are too similar, they create tension without purpose — the reader senses something is "off" without knowing why. Clear structural contrast (serif + sans, light + bold, humanist + geometric) lets each face play a distinct role while coexisting harmoniously.
 
 **Key insights:**
+
 - **Contrast types** — structure (serif + sans), weight (light + regular), era (humanist + geometric), and width (condensed + normal) all create effective contrast
 - **Same designer strategy** — faces designed by one person often share DNA that harmonizes (e.g., FF Meta + FF Meta Serif)
 - **Superfamilies** — typeface families designed to work together eliminate guesswork (e.g., Roboto + Roboto Slab)
@@ -172,27 +189,35 @@ See: [references/evaluating-typefaces.md](references/evaluating-typefaces.md) fo
 
 **Product applications:**
 
-| Context | Application | Example |
-|---------|------------|---------|
-| Editorial site | Serif headlines + sans body for classic readability | Playfair Display + Source Sans Pro |
-| Tech product | Superfamily for guaranteed harmony | Roboto + Roboto Slab |
-| Corporate site | Same-designer pairing for subtle cohesion | FF Meta + FF Meta Serif |
-| E-commerce | Distinctive display + neutral body | Condensed headline face + system sans-serif body |
-| Documentation | Monospace code + sans-serif prose from same family | IBM Plex Mono + IBM Plex Sans |
-| Minimal brand | Single family with weight variation | Inter at varying weights and sizes |
+| Context        | Application                                         | Example                                          |
+| -------------- | --------------------------------------------------- | ------------------------------------------------ |
+| Editorial site | Serif headlines + sans body for classic readability | Playfair Display + Source Sans Pro               |
+| Tech product   | Superfamily for guaranteed harmony                  | Roboto + Roboto Slab                             |
+| Corporate site | Same-designer pairing for subtle cohesion           | FF Meta + FF Meta Serif                          |
+| E-commerce     | Distinctive display + neutral body                  | Condensed headline face + system sans-serif body |
+| Documentation  | Monospace code + sans-serif prose from same family  | IBM Plex Mono + IBM Plex Sans                    |
+| Minimal brand  | Single family with weight variation                 | Inter at varying weights and sizes               |
 
 **Copy patterns:**
+
 ```css
 /* Classic serif + sans-serif pairing */
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-family: 'Playfair Display', Georgia, serif;
 }
 body {
-  font-family: 'Source Sans Pro', -apple-system, sans-serif;
+  font-family:
+    'Source Sans Pro',
+    -apple-system,
+    sans-serif;
 }
 
 /* Superfamily pairing */
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-family: 'Roboto Slab', serif;
 }
 body {
@@ -211,6 +236,7 @@ See: [references/pairing-strategies.md](references/pairing-strategies.md) for sp
 **Why it works:** These measurements directly govern how the eye tracks across and down text. Optimal line length (45-75 characters) matches the saccade pattern. Adequate line height (1.4-1.8) prevents the eye from jumping to the wrong line on the return sweep. Sufficient font size (16-18px minimum) ensures letterforms are large enough for comfortable recognition on screen.
 
 **Key insights:**
+
 - **Body font size** — 16px minimum; err larger (18px) for reading-heavy sites. Mobile users hold phones farther than designers assume
 - **Line length (measure)** — 45-75 characters ideal, 66 characters optimal. Use the `ch` unit or `max-width` to enforce. Longer lines need more line height to compensate
 - **Line height** — 1.4-1.8 for body text. Longer lines need more; shorter lines need less. Headlines need tighter spacing (1.1-1.25)
@@ -218,16 +244,17 @@ See: [references/pairing-strategies.md](references/pairing-strategies.md) for sp
 
 **Product applications:**
 
-| Context | Application | Example |
-|---------|------------|---------|
-| Blog / article | Enforce 65ch max-width with 1.6 line height | `.prose { max-width: 65ch; line-height: 1.6; }` |
-| Documentation | Slightly wider measure with increased line height | `max-width: 75ch; line-height: 1.7;` |
-| Mobile UI | Larger body size, auto-constrained measure | `font-size: 17px;` with viewport-width constraint |
-| Dashboard | Tighter line height for dense data display | `line-height: 1.3;` for table cells and labels |
-| Landing page | Generous sizing and spacing for scanability | `font-size: 1.25rem; line-height: 1.7;` |
-| Email template | Constrained width for email client compatibility | `max-width: 600px;` with inline sizing |
+| Context        | Application                                       | Example                                           |
+| -------------- | ------------------------------------------------- | ------------------------------------------------- |
+| Blog / article | Enforce 65ch max-width with 1.6 line height       | `.prose { max-width: 65ch; line-height: 1.6; }`   |
+| Documentation  | Slightly wider measure with increased line height | `max-width: 75ch; line-height: 1.7;`              |
+| Mobile UI      | Larger body size, auto-constrained measure        | `font-size: 17px;` with viewport-width constraint |
+| Dashboard      | Tighter line height for dense data display        | `line-height: 1.3;` for table cells and labels    |
+| Landing page   | Generous sizing and spacing for scanability       | `font-size: 1.25rem; line-height: 1.7;`           |
+| Email template | Constrained width for email client compatibility  | `max-width: 600px;` with inline sizing            |
 
 **Copy patterns:**
+
 ```css
 /* Optimal body text measurements */
 .prose {
@@ -243,9 +270,16 @@ See: [references/pairing-strategies.md](references/pairing-strategies.md) for sp
 }
 
 /* Line height adjustments by context */
-h1, h2 { line-height: 1.1-1.25; }
-.ui-text { line-height: 1.3-1.4; }
-.body-text { line-height: 1.5-1.7; }
+h1,
+h2 {
+  line-height: 1.1-1.25;
+}
+.ui-text {
+  line-height: 1.3-1.4;
+}
+.body-text {
+  line-height: 1.5-1.7;
+}
 ```
 
 **Ethical boundary:** Never sacrifice readable measurements for layout aesthetics. Cramming text into narrow columns with tiny sizes to "fit the design" prioritizes visual arrangement over human comprehension.
@@ -259,6 +293,7 @@ See: [references/responsive-typography.md](references/responsive-typography.md) 
 **Why it works:** Visual hierarchy mimics how readers naturally prioritize information. When size, weight, and color differences between levels are deliberate and consistent, readers can scan a page and instantly understand its structure. Without hierarchy, everything competes for attention and nothing wins.
 
 **Key insights:**
+
 - **Three levers** — size, weight, and color. Vary one or two between adjacent levels; varying all three creates excessive contrast that wastes headroom for deeper hierarchies
 - **The squint test** — squinting at a page should still reveal the hierarchy. If everything blurs into sameness, the distinction is too subtle
 - **Consistent scale** — use a ratio (1.2-1.5) between heading levels. Arbitrary sizes create visual noise. A modular scale creates rhythm
@@ -266,27 +301,52 @@ See: [references/responsive-typography.md](references/responsive-typography.md) 
 
 **Product applications:**
 
-| Context | Application | Example |
-|---------|------------|---------|
-| Content page | Size + weight variation across 4-5 levels | H1 2.5rem/700, H2 1.75rem/600, Body 1rem/400 |
-| Dashboard | Weight + color for data vs. label distinction | Bold #111 for values, Regular #666 for labels |
-| Navigation | Size + weight to signal current vs. available | Active: bold, Inactive: regular, same size |
-| Marketing page | Large size jumps for dramatic scanability | Hero 3.5rem, Section heads 2rem, Body 1.125rem |
-| Form UI | Subtle weight shifts for label vs. input distinction | Label: 600 weight, Input: 400 weight |
-| Mobile app | Tighter scale due to limited viewport | H1 1.75rem, H2 1.25rem, Body 1rem |
+| Context        | Application                                          | Example                                        |
+| -------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| Content page   | Size + weight variation across 4-5 levels            | H1 2.5rem/700, H2 1.75rem/600, Body 1rem/400   |
+| Dashboard      | Weight + color for data vs. label distinction        | Bold #111 for values, Regular #666 for labels  |
+| Navigation     | Size + weight to signal current vs. available        | Active: bold, Inactive: regular, same size     |
+| Marketing page | Large size jumps for dramatic scanability            | Hero 3.5rem, Section heads 2rem, Body 1.125rem |
+| Form UI        | Subtle weight shifts for label vs. input distinction | Label: 600 weight, Input: 400 weight           |
+| Mobile app     | Tighter scale due to limited viewport                | H1 1.75rem, H2 1.25rem, Body 1rem              |
 
 **Copy patterns:**
+
 ```css
 /* Type hierarchy with modular scale */
-h1 { font-size: clamp(2rem, 1.5rem + 2vw, 3rem); font-weight: 700; color: #111; }
-h2 { font-size: clamp(1.5rem, 1.25rem + 1vw, 2rem); font-weight: 600; color: #111; }
-h3 { font-size: 1.25rem; font-weight: 600; color: #333; }
-body { font-size: 1rem; font-weight: 400; color: #333; }
-.secondary { font-size: 0.875rem; color: #666; }
-.caption { font-size: 0.75rem; color: #888; }
+h1 {
+  font-size: clamp(2rem, 1.5rem + 2vw, 3rem);
+  font-weight: 700;
+  color: #111;
+}
+h2 {
+  font-size: clamp(1.5rem, 1.25rem + 1vw, 2rem);
+  font-weight: 600;
+  color: #111;
+}
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+body {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #333;
+}
+.secondary {
+  font-size: 0.875rem;
+  color: #666;
+}
+.caption {
+  font-size: 0.75rem;
+  color: #888;
+}
 
 /* Heading rhythm */
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   line-height: 1.2;
@@ -304,6 +364,7 @@ See: [references/css-implementation.md](references/css-implementation.md) for co
 **Why it works:** A single fixed font size cannot serve both a 320px phone and a 1440px desktop. Fluid scaling ensures text is always proportionate to its viewport. Meanwhile, web fonts are render-blocking by default — unoptimized loading causes Flash of Invisible Text (FOIT) or Flash of Unstyled Text (FOUT), both of which degrade the reading experience.
 
 **Key insights:**
+
 - **Fluid typography** — `clamp(min, preferred, max)` scales font size smoothly between viewport sizes, eliminating the need for media query breakpoints for type sizing
 - **Breakpoint adjustments** — mobile (<640px) needs slightly larger body size (17-18px) and tighter heading scale; tablet (640-1024px) uses standard sizing with enforced line-length limits; desktop (>1024px) can use larger display type while maintaining line-length
 - **Font loading strategy** — use `font-display: swap` to show fallback text immediately, preload critical fonts with `<link rel="preload">`, and subset fonts to include only needed characters
@@ -311,16 +372,17 @@ See: [references/css-implementation.md](references/css-implementation.md) for co
 
 **Product applications:**
 
-| Context | Application | Example |
-|---------|------------|---------|
-| Content site | Fluid body and heading sizes with clamp() | `font-size: clamp(1rem, 0.9rem + 0.5vw, 1.25rem)` |
-| E-commerce | Preload hero font, lazy-load secondary weights | `<link rel="preload" href="font.woff2" as="font">` |
-| SaaS app | System font stack for UI, web font for marketing only | `-apple-system` in app, custom font on landing page |
-| Global product | Subset fonts per language to reduce payload | Latin subset for English pages, CJK subset for Asian pages |
-| Performance-critical | Variable font replacing 4-6 static files | Single variable font file with weight axis 300-700 |
-| Progressive web app | Cache fonts in service worker for offline use | `caches.open('fonts').then(cache => cache.addAll(...))` |
+| Context              | Application                                           | Example                                                    |
+| -------------------- | ----------------------------------------------------- | ---------------------------------------------------------- |
+| Content site         | Fluid body and heading sizes with clamp()             | `font-size: clamp(1rem, 0.9rem + 0.5vw, 1.25rem)`          |
+| E-commerce           | Preload hero font, lazy-load secondary weights        | `<link rel="preload" href="font.woff2" as="font">`         |
+| SaaS app             | System font stack for UI, web font for marketing only | `-apple-system` in app, custom font on landing page        |
+| Global product       | Subset fonts per language to reduce payload           | Latin subset for English pages, CJK subset for Asian pages |
+| Performance-critical | Variable font replacing 4-6 static files              | Single variable font file with weight axis 300-700         |
+| Progressive web app  | Cache fonts in service worker for offline use         | `caches.open('fonts').then(cache => cache.addAll(...))`    |
 
 **Copy patterns:**
+
 ```css
 /* Fluid typography with clamp() */
 body {
@@ -349,32 +411,32 @@ See: [references/responsive-typography.md](references/responsive-typography.md) 
 
 ## Common Mistakes
 
-| Mistake | Why It Fails | Fix |
-|---------|-------------|-----|
-| Text feels cramped | Insufficient line height creates visual density that fatigues readers | Increase line-height to 1.6+; add paragraph spacing |
-| Lines too long, hard to track | Beyond 75 characters, the eye loses its place on the return sweep | Add `max-width: 65ch` to text containers |
-| Headings look disconnected | Excessive space above headings breaks their association with following content | Reduce space above heading; keep space below |
-| Text looks blurry on screen | Poor font-smoothing settings or subpixel rendering issues | Check font-smoothing; try different weight; increase size |
-| Fonts loading slowly | Unoptimized font files block rendering and delay first contentful paint | Subset fonts; use `font-display: swap`; preload critical fonts |
-| Body text too small | Users hold phones farther than assumed; small text strains older eyes | Increase to 18px; test with real users at real distance |
-| Hierarchy is unclear | Insufficient contrast between adjacent levels makes everything compete | Increase size/weight differences between levels |
-| Typefaces clash | Pairing faces without clear contrast creates unresolvable visual tension | Simplify to one family; or ensure structural contrast (serif + sans) |
-| Using Lorem ipsum for testing | Dummy text hides character frequency, word length, and rhythm problems | Test with real content representative of actual use |
+| Mistake                       | Why It Fails                                                                   | Fix                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| Text feels cramped            | Insufficient line height creates visual density that fatigues readers          | Increase line-height to 1.6+; add paragraph spacing                  |
+| Lines too long, hard to track | Beyond 75 characters, the eye loses its place on the return sweep              | Add `max-width: 65ch` to text containers                             |
+| Headings look disconnected    | Excessive space above headings breaks their association with following content | Reduce space above heading; keep space below                         |
+| Text looks blurry on screen   | Poor font-smoothing settings or subpixel rendering issues                      | Check font-smoothing; try different weight; increase size            |
+| Fonts loading slowly          | Unoptimized font files block rendering and delay first contentful paint        | Subset fonts; use `font-display: swap`; preload critical fonts       |
+| Body text too small           | Users hold phones farther than assumed; small text strains older eyes          | Increase to 18px; test with real users at real distance              |
+| Hierarchy is unclear          | Insufficient contrast between adjacent levels makes everything compete         | Increase size/weight differences between levels                      |
+| Typefaces clash               | Pairing faces without clear contrast creates unresolvable visual tension       | Simplify to one family; or ensure structural contrast (serif + sans) |
+| Using Lorem ipsum for testing | Dummy text hides character frequency, word length, and rhythm problems         | Test with real content representative of actual use                  |
 
 ## Quick Diagnostic
 
-| Question | If No | Action |
-|----------|-------|--------|
-| Is body text 16px or larger? | Text too small for comfortable screen reading | Increase to at least 16px; prefer 18px for reading-heavy pages |
-| Is line length under 75 characters? | Eye loses position on return sweep | Add `max-width: 65ch` to prose containers |
-| Is line height 1.4 or greater for body? | Lines feel cramped and reading speed drops | Increase to 1.5-1.7 for body text |
-| Is there sufficient contrast between type levels? | Hierarchy is invisible; readers can't scan | Increase size or weight differences between adjacent levels |
-| Have typefaces been tested at actual sizes on real screens? | Rendering surprises will appear in production | Test at every use size on target devices and browsers |
-| Is total font payload under 200KB? | Slow loading degrades experience and SEO | Subset fonts, use WOFF2, consider variable fonts |
-| Are fallback fonts specified? | FOIT leaves blank text while fonts load | Add system font fallbacks in every font-family declaration |
-| Does the page work at 200% browser zoom? | Accessibility failure for low-vision users | Test at 200% zoom; fix overflow and truncation issues |
-| Are headings free of orphaned single words? | Single trailing words look unfinished and waste space | Use `text-wrap: balance` or manual breaks |
-| Are links visually distinct from surrounding text? | Users cannot identify interactive elements | Ensure links have color and/or underline distinction |
+| Question                                                    | If No                                                 | Action                                                         |
+| ----------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
+| Is body text 16px or larger?                                | Text too small for comfortable screen reading         | Increase to at least 16px; prefer 18px for reading-heavy pages |
+| Is line length under 75 characters?                         | Eye loses position on return sweep                    | Add `max-width: 65ch` to prose containers                      |
+| Is line height 1.4 or greater for body?                     | Lines feel cramped and reading speed drops            | Increase to 1.5-1.7 for body text                              |
+| Is there sufficient contrast between type levels?           | Hierarchy is invisible; readers can't scan            | Increase size or weight differences between adjacent levels    |
+| Have typefaces been tested at actual sizes on real screens? | Rendering surprises will appear in production         | Test at every use size on target devices and browsers          |
+| Is total font payload under 200KB?                          | Slow loading degrades experience and SEO              | Subset fonts, use WOFF2, consider variable fonts               |
+| Are fallback fonts specified?                               | FOIT leaves blank text while fonts load               | Add system font fallbacks in every font-family declaration     |
+| Does the page work at 200% browser zoom?                    | Accessibility failure for low-vision users            | Test at 200% zoom; fix overflow and truncation issues          |
+| Are headings free of orphaned single words?                 | Single trailing words look unfinished and waste space | Use `text-wrap: balance` or manual breaks                      |
+| Are links visually distinct from surrounding text?          | Users cannot identify interactive elements            | Ensure links have color and/or underline distinction           |
 
 ## Reference Files
 
