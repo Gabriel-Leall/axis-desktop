@@ -66,9 +66,7 @@ export function formatLocalDate(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-export function getSlashCommandInsertion(
-  command: MarkdownCommand
-): string {
+export function getSlashCommandInsertion(command: MarkdownCommand): string {
   if (command === 'date') return formatLocalDate(new Date())
   return slashCommandInsertions[command]
 }
@@ -86,7 +84,9 @@ function wrapSelection(
   const insertion = `${marker}${selected}${marker}`
   return {
     content:
-      content.slice(0, selection.from) + insertion + content.slice(selection.to),
+      content.slice(0, selection.from) +
+      insertion +
+      content.slice(selection.to),
     selection: {
       from: selection.from + marker.length,
       to: selection.from + marker.length + selected.length,
@@ -104,7 +104,9 @@ function applyLinkCommand(
 
   return {
     content:
-      content.slice(0, selection.from) + insertion + content.slice(selection.to),
+      content.slice(0, selection.from) +
+      insertion +
+      content.slice(selection.to),
     selection: { from: urlStart, to: urlStart + 3 },
   }
 }
@@ -177,10 +179,10 @@ function slashCompletions(context: CompletionContext) {
   return {
     from: match.from,
     options: slashCommands.map(command => ({
-        label: `/${command}`,
-        type: 'keyword',
-        apply: getSlashCommandInsertion(command),
-      })),
+      label: `/${command}`,
+      type: 'keyword',
+      apply: getSlashCommandInsertion(command),
+    })),
   }
 }
 

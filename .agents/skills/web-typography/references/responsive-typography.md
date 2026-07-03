@@ -2,8 +2,8 @@
 
 Adapting type to screens, viewports, and reading contexts.
 
-
 ## Table of Contents
+
 1. [Core Principle](#core-principle)
 2. [The Problem with Fixed Sizes](#the-problem-with-fixed-sizes)
 3. [Fluid Typography with clamp()](#fluid-typography-with-clamp)
@@ -30,8 +30,12 @@ Fixed pixel sizes create problems:
 
 ```css
 /* This doesn't adapt */
-h1 { font-size: 48px; }
-p { font-size: 16px; }
+h1 {
+  font-size: 48px;
+}
+p {
+  font-size: 16px;
+}
 ```
 
 - 48px headline overwhelms a 320px phone screen
@@ -49,11 +53,11 @@ font-size: clamp(1rem, 0.9rem + 0.5vw, 1.25rem);
 
 ### How clamp() Works
 
-| Part | Purpose | Example |
-|------|---------|---------|
-| Minimum | Floor - never smaller | 1rem (16px) |
-| Preferred | Scales with viewport | 0.9rem + 0.5vw |
-| Maximum | Ceiling - never larger | 1.25rem (20px) |
+| Part      | Purpose                | Example        |
+| --------- | ---------------------- | -------------- |
+| Minimum   | Floor - never smaller  | 1rem (16px)    |
+| Preferred | Scales with viewport   | 0.9rem + 0.5vw |
+| Maximum   | Ceiling - never larger | 1.25rem (20px) |
 
 The preferred value uses viewport units (vw) to scale, but clamp() prevents extremes.
 
@@ -67,6 +71,7 @@ body {
 ```
 
 Breakdown:
+
 - At 320px viewport: ~16px
 - At 768px viewport: ~18px
 - At 1200px+ viewport: 20px (capped)
@@ -93,16 +98,19 @@ h3 {
 ### Generating clamp() Values
 
 **Formula for calculating:**
+
 ```
 preferred = minimum + (maximum - minimum) * ((100vw - minViewport) / (maxViewport - minViewport))
 ```
 
 **Simplified approach:**
+
 1. Pick min size at min viewport (e.g., 16px at 320px)
 2. Pick max size at max viewport (e.g., 20px at 1200px)
 3. Use a clamp generator or calculate the vw coefficient
 
 **Tools:**
+
 - [Utopia.fyi](https://utopia.fyi/type/calculator/) - Type scale generator
 - [clamp() Calculator](https://min-max-calculator.9elements.com/) - Interactive calculator
 
@@ -121,13 +129,27 @@ preferred = minimum + (maximum - minimum) * ((100vw - minViewport) / (maxViewpor
   --text-4xl: clamp(2.5rem, 1.75rem + 3vw, 4rem);
 }
 
-body { font-size: var(--text-base); }
-h1 { font-size: var(--text-4xl); }
-h2 { font-size: var(--text-3xl); }
-h3 { font-size: var(--text-2xl); }
-h4 { font-size: var(--text-xl); }
-.small { font-size: var(--text-sm); }
-.caption { font-size: var(--text-xs); }
+body {
+  font-size: var(--text-base);
+}
+h1 {
+  font-size: var(--text-4xl);
+}
+h2 {
+  font-size: var(--text-3xl);
+}
+h3 {
+  font-size: var(--text-2xl);
+}
+h4 {
+  font-size: var(--text-xl);
+}
+.small {
+  font-size: var(--text-sm);
+}
+.caption {
+  font-size: var(--text-xs);
+}
 ```
 
 ## Responsive Line Length
@@ -138,7 +160,7 @@ Line length must also adapt. 65 characters is ideal, but the method matters.
 
 ```css
 .prose {
-  max-width: 65ch;  /* Approximately 65 characters */
+  max-width: 65ch; /* Approximately 65 characters */
 }
 ```
 
@@ -210,7 +232,7 @@ h1 {
 /* Tablet */
 @media (min-width: 640px) {
   body {
-    font-size: 1.0625rem;  /* 17px */
+    font-size: 1.0625rem; /* 17px */
   }
 
   h1 {
@@ -221,7 +243,7 @@ h1 {
 /* Desktop */
 @media (min-width: 1024px) {
   body {
-    font-size: 1.125rem;  /* 18px */
+    font-size: 1.125rem; /* 18px */
     line-height: 1.6;
   }
 
@@ -233,7 +255,7 @@ h1 {
 /* Large desktop */
 @media (min-width: 1440px) {
   body {
-    font-size: 1.25rem;  /* 20px */
+    font-size: 1.25rem; /* 20px */
     line-height: 1.7;
   }
 }
@@ -241,12 +263,12 @@ h1 {
 
 ### Key Breakpoints
 
-| Breakpoint | Typical Adjustments |
-|------------|---------------------|
-| 640px | Increase body text slightly; relax line length |
-| 768px | Tablet optimizations; two-column layouts possible |
-| 1024px | Desktop sizes; full hierarchy |
-| 1440px | Large screens; may need max-width constraints |
+| Breakpoint | Typical Adjustments                               |
+| ---------- | ------------------------------------------------- |
+| 640px      | Increase body text slightly; relax line length    |
+| 768px      | Tablet optimizations; two-column layouts possible |
+| 1024px     | Desktop sizes; full hierarchy                     |
+| 1440px     | Large screens; may need max-width constraints     |
 
 ## Container Queries (Modern Approach)
 
@@ -274,30 +296,30 @@ For component-based systems, container queries let type respond to component siz
 
 Different devices = different reading distances:
 
-| Device | Typical Distance | Implication |
-|--------|------------------|-------------|
-| Phone | 10-12 inches | Can use slightly smaller text |
-| Tablet | 15-18 inches | Similar to desktop |
-| Desktop | 18-24 inches | Standard sizing works |
-| TV/Large display | 6+ feet | Much larger text needed |
+| Device           | Typical Distance | Implication                   |
+| ---------------- | ---------------- | ----------------------------- |
+| Phone            | 10-12 inches     | Can use slightly smaller text |
+| Tablet           | 15-18 inches     | Similar to desktop            |
+| Desktop          | 18-24 inches     | Standard sizing works         |
+| TV/Large display | 6+ feet          | Much larger text needed       |
 
 **For phones:** Don't automatically shrink text. Users often hold phones far away, and smaller text just means more squinting.
 
 ## Viewport Units Reference
 
-| Unit | Based On | Use Case |
-|------|----------|----------|
-| vw | Viewport width | Horizontal scaling |
-| vh | Viewport height | Vertical scaling (rarely for type) |
-| vmin | Smaller of vw/vh | Consistent scaling regardless of orientation |
-| vmax | Larger of vw/vh | Less common for type |
-| dvh | Dynamic viewport height | Accounts for mobile browser chrome |
+| Unit | Based On                | Use Case                                     |
+| ---- | ----------------------- | -------------------------------------------- |
+| vw   | Viewport width          | Horizontal scaling                           |
+| vh   | Viewport height         | Vertical scaling (rarely for type)           |
+| vmin | Smaller of vw/vh        | Consistent scaling regardless of orientation |
+| vmax | Larger of vw/vh         | Less common for type                         |
+| dvh  | Dynamic viewport height | Accounts for mobile browser chrome           |
 
 **Warning:** Pure viewport units (not in clamp) can get too small or too large:
 
 ```css
 /* Dangerous - no limits */
-font-size: 5vw;  /* Could be 16px or 96px */
+font-size: 5vw; /* Could be 16px or 96px */
 
 /* Safe - bounded */
 font-size: clamp(1rem, 5vw, 3rem);
@@ -341,14 +363,22 @@ body {
   line-height: 1.6;
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-family: var(--font-heading);
   line-height: 1.2;
 }
 
-h1 { font-size: var(--text-3xl); }
-h2 { font-size: var(--text-2xl); }
-h3 { font-size: var(--text-xl); }
+h1 {
+  font-size: var(--text-3xl);
+}
+h2 {
+  font-size: var(--text-2xl);
+}
+h3 {
+  font-size: var(--text-xl);
+}
 
 .prose {
   max-width: min(65ch, 100% - 2rem);
@@ -367,11 +397,13 @@ h3 { font-size: var(--text-xl); }
 ## Tools and Resources
 
 **Fluid type calculators:**
+
 - [Utopia.fyi](https://utopia.fyi/type/calculator/)
 - [Modern Fluid Typography Editor](https://modern-fluid-typography.vercel.app/)
 - [Fluid Type Scale Calculator](https://www.fluid-type-scale.com/)
 
 **Testing:**
+
 - Browser DevTools responsive mode
 - [Responsively App](https://responsively.app/) - Multi-device preview
 - Real devices when possible

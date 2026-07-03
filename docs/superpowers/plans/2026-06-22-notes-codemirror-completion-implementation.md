@@ -13,6 +13,7 @@
 ### Task 1: Complete Markdown command domain
 
 **Files:**
+
 - Modify: `src/components/notes/editor/markdown-editor-commands.ts`
 - Modify: `src/components/notes/editor/markdown-editor-commands.test.ts`
 
@@ -44,6 +45,7 @@ Expected: PASS.
 ### Task 2: Finish marker presentation and external selection handling
 
 **Files:**
+
 - Modify: `src/components/notes/editor/markdown-live-preview.ts`
 - Modify: `src/components/notes/editor/markdown-live-preview.test.ts`
 - Modify: `src/components/notes/editor/MarkdownLiveEditor.tsx`
@@ -78,6 +80,7 @@ Expected: PASS.
 ### Task 3: Cover user-facing editor behavior
 
 **Files:**
+
 - Modify: `src/pages/NotesPage.test.tsx`
 - Modify: `src/store/notes-store.test.ts`
 
@@ -108,6 +111,7 @@ Expected: PASS.
 ### Task 4: Document and verify completion
 
 **Files:**
+
 - Modify: `docs/developer/notes-architecture.md`
 - Modify: `docs/superpowers/plans/2026-06-22-notes-codemirror-completion-implementation.md`
 

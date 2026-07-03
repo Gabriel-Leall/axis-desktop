@@ -3,9 +3,7 @@ import { getDailyAxisPeriod } from './daily-axis-banner-domain'
 
 describe('getDailyAxisPeriod', () => {
   it('returns morning before noon', () => {
-    expect(getDailyAxisPeriod(new Date('2026-06-02T08:00:00'))).toBe(
-      'morning'
-    )
+    expect(getDailyAxisPeriod(new Date('2026-06-02T08:00:00'))).toBe('morning')
   })
 
   it('returns afternoon from noon until 17:59', () => {
@@ -15,8 +13,6 @@ describe('getDailyAxisPeriod', () => {
   })
 
   it('returns evening from 18:00 onward', () => {
-    expect(getDailyAxisPeriod(new Date('2026-06-02T20:15:00'))).toBe(
-      'evening'
-    )
+    expect(getDailyAxisPeriod(new Date('2026-06-02T20:15:00'))).toBe('evening')
   })
 })

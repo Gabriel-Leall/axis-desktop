@@ -8,27 +8,28 @@ A systematic approach to assessing whether a typeface will work for your project
 
 A well-designed typeface has consistent visual rhythm:
 
-| Check | What to Look For |
-|-------|------------------|
-| **Stroke weight** | Consistent thickness throughout the alphabet |
-| **Color** | Even darkness when viewing a text block |
-| **Proportion** | Characters relate harmoniously to each other |
-| **Curves** | Smooth, intentional curves without awkward joints |
+| Check             | What to Look For                                  |
+| ----------------- | ------------------------------------------------- |
+| **Stroke weight** | Consistent thickness throughout the alphabet      |
+| **Color**         | Even darkness when viewing a text block           |
+| **Proportion**    | Characters relate harmoniously to each other      |
+| **Curves**        | Smooth, intentional curves without awkward joints |
 
 **Quick test:** Set a paragraph and squint. Good typefaces appear as an even gray; poor ones show dark spots or inconsistent density.
 
 ### Technical Quality
 
-| Criterion | Signs of Quality | Signs of Problems |
-|-----------|------------------|-------------------|
-| **Kerning** | Even spacing across character pairs | Awkward gaps (AV, To, Ty, ff) |
-| **Hinting** | Crisp rendering at small sizes | Blurry or uneven at 14-16px |
-| **Spacing** | Consistent rhythm without adjustment | Needs manual letter-spacing fixes |
-| **Rendering** | Clean on multiple browsers/OS | Looks different across platforms |
+| Criterion     | Signs of Quality                     | Signs of Problems                 |
+| ------------- | ------------------------------------ | --------------------------------- |
+| **Kerning**   | Even spacing across character pairs  | Awkward gaps (AV, To, Ty, ff)     |
+| **Hinting**   | Crisp rendering at small sizes       | Blurry or uneven at 14-16px       |
+| **Spacing**   | Consistent rhythm without adjustment | Needs manual letter-spacing fixes |
+| **Rendering** | Clean on multiple browsers/OS        | Looks different across platforms  |
 
 ### Character Set Completeness
 
 **Minimum requirements:**
+
 - Full ASCII (A-Z, a-z, 0-9, basic punctuation)
 - Common accented characters (é, ñ, ü, etc.)
 - Proper typographic quotes ("" '' vs "" '')
@@ -36,6 +37,7 @@ A well-designed typeface has consistent visual rhythm:
 - Euro (€), pound (£), other needed currency
 
 **Better:**
+
 - Full Latin Extended character set
 - Smart quotes and proper apostrophes
 - Multiple figure styles (oldstyle, lining, tabular)
@@ -58,12 +60,14 @@ At same point size, A appears larger and more readable.
 ```
 
 **When to prefer larger x-height:**
+
 - Body text on screens
 - Small sizes (14-16px)
 - UI text
 - Mobile interfaces
 
 **When smaller x-height works:**
+
 - Large display text
 - Headlines
 - Print (higher resolution)
@@ -79,6 +83,7 @@ Closed:  a e c s g    (can fill in at small sizes)
 ```
 
 Check these characters specifically:
+
 - **a** - How open is the counter?
 - **e** - How large is the aperture?
 - **c** - Wide or closed opening?
@@ -86,11 +91,11 @@ Check these characters specifically:
 
 ### Stroke Contrast
 
-| Contrast | Screen Performance | Personality |
-|----------|-------------------|-------------|
-| Low/None | Excellent - consistent at all sizes | Modern, neutral, sturdy |
-| Medium | Good - works for most body text | Classic, refined |
-| High | Poor at small sizes - thin strokes disappear | Elegant, delicate, display-only |
+| Contrast | Screen Performance                           | Personality                     |
+| -------- | -------------------------------------------- | ------------------------------- |
+| Low/None | Excellent - consistent at all sizes          | Modern, neutral, sturdy         |
+| Medium   | Good - works for most body text              | Classic, refined                |
+| High     | Poor at small sizes - thin strokes disappear | Elegant, delicate, display-only |
 
 **Rule:** High-contrast typefaces (Bodoni, Didot) are headlines-only on screens.
 
@@ -98,16 +103,17 @@ Check these characters specifically:
 
 Critical for legibility. Test these easily-confused sets:
 
-| Set | What to Check |
-|-----|---------------|
-| **Il1\|** | Can you distinguish capital I, lowercase l, numeral 1, pipe? |
-| **O0** | Is capital O distinct from zero? |
-| **rn vs m** | Do "rn" together look like "m"? |
-| **cl vs d** | At small sizes, could these be confused? |
-| **5S** | Distinct enough in both cases? |
-| **6b, 9q** | Clear differentiation? |
+| Set         | What to Check                                                |
+| ----------- | ------------------------------------------------------------ |
+| **Il1\|**   | Can you distinguish capital I, lowercase l, numeral 1, pipe? |
+| **O0**      | Is capital O distinct from zero?                             |
+| **rn vs m** | Do "rn" together look like "m"?                              |
+| **cl vs d** | At small sizes, could these be confused?                     |
+| **5S**      | Distinct enough in both cases?                               |
+| **6b, 9q**  | Clear differentiation?                                       |
 
 Some typefaces add distinguishing features:
+
 - Serifs on capital I
 - Slashed or dotted zero
 - Curved tail on lowercase l
@@ -119,16 +125,17 @@ Some typefaces add distinguishing features:
 
 Don't evaluate at 36px if you'll use it at 16px. Common sizes to test:
 
-| Use Case | Test Sizes |
-|----------|------------|
-| Body text | 14px, 16px, 18px |
-| Secondary text | 12px, 13px |
-| Headlines | 24px, 32px, 48px |
-| UI text | 13px, 14px, 15px |
+| Use Case       | Test Sizes       |
+| -------------- | ---------------- |
+| Body text      | 14px, 16px, 18px |
+| Secondary text | 12px, 13px       |
+| Headlines      | 24px, 32px, 48px |
+| UI text        | 13px, 14px, 15px |
 
 ### 2. Test with Real Content
 
 Lorem ipsum hides problems. Use:
+
 - Actual content from your project
 - Text with numbers (to check figure styles)
 - Text with punctuation (em dashes, quotes)
@@ -144,6 +151,7 @@ Lorem ipsum hides problems. Use:
 ### 4. Test at Scale
 
 If possible, set several paragraphs. Single sentences don't reveal:
+
 - Text color (overall density)
 - How the typeface "feels" to read
 - Any rhythm issues
@@ -187,17 +195,20 @@ If possible, set several paragraphs. Single sentences don't reveal:
 ### Free Fonts (Google Fonts, Font Squirrel, etc.)
 
 **Advantages:**
+
 - No cost
 - Easy implementation
 - Often good quality (Google Fonts are curated)
 
 **Considerations:**
+
 - May be overused (Roboto, Open Sans everywhere)
 - Sometimes incomplete character sets
 - Variable quality in hinting/kerning
 - May lack advanced OpenType features
 
 **Quality free options:**
+
 - Inter (UI, body)
 - Source Sans/Serif Pro (body, editorial)
 - IBM Plex family (tech, corporate)
@@ -207,6 +218,7 @@ If possible, set several paragraphs. Single sentences don't reveal:
 ### Paid Fonts
 
 **Advantages:**
+
 - Often superior craftsmanship
 - More distinctive options
 - Better support and updates
@@ -214,11 +226,13 @@ If possible, set several paragraphs. Single sentences don't reveal:
 - Professional licensing terms
 
 **Considerations:**
+
 - Cost (though often reasonable per-project)
 - Licensing complexity for web use
 - Need to self-host or use a service
 
 **When to pay:**
+
 - Brand differentiation matters
 - Long-form reading is primary use
 - You need specific OpenType features
@@ -228,11 +242,11 @@ If possible, set several paragraphs. Single sentences don't reveal:
 
 File size directly impacts load time. Budget guidelines:
 
-| Quality | Total Font Budget |
-|---------|-------------------|
-| Fast | < 100KB |
-| Acceptable | 100-200KB |
-| Heavy | > 200KB (needs justification) |
+| Quality    | Total Font Budget             |
+| ---------- | ----------------------------- |
+| Fast       | < 100KB                       |
+| Acceptable | 100-200KB                     |
+| Heavy      | > 200KB (needs justification) |
 
 ### Optimization Strategies
 
@@ -246,8 +260,9 @@ File size directly impacts load time. Budget guidelines:
 ```css
 @font-face {
   font-family: 'Custom';
-  src: url('font.woff2') format('woff2'),  /* Modern browsers */
-       url('font.woff') format('woff');     /* Older browsers */
+  src:
+    url('font.woff2') format('woff2'),
+    /* Modern browsers */ url('font.woff') format('woff'); /* Older browsers */
 }
 ```
 
@@ -257,16 +272,16 @@ WOFF2 has best compression and near-universal support. Skip TTF/OTF for web.
 
 Avoid typefaces with these issues:
 
-| Red Flag | Why It Matters |
-|----------|----------------|
-| No hinting | Will render poorly on Windows |
-| Very thin weights | Disappear at small sizes |
-| Incomplete kerning | Requires manual spacing fixes |
-| Missing basic characters | Will show boxes or fallback |
-| Poor screen rendering | May look fine in samples, not in use |
-| Unusual licensing | Can cause legal issues |
+| Red Flag                 | Why It Matters                        |
+| ------------------------ | ------------------------------------- |
+| No hinting               | Will render poorly on Windows         |
+| Very thin weights        | Disappear at small sizes              |
+| Incomplete kerning       | Requires manual spacing fixes         |
+| Missing basic characters | Will show boxes or fallback           |
+| Poor screen rendering    | May look fine in samples, not in use  |
+| Unusual licensing        | Can cause legal issues                |
 | "Inspired by" knock-offs | Lower quality, potential legal issues |
-| Only one weight | Limits hierarchy options |
+| Only one weight          | Limits hierarchy options              |
 
 ## Quick Comparison Method
 

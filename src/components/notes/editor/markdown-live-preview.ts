@@ -113,11 +113,9 @@ export function getMarkdownMarkerRanges(
     ])
   }
 
-  for (
-    const match of content.matchAll(
-      /^(?:[-+*][ \t]+(?:\[[ xX]\][ \t]+)?|\d+\.[ \t]+)/gm
-    )
-  ) {
+  for (const match of content.matchAll(
+    /^(?:[-+*][ \t]+(?:\[[ xX]\][ \t]+)?|\d+\.[ \t]+)/gm
+  )) {
     const start = match.index ?? 0
     addMarkers(start, start + match[0].length, [
       { from: start, to: start + match[0].length },

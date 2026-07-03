@@ -32,6 +32,7 @@
 ### Task 1: Make the Markdown Filename the Durable Title
 
 **Files:**
+
 - Modify: src-tauri/src/commands/notes.rs
 - Modify: src-tauri/src/commands/notes/tests.rs
 - Modify: docs/developer/notes-architecture.md
@@ -79,18 +80,23 @@ Document that title equals file stem, creation makes an empty MD body, H1 headin
 
 Run:
 
-    bun run rust:test -- notes
+```sh
+bun run rust:test -- notes
+```
 
 Expected: all notes command tests pass.
 
 - [ ] **Step 6: Commit the durable title contract**
 
-    git add src-tauri/src/commands/notes.rs src-tauri/src/commands/notes/tests.rs docs/developer/notes-architecture.md
-    git commit -m "feat(notes): use filenames as note titles"
+```sh
+git add src-tauri/src/commands/notes.rs src-tauri/src/commands/notes/tests.rs docs/developer/notes-architecture.md
+git commit -m "feat(notes): use filenames as note titles"
+```
 
 ### Task 2: Add an Immediate Store Rename Action
 
 **Files:**
+
 - Modify: src/store/notes-store.ts
 - Modify: src/store/notes-store.test.ts
 
@@ -143,18 +149,23 @@ Add renameNote to NotesState. Call the generated typed binding, map the returned
 
 Run:
 
-    bun run test:run -- src/store/notes-store.test.ts
+```sh
+bun run test:run -- src/store/notes-store.test.ts
+```
 
 Expected: all store tests pass.
 
 - [ ] **Step 5: Commit the store action**
 
-    git add src/store/notes-store.ts src/store/notes-store.test.ts
-    git commit -m "feat(notes): rename file-backed note titles"
+```sh
+git add src/store/notes-store.ts src/store/notes-store.test.ts
+git commit -m "feat(notes): rename file-backed note titles"
+```
 
 ### Task 3: Install CodeMirror and Build Testable Markdown Extensions
 
 **Files:**
+
 - Modify: package.json
 - Modify: bun.lock
 - Create: src/components/notes/editor/markdown-live-preview.ts
@@ -214,12 +225,13 @@ Expected: all decoration and command tests pass.
 
 - [ ] **Step 7: Commit the CodeMirror foundations**
 
-    git add package.json bun.lock src/components/notes/editor/markdown-live-preview.ts src/components/notes/editor/markdown-live-preview.test.ts src/components/notes/editor/markdown-editor-commands.ts src/components/notes/editor/markdown-editor-commands.test.ts
-    git commit -m "feat(notes): add CodeMirror markdown extensions"
+  git add package.json bun.lock src/components/notes/editor/markdown-live-preview.ts src/components/notes/editor/markdown-live-preview.test.ts src/components/notes/editor/markdown-editor-commands.ts src/components/notes/editor/markdown-editor-commands.test.ts
+  git commit -m "feat(notes): add CodeMirror markdown extensions"
 
 ### Task 4: Bridge a Stable Imperative EditorView into React
 
 **Files:**
+
 - Create: src/components/notes/editor/MarkdownLiveEditor.tsx
 - Create: src/components/notes/editor/MarkdownLiveEditor.test.tsx
 
@@ -270,12 +282,13 @@ Expected: all lifecycle tests pass without duplicate mounts.
 
 - [ ] **Step 5: Commit the React editor bridge**
 
-    git add src/components/notes/editor/MarkdownLiveEditor.tsx src/components/notes/editor/MarkdownLiveEditor.test.tsx
-    git commit -m "feat(notes): add stable CodeMirror editor bridge"
+  git add src/components/notes/editor/MarkdownLiveEditor.tsx src/components/notes/editor/MarkdownLiveEditor.test.tsx
+  git commit -m "feat(notes): add stable CodeMirror editor bridge"
 
 ### Task 5: Compose the New Notes Writing Surface
 
 **Files:**
+
 - Modify: src/pages/NotesPage.tsx
 - Modify: src/pages/NotesPage.test.tsx
 - Modify: src/App.css
@@ -336,12 +349,13 @@ Expected: all Notes Page tests pass using the new body-only editor contract.
 
 - [ ] **Step 7: Commit the integrated writing surface**
 
-    git add src/pages/NotesPage.tsx src/pages/NotesPage.test.tsx src/App.css locales/en.json locales/pt-BR.json
-    git commit -m "feat(notes): replace Toast editor with CodeMirror"
+  git add src/pages/NotesPage.tsx src/pages/NotesPage.test.tsx src/App.css locales/en.json locales/pt-BR.json
+  git commit -m "feat(notes): replace Toast editor with CodeMirror"
 
 ### Task 6: Verify the Complete Contract and Prepare Review
 
 **Files:**
+
 - Modify: docs/developer/notes-architecture.md
 - Modify: docs/superpowers/specs/2026-06-19-notes-workspace-evolution-design.md
 
@@ -351,35 +365,45 @@ State that EditorView is imperative and persistent, React never controls the doc
 
 - [ ] **Step 2: Run focused test suites**
 
-    bun run test:run -- src/store/notes-store.test.ts src/components/notes/editor/markdown-live-preview.test.ts src/components/notes/editor/markdown-editor-commands.test.ts src/components/notes/editor/MarkdownLiveEditor.test.tsx src/pages/NotesPage.test.tsx
-    bun run rust:test -- notes
+```sh
+bun run test:run -- src/store/notes-store.test.ts src/components/notes/editor/markdown-live-preview.test.ts src/components/notes/editor/markdown-editor-commands.test.ts src/components/notes/editor/MarkdownLiveEditor.test.tsx src/pages/NotesPage.test.tsx
+bun run rust:test -- notes
+```
 
 Expected: all focused TypeScript and Rust tests pass.
 
 - [ ] **Step 3: Run quality gates**
 
-    bun run typecheck
-    bun run lint
-    bun run ast:lint
-    bun run rust:fmt:check
-    bun run rust:clippy
-    bun run test:run
-    bun run check:all
+```sh
+bun run typecheck
+bun run lint
+bun run ast:lint
+bun run rust:fmt:check
+bun run rust:clippy
+bun run test:run
+bun run check:all
+```
 
 Expected: all gates pass except the known repository-wide format check baseline if it still reports pre-existing unrelated files. Record the exact limitation rather than formatting unrelated files.
 
 - [ ] **Step 4: Inspect the final diff and commit documentation**
 
-    git diff --check main...HEAD
+```sh
+git diff --check main...HEAD
+```
 
 Expected: no whitespace errors.
 
-    git add docs/developer/notes-architecture.md docs/superpowers/specs/2026-06-19-notes-workspace-evolution-design.md
-    git commit -m "docs(notes): document CodeMirror title model"
+```sh
+git add docs/developer/notes-architecture.md docs/superpowers/specs/2026-06-19-notes-workspace-evolution-design.md
+git commit -m "docs(notes): document CodeMirror title model"
+```
 
 - [ ] **Step 5: Push and open a ready-for-review PR**
 
-    git push -u origin feature/notes-codemirror-live-preview
-    gh pr create --base main --head feature/notes-codemirror-live-preview --title "feat(notes): add CodeMirror live preview" --fill
+```sh
+git push -u origin feature/notes-codemirror-live-preview
+gh pr create --base main --head feature/notes-codemirror-live-preview --title "feat(notes): add CodeMirror live preview" --fill
+```
 
 Expected: a non-draft PR exists for CodeRabbit, Qodo, and GitHub review.

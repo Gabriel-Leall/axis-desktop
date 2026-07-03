@@ -14,9 +14,13 @@ describe('App', () => {
 
     // App should render (onboarding shown for new users)
     expect(
-      await screen.findByText(/Qual é o seu maior obstáculo hoje?/i, undefined, {
-        timeout: 10000,
-      })
+      await screen.findByText(
+        /Qual é o seu maior obstáculo hoje?/i,
+        undefined,
+        {
+          timeout: 10000,
+        }
+      )
     ).toBeInTheDocument()
   }, 20000)
 })

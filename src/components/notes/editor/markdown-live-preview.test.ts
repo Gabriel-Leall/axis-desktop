@@ -7,7 +7,9 @@ import {
 describe('markdown live preview', () => {
   it('hides closed strong markers away from the active selection', () => {
     expect(
-      getMarkdownMarkerRanges('Text with **strong** content', [{ from: 0, to: 0 }])
+      getMarkdownMarkerRanges('Text with **strong** content', [
+        { from: 0, to: 0 },
+      ])
     ).toEqual([
       { from: 10, to: 12 },
       { from: 18, to: 20 },
@@ -16,7 +18,9 @@ describe('markdown live preview', () => {
 
   it('reveals markers when the selection touches their syntax range', () => {
     expect(
-      getMarkdownMarkerRanges('Text with **strong** content', [{ from: 11, to: 11 }])
+      getMarkdownMarkerRanges('Text with **strong** content', [
+        { from: 11, to: 11 },
+      ])
     ).toEqual([])
   })
 
@@ -27,7 +31,9 @@ describe('markdown live preview', () => {
   })
 
   it('hides inline-code markers when no selection touches them', () => {
-    expect(getMarkdownMarkerRanges('_italic_ and `code`', [{ from: 0, to: 0 }])).toEqual([
+    expect(
+      getMarkdownMarkerRanges('_italic_ and `code`', [{ from: 0, to: 0 }])
+    ).toEqual([
       { from: 13, to: 14 },
       { from: 18, to: 19 },
     ])
