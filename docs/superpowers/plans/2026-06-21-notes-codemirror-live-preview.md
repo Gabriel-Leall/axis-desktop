@@ -80,7 +80,9 @@ Document that title equals file stem, creation makes an empty MD body, H1 headin
 
 Run:
 
-    bun run rust:test -- notes
+```sh
+bun run rust:test -- notes
+```
 
 Expected: all notes command tests pass.
 
@@ -147,7 +149,9 @@ Add renameNote to NotesState. Call the generated typed binding, map the returned
 
 Run:
 
-    bun run test:run -- src/store/notes-store.test.ts
+```sh
+bun run test:run -- src/store/notes-store.test.ts
+```
 
 Expected: all store tests pass.
 
