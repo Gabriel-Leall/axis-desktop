@@ -86,8 +86,10 @@ Expected: all notes command tests pass.
 
 - [ ] **Step 6: Commit the durable title contract**
 
-  git add src-tauri/src/commands/notes.rs src-tauri/src/commands/notes/tests.rs docs/developer/notes-architecture.md
-  git commit -m "feat(notes): use filenames as note titles"
+```sh
+git add src-tauri/src/commands/notes.rs src-tauri/src/commands/notes/tests.rs docs/developer/notes-architecture.md
+git commit -m "feat(notes): use filenames as note titles"
+```
 
 ### Task 2: Add an Immediate Store Rename Action
 
@@ -151,8 +153,10 @@ Expected: all store tests pass.
 
 - [ ] **Step 5: Commit the store action**
 
-  git add src/store/notes-store.ts src/store/notes-store.test.ts
-  git commit -m "feat(notes): rename file-backed note titles"
+```sh
+git add src/store/notes-store.ts src/store/notes-store.test.ts
+git commit -m "feat(notes): rename file-backed note titles"
+```
 
 ### Task 3: Install CodeMirror and Build Testable Markdown Extensions
 
@@ -357,35 +361,45 @@ State that EditorView is imperative and persistent, React never controls the doc
 
 - [ ] **Step 2: Run focused test suites**
 
-  bun run test:run -- src/store/notes-store.test.ts src/components/notes/editor/markdown-live-preview.test.ts src/components/notes/editor/markdown-editor-commands.test.ts src/components/notes/editor/MarkdownLiveEditor.test.tsx src/pages/NotesPage.test.tsx
-  bun run rust:test -- notes
+```sh
+bun run test:run -- src/store/notes-store.test.ts src/components/notes/editor/markdown-live-preview.test.ts src/components/notes/editor/markdown-editor-commands.test.ts src/components/notes/editor/MarkdownLiveEditor.test.tsx src/pages/NotesPage.test.tsx
+bun run rust:test -- notes
+```
 
 Expected: all focused TypeScript and Rust tests pass.
 
 - [ ] **Step 3: Run quality gates**
 
-  bun run typecheck
-  bun run lint
-  bun run ast:lint
-  bun run rust:fmt:check
-  bun run rust:clippy
-  bun run test:run
-  bun run check:all
+```sh
+bun run typecheck
+bun run lint
+bun run ast:lint
+bun run rust:fmt:check
+bun run rust:clippy
+bun run test:run
+bun run check:all
+```
 
 Expected: all gates pass except the known repository-wide format check baseline if it still reports pre-existing unrelated files. Record the exact limitation rather than formatting unrelated files.
 
 - [ ] **Step 4: Inspect the final diff and commit documentation**
 
-  git diff --check main...HEAD
+```sh
+git diff --check main...HEAD
+```
 
 Expected: no whitespace errors.
 
-    git add docs/developer/notes-architecture.md docs/superpowers/specs/2026-06-19-notes-workspace-evolution-design.md
-    git commit -m "docs(notes): document CodeMirror title model"
+```sh
+git add docs/developer/notes-architecture.md docs/superpowers/specs/2026-06-19-notes-workspace-evolution-design.md
+git commit -m "docs(notes): document CodeMirror title model"
+```
 
 - [ ] **Step 5: Push and open a ready-for-review PR**
 
-  git push -u origin feature/notes-codemirror-live-preview
-  gh pr create --base main --head feature/notes-codemirror-live-preview --title "feat(notes): add CodeMirror live preview" --fill
+```sh
+git push -u origin feature/notes-codemirror-live-preview
+gh pr create --base main --head feature/notes-codemirror-live-preview --title "feat(notes): add CodeMirror live preview" --fill
+```
 
 Expected: a non-draft PR exists for CodeRabbit, Qodo, and GitHub review.
