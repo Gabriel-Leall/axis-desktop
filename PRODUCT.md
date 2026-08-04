@@ -2,9 +2,11 @@
 
 ### Users
 
-- Usuário principal: pessoa solo focada em auto produtividade.
-- Contexto de uso: organização pessoal diária no desktop, com consultas rápidas ao longo do dia.
-- Job to be done: controlar rotina com visão clara de hábitos, tarefas do dia e compromissos/pendências da semana.
+- Usuário principal (ICP): profissional solo cujo trabalho acontece principalmente no desktop e que precisa manter o controle do dia entre tarefas, compromissos e interrupções.
+- Contexto de uso: organização diária no desktop, com capturas e consultas rápidas ao longo do dia, sem interromper o fluxo de trabalho.
+- Job to be done: transformar interrupções em um próximo foco executável e controlar a rotina com visão clara de hábitos, tarefas do dia e compromissos/pendências da semana.
+- Promessa do produto: um workspace desktop local-first que ajuda profissionais solo a retomar o foco e executar o próximo passo com clareza.
+- Desenvolvedores: público complementar natural pela origem do produto, mas não um recorte exclusivo da proposta ou da interface.
 
 ### Brand Personality
 
