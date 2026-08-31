@@ -3,7 +3,7 @@ use tauri_specta::{collect_commands, Builder};
 pub fn generate_bindings() -> Builder<tauri::Wry> {
     use crate::commands::{
         analytics, calendar, daily_plan, habits, kanban, notes, notifications, oauth, pomodoro,
-        preferences, quick_pane, recovery, tasks,
+        preferences, product_usage, quick_pane, recovery, tasks,
     };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
@@ -17,6 +17,9 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         daily_plan::create_daily_plan,
         daily_plan::update_daily_plan_focus,
         daily_plan::complete_daily_plan,
+        // Local product usage
+        product_usage::record_product_usage_event,
+        product_usage::get_product_usage_snapshot,
         // Existing commands
         preferences::greet,
         preferences::load_preferences,

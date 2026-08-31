@@ -3,12 +3,17 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import i18n from '@/i18n/config'
 import { commands } from '@/lib/tauri-bindings'
+import { recordProductUsage } from '@/lib/product-usage'
 import { useDailyPlanStore } from '@/store/daily-plan-store'
 import { useOnboardingStore } from '@/store/onboarding-store'
 import { usePomodoroStore } from '@/store/pomodoro-store'
 import { useTasksStore } from '@/store/tasks-store'
 import { useUIStore } from '@/store/ui-store'
 import { OnboardingPage } from './OnboardingPage'
+
+vi.mock('@/lib/product-usage', () => ({
+  recordProductUsage: vi.fn().mockResolvedValue(true),
+}))
 
 describe('OnboardingPage', () => {
   beforeEach(async () => {
@@ -156,6 +161,7 @@ describe('OnboardingPage', () => {
           priority: 'medium',
         })
       )
+      expect(recordProductUsage).toHaveBeenCalledWith('capture_saved')
     })
     expect(useOnboardingStore.getState().hasCompleted).toBe(false)
 
@@ -163,5 +169,6 @@ describe('OnboardingPage', () => {
 
     expect(useOnboardingStore.getState().hasCompleted).toBe(true)
     expect(useUIStore.getState().activePage).toBe('pomodoro')
-  })
+    expect(recordProductUsage).toHaveBeenCalledWith('onboarding_completed')
+  }, 10_000)
 })

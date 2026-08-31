@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { commands } from '@/lib/tauri-bindings'
+import { recordProductUsage } from '@/lib/product-usage'
 import { DEFAULT_SETTINGS, usePomodoroStore } from './pomodoro-store'
 
 vi.mock('@/lib/tauri-bindings', () => ({
@@ -24,6 +25,10 @@ vi.mock('@/lib/tauri-bindings', () => ({
       .fn()
       .mockResolvedValue({ status: 'ok', data: null }),
   },
+}))
+
+vi.mock('@/lib/product-usage', () => ({
+  recordProductUsage: vi.fn().mockResolvedValue(true),
 }))
 
 describe('usePomodoroStore', () => {
@@ -54,6 +59,21 @@ describe('usePomodoroStore', () => {
     expect(ok).toBe(true)
     expect(usePomodoroStore.getState().linkedTaskId).toBe('task-1')
     expect(usePomodoroStore.getState().timerState).toBe('running')
+    expect(recordProductUsage).toHaveBeenCalledWith('focus_started')
+  })
+
+  it('does not record another focus when a session is already running', async () => {
+    usePomodoroStore.setState({
+      timerState: 'running',
+      startedAt: Date.now(),
+      currentSessionId: 'session-running',
+      sessionStartedAt: '2026-08-06T12:00:00.000Z',
+    })
+
+    const ok = await usePomodoroStore.getState().startContextualFocus('task-2')
+
+    expect(ok).toBe(true)
+    expect(recordProductUsage).not.toHaveBeenCalled()
   })
 
   it('opens a completion prompt after a focus session completes', async () => {

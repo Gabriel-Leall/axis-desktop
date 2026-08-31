@@ -13,6 +13,7 @@ pub mod notifications;
 pub mod oauth;
 pub mod pomodoro;
 pub mod preferences;
+pub mod product_usage;
 pub mod quick_pane;
 pub mod recovery;
 pub mod tasks;

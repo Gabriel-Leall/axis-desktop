@@ -9,6 +9,7 @@ import {
 import { getLocalISODate } from '@/lib/calendar-domain'
 import { selectDailyPlanFocus } from '@/lib/daily-plan-domain'
 import { logger } from '@/lib/logger'
+import { recordProductUsage } from '@/lib/product-usage'
 import type { Task as BindingTask } from '@/lib/tauri-bindings'
 
 interface DailyPlanState {
@@ -185,6 +186,9 @@ export const useDailyPlanStore = create<DailyPlanState>()(
             undefined,
             'dailyPlan/focus/done'
           )
+          if (taskId && source === 'manual') {
+            void recordProductUsage('daily_focus_set')
+          }
         } catch (error) {
           logger.error(`Failed to update daily plan focus: ${String(error)}`)
           set(
@@ -225,6 +229,7 @@ export const useDailyPlanStore = create<DailyPlanState>()(
             undefined,
             'dailyPlan/complete/done'
           )
+          void recordProductUsage('wrap_up_completed')
         } catch (error) {
           logger.error(`Failed to complete daily plan: ${String(error)}`)
           set(

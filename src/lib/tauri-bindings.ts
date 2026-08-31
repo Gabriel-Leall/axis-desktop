@@ -27,6 +27,8 @@ export type {
   CreateDailyPlanInput,
   DailyPlan,
   JsonValue,
+  ProductUsageEvent,
+  ProductUsageSnapshot,
   RecoveryError,
 } from './bindings'
 

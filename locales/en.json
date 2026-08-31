@@ -114,6 +114,11 @@
   "preferences.advanced.resetOnboardingDescription": "Restarts the initial welcome flow of the application.",
   "preferences.advanced.githubLogout": "GitHub Logout",
   "preferences.advanced.githubLogoutDescription": "Disconnects your GitHub account from Axis Desktop.",
+  "preferences.advanced.productUsageExport": "Export local diagnostics",
+  "preferences.advanced.productUsageExportDescription": "Saves a JSON file with usage milestones and counters. It excludes tasks, notes, URLs, file paths, and personal identifiers.",
+  "preferences.advanced.productUsageExporting": "Exporting...",
+  "preferences.advanced.productUsageExportSuccess": "Local diagnostics exported.",
+  "preferences.advanced.productUsageExportError": "Local diagnostics could not be exported.",
 
   "preferences.habits.calendar": "Calendar Settings",
   "preferences.habits.startOfWeek": "Start of the week",

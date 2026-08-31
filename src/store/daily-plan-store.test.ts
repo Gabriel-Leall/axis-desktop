@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { commands } from '@/lib/tauri-bindings'
+import { recordProductUsage } from '@/lib/product-usage'
 import { useDailyPlanStore } from './daily-plan-store'
 
 vi.mock('@/lib/tauri-bindings', () => ({
@@ -10,6 +11,10 @@ vi.mock('@/lib/tauri-bindings', () => ({
     updateDailyPlanFocus: vi.fn(),
     completeDailyPlan: vi.fn(),
   },
+}))
+
+vi.mock('@/lib/product-usage', () => ({
+  recordProductUsage: vi.fn().mockResolvedValue(true),
 }))
 
 vi.mock('@/lib/logger', () => ({
@@ -189,5 +194,69 @@ describe('daily-plan-store', () => {
     expect(useDailyPlanStore.getState().activePlan?.focus_task_id).toBe(
       'task-2'
     )
+  })
+
+  it('records a manually selected daily focus after persistence succeeds', async () => {
+    useDailyPlanStore.setState({
+      activePlan: {
+        id: 'plan-existing',
+        plan_date: '2026-06-02',
+        focus_task_id: null,
+        status: 'open',
+        focus_source: 'auto',
+        created_at: '2026-06-02T08:00:00.000Z',
+        updated_at: '2026-06-02T08:00:00.000Z',
+        completed_at: null,
+      },
+    })
+    vi.mocked(commands.updateDailyPlanFocus).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'plan-existing',
+        plan_date: '2026-06-02',
+        focus_task_id: 'task-2',
+        status: 'open',
+        focus_source: 'manual',
+        created_at: '2026-06-02T08:00:00.000Z',
+        updated_at: '2026-06-02T08:10:00.000Z',
+        completed_at: null,
+      },
+    })
+
+    await useDailyPlanStore.getState().updateFocus('task-2', 'manual')
+
+    expect(recordProductUsage).toHaveBeenCalledWith('daily_focus_set')
+  })
+
+  it('records a wrap-up after the daily plan is completed', async () => {
+    useDailyPlanStore.setState({
+      activePlan: {
+        id: 'plan-existing',
+        plan_date: '2026-06-02',
+        focus_task_id: 'task-2',
+        status: 'open',
+        focus_source: 'manual',
+        created_at: '2026-06-02T08:00:00.000Z',
+        updated_at: '2026-06-02T08:00:00.000Z',
+        completed_at: null,
+      },
+    })
+    vi.mocked(commands.completeDailyPlan).mockResolvedValue({
+      status: 'ok',
+      data: {
+        id: 'plan-existing',
+        plan_date: '2026-06-02',
+        focus_task_id: 'task-2',
+        status: 'wrapped_up',
+        focus_source: 'manual',
+        created_at: '2026-06-02T08:00:00.000Z',
+        updated_at: '2026-06-02T18:00:00.000Z',
+        completed_at: '2026-06-02T18:00:00.000Z',
+      },
+    })
+
+    await useDailyPlanStore.getState().completePlan('2026-06-02T18:00:00.000Z')
+
+    expect(recordProductUsage).toHaveBeenCalledWith('wrap_up_completed')
   })
 })

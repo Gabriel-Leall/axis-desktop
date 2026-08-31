@@ -29,6 +29,7 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { commands } from '@/lib/tauri-bindings'
 import { logger } from '@/lib/logger'
+import { recordProductUsage } from '@/lib/product-usage'
 import { notifications } from '@/lib/notifications'
 import i18n from '@/i18n/config'
 
@@ -259,6 +260,13 @@ export const usePomodoroStore = create<PomodoroStoreState>()(
             'startContextualFocus/clearPrompt'
           )
           get().start()
+          const startedNewSession =
+            snapshot.timerState === 'idle' &&
+            get().timerState === 'running' &&
+            get().currentSessionId !== snapshot.currentSessionId
+          if (startedNewSession) {
+            void recordProductUsage('focus_started')
+          }
           return true
         } catch (error) {
           set(

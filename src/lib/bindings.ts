@@ -72,6 +72,22 @@ async completeDailyPlan(planId: string, completedAt: string, updatedAt: string) 
     else return { status: "error", error: e  as any };
 }
 },
+async recordProductUsageEvent(event: ProductUsageEvent, occurredAt: string, localDate: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("record_product_usage_event", { event, occurredAt, localDate }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getProductUsageSnapshot() : Promise<Result<ProductUsageSnapshot, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_product_usage_snapshot") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Simple greeting command for demonstration purposes.
  */
@@ -970,6 +986,13 @@ export type OAuthLoopbackResult = { code: string; state: string | null; redirect
 export type PomodoroSession = { id: string; session_type: string; duration_seconds: number; completed: boolean; task_id: string | null; started_at: string; ended_at: string | null; created_at: string }
 export type PomodoroSettings = { focus_duration: number; short_break_duration: number; long_break_duration: number; pomos_until_long_break: number; auto_start_breaks: boolean; auto_start_focus: boolean; sound_notifications: boolean }
 export type PomodoroSummary = { session_type: string; sessions: number; total_seconds: number }
+export type ProductActivationMetrics = { activated: boolean; activated_at: string | null; time_to_value_seconds: number | null }
+export type ProductRetentionMetrics = { d1_returned: boolean | null; active_days_first_week: number; first_week_retained: boolean | null }
+export type ProductUsageDay = { local_date: string; app_open_count: number; focus_started_count: number; capture_saved_count: number; daily_focus_set_count: number; wrap_up_completed_count: number; onboarding_completed_count: number }
+export type ProductUsageDefinition = { activation: string; first_week_retention: string }
+export type ProductUsageEvent = "app_opened" | "focus_started" | "capture_saved" | "daily_focus_set" | "wrap_up_completed" | "onboarding_completed"
+export type ProductUsageMilestones = { measurement_started_at: string | null; first_focus_started_at: string | null; first_capture_saved_at: string | null; onboarding_completed_at: string | null }
+export type ProductUsageSnapshot = { schema_version: number; generated_at: string; local_only: boolean; definition: ProductUsageDefinition; milestones: ProductUsageMilestones; activation: ProductActivationMetrics; retention: ProductRetentionMetrics; daily_usage: ProductUsageDay[] }
 /**
  * Error types for recovery operations (typed for frontend matching)
  */

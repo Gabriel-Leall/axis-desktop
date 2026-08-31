@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getLocalISODate } from '@/lib/calendar-domain'
 import { commands, unwrapResult } from '@/lib/tauri-bindings'
+import { recordProductUsage } from '@/lib/product-usage'
 import { cn } from '@/lib/utils'
 import { useDailyPlanStore } from '@/store/daily-plan-store'
 import { useOnboardingStore } from '@/store/onboarding-store'
@@ -108,6 +109,7 @@ export function OnboardingPage() {
 
   const handleFinish = () => {
     completeOnboarding()
+    void recordProductUsage('onboarding_completed')
     navigateTo('pomodoro')
   }
 
@@ -147,6 +149,7 @@ export function OnboardingPage() {
 
       setCaptureText('')
       setCaptureSaved(true)
+      void recordProductUsage('capture_saved')
     } catch (captureError) {
       console.error('Failed to save onboarding quick capture', captureError)
       setError(t('onboarding.error.capture'))

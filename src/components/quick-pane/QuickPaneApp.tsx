@@ -19,6 +19,7 @@ import {
   type CapturePaneIntent,
 } from '@/lib/capture-pane-domain'
 import { getLocalISODate } from '@/lib/calendar-domain'
+import { recordProductUsage } from '@/lib/product-usage'
 
 const CAPTURE_MODES: CapturePaneKind[] = [
   'task',
@@ -611,6 +612,10 @@ export default function QuickPaneApp() {
         createFromIntent(parsed.intent, openAfterSave),
         emit('quick-pane-submit', { text: text.trim() }),
       ])
+      void recordProductUsage('capture_saved')
+      if (payload.kind === 'focus') {
+        void recordProductUsage('daily_focus_set')
+      }
       await Promise.all([
         emit('capture-pane-created', payload),
         dismissQuickPane(),

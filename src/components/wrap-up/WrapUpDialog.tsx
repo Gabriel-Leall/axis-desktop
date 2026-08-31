@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { notifications } from '@/lib/notifications'
 import { getTomorrowISO, splitWrapUpTasks } from '@/lib/wrap-up-domain'
+import { recordProductUsage } from '@/lib/product-usage'
 import {
   commands,
   type CreateDailyPlanInput,
@@ -146,6 +147,9 @@ export function WrapUpDialog() {
       }
 
       await saveTomorrowFocus()
+      if (tomorrowFocusId) {
+        void recordProductUsage('daily_focus_set')
+      }
       await completePlan()
       await initializeTodayPlan()
       setWrapUpOpen(false)

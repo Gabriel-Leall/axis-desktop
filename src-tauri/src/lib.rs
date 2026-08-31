@@ -325,6 +325,12 @@ pub fn run() {
                     ",
                     kind: MigrationKind::Up,
                 },
+                Migration {
+                    version: 7,
+                    description: "create_local_product_usage_tables",
+                    sql: commands::product_usage::PRODUCT_USAGE_MIGRATION_SQL,
+                    kind: MigrationKind::Up,
+                },
             ];
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:tasks.db", migrations)
@@ -530,6 +536,10 @@ pub fn run() {
                         "CREATE INDEX IF NOT EXISTS idx_daily_plans_date \
                          ON daily_plans(plan_date)"
                     ).execute(&pool).await.expect("Failed to create daily_plans index");
+
+                    commands::product_usage::create_product_usage_schema(&pool)
+                        .await
+                        .expect("Failed to create local product usage tables");
 
                     // Notes
                     sqlx::query(

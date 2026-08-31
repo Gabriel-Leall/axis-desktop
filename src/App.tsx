@@ -21,6 +21,7 @@ import { TooltipProvider } from './components/ui/tooltip'
 import { useSquareCornersEffect } from './hooks/useSquareCornersEffect'
 import { Toaster } from './components/ui/sonner'
 import { notifications } from './lib/notifications'
+import { recordProductUsage } from './lib/product-usage'
 
 const LOADING_MESSAGES = [
   'Verificando suas tasks',
@@ -81,6 +82,7 @@ function App() {
   // Initialize command system and cleanup on app startup
   useEffect(() => {
     logger.info('🚀 Frontend application starting up')
+    void recordProductUsage('app_opened')
     initializeCommandSystem()
     logger.debug('Command system initialized')
 

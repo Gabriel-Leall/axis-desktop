@@ -1,7 +1,8 @@
 import { useGitHubStore } from '@/store/github-store'
 import { useGoogleStore } from '@/store/google-store'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LogOut, User as UserIcon } from 'lucide-react'
+import { Download, LogOut, User as UserIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SettingsSection } from '../shared/SettingsComponents'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +10,7 @@ import { useOnboardingStore } from '@/store/onboarding-store'
 import { useUIStore } from '@/store/ui-store'
 import { toast } from 'sonner'
 import { SettingsField } from '../shared/SettingsComponents'
+import { exportProductUsageSnapshot } from '@/lib/product-usage'
 
 const GithubIcon = ({ className }: { className?: string }) => (
   <svg
@@ -42,11 +44,26 @@ export function UserPane() {
   const startGoogleOAuthFlow = useGoogleStore(state => state.startOAuthFlow)
   const resetOnboarding = useOnboardingStore(state => state.resetOnboarding)
   const setPreferencesOpen = useUIStore(state => state.setPreferencesOpen)
+  const [isExportingUsage, setIsExportingUsage] = useState(false)
 
   const handleResetOnboarding = () => {
     resetOnboarding()
     setPreferencesOpen(false)
     toast.success(t('toast.success.preferencesSaved'))
+  }
+
+  const handleExportProductUsage = async () => {
+    setIsExportingUsage(true)
+    try {
+      const exported = await exportProductUsageSnapshot()
+      if (exported) {
+        toast.success(t('preferences.advanced.productUsageExportSuccess'))
+      }
+    } catch {
+      toast.error(t('preferences.advanced.productUsageExportError'))
+    } finally {
+      setIsExportingUsage(false)
+    }
   }
 
   return (
@@ -199,6 +216,26 @@ export function UserPane() {
               className="h-8"
             >
               {t('preferences.advanced.resetOnboarding')}
+            </Button>
+          </SettingsField>
+
+          <SettingsField
+            label={t('preferences.advanced.productUsageExport')}
+            description={t(
+              'preferences.advanced.productUsageExportDescription'
+            )}
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleExportProductUsage()}
+              disabled={isExportingUsage}
+              className="h-8 gap-2"
+            >
+              <Download className="size-3.5" />
+              {isExportingUsage
+                ? t('preferences.advanced.productUsageExporting')
+                : t('preferences.advanced.productUsageExport')}
             </Button>
           </SettingsField>
 

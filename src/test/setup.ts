@@ -123,6 +123,38 @@ vi.mock('@/lib/tauri-bindings', () => ({
       status: 'ok',
       data: null,
     }),
+    recordProductUsageEvent: vi
+      .fn()
+      .mockResolvedValue({ status: 'ok', data: null }),
+    getProductUsageSnapshot: vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: {
+        schema_version: 1,
+        generated_at: '2026-08-06T12:00:00Z',
+        local_only: true,
+        definition: {
+          activation: 'first_focus_started_and_first_capture_saved',
+          first_week_retention: 'three_active_days_in_first_seven_days',
+        },
+        milestones: {
+          measurement_started_at: null,
+          first_focus_started_at: null,
+          first_capture_saved_at: null,
+          onboarding_completed_at: null,
+        },
+        activation: {
+          activated: false,
+          activated_at: null,
+          time_to_value_seconds: null,
+        },
+        retention: {
+          d1_returned: null,
+          active_days_first_week: 0,
+          first_week_retained: null,
+        },
+        daily_usage: [],
+      },
+    }),
     showQuickPane: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
     dismissQuickPane: vi.fn().mockResolvedValue({ status: 'ok', data: null }),
     getTasks: vi.fn().mockResolvedValue({ status: 'ok', data: [] }),
